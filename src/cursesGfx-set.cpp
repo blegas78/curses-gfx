@@ -59,50 +59,6 @@ Coordinates3D rgbToHsv( const Coordinates3D& rgb) {
 	return result;
 }
 
-// from https://www.programmingalgorithms.com/algorithm/hsl-to-rgb/c/
-float hueToRgb(float v1, float v2, float vH)
-{
-	if (vH < 0)
-		vH += 1;
-
-	if (vH > 1)
-		vH -= 1;
-
-	if ((6 * vH) < 1)
-		return (v1 + (v2 - v1) * 6 * vH);
-
-	if ((2 * vH) < 1)
-		return v2;
-
-	if ((3 * vH) < 2)
-		return (v1 + (v2 - v1) * ((2.0f / 3) - vH) * 6);
-
-	return v1;
-}
-
-Coordinates3D hslToRgb(Coordinates3D hsl) {
-	Coordinates3D rgb;
-
-	if (hsl.y == 0)
-	{
-		rgb.x = rgb.y = rgb.z = (unsigned char)(hsl.z * 255);
-	}
-	else
-	{
-		float v1, v2;
-		float hue = (float)hsl.x / 360;
-
-		v2 = (hsl.z < 0.5) ? (hsl.z * (1 + hsl.y)) : ((hsl.z + hsl.y) - (hsl.z * hsl.y));
-		v1 = 2 * hsl.z - v2;
-
-		rgb.x = (unsigned char)(255 * hueToRgb(v1, v2, hue + (1.0f / 3)));
-		rgb.y = (unsigned char)(255 * hueToRgb(v1, v2, hue));
-		rgb.z = (unsigned char)(255 * hueToRgb(v1, v2, hue - (1.0f / 3)));
-	}
-
-	return rgb;
-}
-
 Coordinates3D rgbToHsl( const Coordinates3D& rgb) {
 	Coordinates3D result;
 	
@@ -195,29 +151,28 @@ void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
 	const double numLevels = 16;
 #endif
 	double step = numLevels - 1.0;
-	double LperLs = maxL/numLevels;
 	
 #ifdef ASCII_EXTENDED
-	if (hsl.z > step-- * LperLs) {
+	if (hsl.z > maxL* step--/numLevels) {
 //		c = '█';
 		mvprintw(pixel.y, pixel.x, "▓");	//dark
 		attroff(COLOR_PAIR(hueIndex));
 		return;
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL * step--/numLevels) {
 		mvprintw(pixel.y, pixel.x, "█");	// full
 		attroff(COLOR_PAIR(hueIndex));
 		return;
 	} else
 #endif
-		if (hsl.z > step-- * LperLs) {
+		if (hsl.z > maxL*step--/numLevels) {
 		c = '$';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '@';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '%';
 	
 #ifdef ASCII_EXTENDED
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		
 		
 		mvprintw(pixel.y, pixel.x, "▒"); // medium "▒" ▓ █
@@ -227,40 +182,40 @@ void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
 //	}  else if (hsl.z > 0.50) {
 //		c = '*';
 		
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '#';
 		
-	}	else if (hsl.z > step-- * LperLs) {
+	}	else if (hsl.z > maxL*step--/numLevels) {
 		c = 'o';
 #ifdef ASCII_EXTENDED
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		
 		
 		mvprintw(pixel.y, pixel.x, "░"); // light "▒" ▓ █
 		attroff(COLOR_PAIR(hueIndex));
 		return;
 #endif
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '=';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '*';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '+';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = ';';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '~';
 //	} else if (hsl.z > maxL*6.0/numLevels) {
 //		c = '"';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = ',';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = ':';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '-';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		c = '.';
-	} else if (hsl.z > step-- * LperLs) {
+	} else if (hsl.z > maxL*step--/numLevels) {
 		
 		c = '`';
 	}

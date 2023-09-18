@@ -40,8 +40,7 @@ void drawHorizonalLineWithShader( FragmentInfo& start, FragmentInfo& end, double
 //		point = interpolate(point1, point2, factor);
 //		point.z = 1.0/(1.0/point1.z + factor*(1.0/point2.z - 1.0/point1.z));
 		
-//		point = perspectiveInterpolate(start.location3D, end.location3D, 0, 0, 0, factor);
-		point = perspectiveInterpolate(start.location3D, end.location3D, factor);
+		point = perspectiveInterpolate(start.location3D, end.location3D, 0, 0, 0, factor);
 		
 		depth = 1.0/(1.0/depth1 + factor*(1.0/depth2 - 1.0/depth1));
 		
@@ -349,8 +348,7 @@ void drawPolygonShader( Polygon4D& poly, Polygon4D& restored, void* userData, De
 				fragStart.pixel.x = lineStartX[1];
 				fragStart.pixel.y = ar.y-1;
 				fragStart.normal = interpolate(brNormal, arNormal, alphar);
-//				fragStart.location3D = perspectiveInterpolate(savedBr3dPoint, savedAr3dPoint, savebrDepth, savearDepth, lineDepthStart, alphar);
-				fragStart.location3D = perspectiveInterpolate(savedBr3dPoint, savedAr3dPoint, alphar);
+				fragStart.location3D = perspectiveInterpolate(savedBr3dPoint, savedAr3dPoint, savebrDepth, savearDepth, lineDepthStart, alphar);
 				
 				savedMagnitudeR = lineMagnitudeSqr;
 				savedBr = br;
@@ -532,8 +530,7 @@ void drawPolygonShader( Polygon4D& poly, Polygon4D& restored, void* userData, De
 					fragEnd.normal = interpolate(blNormal, alNormal, alphal);
 //					fragEnd.location3D = perspectiveInterpolate(bl3dPoint, al3dPoint, blDepth, alDepth, lineDepthEnd, alphal);
 					
-//					fragEnd.location3D = perspectiveInterpolate(savedBl3dPoint, savedAl3dPoint, saveblDepth, savealDepth, lineDepthEnd, alphal);
-					fragEnd.location3D = perspectiveInterpolate(savedBl3dPoint, savedAl3dPoint, alphal);
+					fragEnd.location3D = perspectiveInterpolate(savedBl3dPoint, savedAl3dPoint, saveblDepth, savealDepth, lineDepthEnd, alphal);
 					
 					
 //						drawHorizonalLineWithDepthBuffer(lineStartX[0], lineEndX[0], lineY[0], fill, lineDepthStart[0], lineDepthEnd[0], depthBuffer);

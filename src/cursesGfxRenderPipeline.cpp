@@ -32,8 +32,7 @@ void RenderPipeline::setupLinuxFb() {
 	fb_bytes = fb_bpp / 8;
 	fb_bytes_per_length = finfo.line_length/fb_bytes;
 	
-//	fb_data_size = fb_width * fb_height * fb_bytes * fb_bytes_per_length;
-	fb_data_size = fb_height * fb_bytes_per_length* fb_bytes;
+	fb_data_size = fb_width * fb_height * fb_bytes*64;
 
 	fbdata = (char*)mmap (0, fb_data_size, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, (off_t)0);
 	
@@ -103,68 +102,6 @@ void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo
 	this->fragmentShader = fragmentShader;
 };
 
-
-void* RenderPipeline::renderThread(void* info) {
-	Renderable* This = (Renderable*)info;
-	
-	//This->rasterizePolygonsShader();
-	
-	This->pipeline->rasterizePolygonsShader(This->polygons,
-											This->count,
-											This->modelView,
-											This->projection,
-											This->viewPort,
-											This->userData,
-											This->line);
-	
-	
-	delete [] This->polygons;
-	delete This;
-	//return NULL;
-}
-
-void RenderPipeline::rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line) {
-	Renderable* thisRenderable = new Renderable;
-	
-	thisRenderable->pipeline = this;
-	thisRenderable->polygons = new Polygon4D[count];
-	for (int i = 0; i < count; i++) {
-		thisRenderable->polygons[i].numVertices = polygons[i].numVertices;
-		
-		for (int v = 0; v < polygons[i].numVertices; v++) {
-			thisRenderable->polygons[i].normals[v] = polygons[i].normals[v];
-			thisRenderable->polygons[i].vertices[v] = polygons[i].vertices[v];
-			
-		}
-	}
-//	memcpy(thisRenderable->polygons, polygons, sizeof(Polygon4D)*count);
-	
-	thisRenderable->count = count;
-	thisRenderable->modelView = modelView;
-	thisRenderable->projection = projection;
-	thisRenderable->viewPort = viewport;
-	thisRenderable->userData = userData;
-	thisRenderable->line = line;
-	
-	thisRenderable->fragmentShader = this->fragmentShader;	// hmmm
-	
-	pthread_t* thread = new pthread_t;
-	pthread_create(thread, NULL, renderThread, (void *)thisRenderable);
-	renderThreads.push(thread);
-	
-	waitForThreads();
-}
-
-void RenderPipeline::waitForThreads() {
-	while (!renderThreads.empty()) {
-		pthread_t* thread = renderThreads.front();
-		pthread_join(*thread, NULL);
-		renderThreads.pop();
-		delete thread;
-	}
-	
-}
-
 void RenderPipeline::rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line) {
 	
 	
@@ -181,8 +118,6 @@ void RenderPipeline::rasterizeQuadsShader(Coordinates4D* vertices, int quadIndic
 			fillPolygonNormals(&quadAsPolygon, 1);
 			
 			rasterizePolygonsShader(&quadAsPolygon, 1, modelView, projection, viewport, userData, line);
-			
-//			rasterizeThreaded(&quadAsPolygon, 1, modelView, projection, viewport, userData, line);
 			
 		}
 //	}
@@ -273,7 +208,7 @@ void RenderPipeline::rasterizePolygonsShader(Polygon4D* polygons, int count, Mat
 		// Homogenous clipping:
 		int valid = clipPolygon(polygonProjected, &polygonProjected, line);
 		
-		// now get back the original coordinates for separate handling
+		// now get back the original coordinates or separate handling
 		polygonRestored.numVertices = polygonProjected.numVertices;
 		for (int v = 0; v < polygonRestored.numVertices; v++) {
 			polygonRestored.vertices[v] = matrixVectorMultiply(inverseProjection, polygonProjected.vertices[v]);
@@ -296,194 +231,19 @@ void RenderPipeline::rasterizePolygonsShader(Polygon4D* polygons, int count, Mat
 		}
 		
 		// Draw:
-////		mvprintw(line++, 0, "Calling drawPolygon() with %d vertices", polygon.numVertices);
-////		refresh();
-////		drawPolygon( polygon, depthBuffer, fill, line);
-////		drawPolygonShader( polygonProjected, polygonRestored, userData, depthBuffer, fragmentShader, line);
-//		drawPolygonShader( polygonProjected, polygonRestored, userData, line);
-////		mvprintw(line++, 0, "Calling drawPolygon() Done");
-////		refresh();
-//
-//
-//		drawPolygonShader( polygonProjected, polygonRestored, userData, line);
-		drawPolygonWithTriangles( polygonProjected, polygonRestored, userData);
+//		mvprintw(line++, 0, "Calling drawPolygon() with %d vertices", polygon.numVertices);
+//		refresh();
+//		drawPolygon( polygon, depthBuffer, fill, line);
+//		drawPolygonShader( polygonProjected, polygonRestored, userData, depthBuffer, fragmentShader, line);
+		drawPolygonShader( polygonProjected, polygonRestored, userData, line);
+//		mvprintw(line++, 0, "Calling drawPolygon() Done");
+//		refresh();
 		
 	}
 }
-
-void RenderPipeline::drawPolygonWithTriangles( Polygon4D& poly, Polygon4D& restored, void* userData) {
-//void drawPolygonWithTriangles( Polygon4D& poly, FrameBuffer* fbo) {
-	if (poly.numVertices < 3) {
-//		mvprintw(line++, 0, "Not enough Polygon vertices: %d", poly.numVertices);
-		return;
-	}
-//	int minIndex = 0, maxIndex = 0;
-//	double minY = poly.vertices[0].y;
-//	double maxY = poly.vertices[0].y;
-//	for (int i = 1; i < poly.numVertices; i++) {
-//		if (poly.vertices[i].y < minY) {
-//			minY = poly.vertices[i].y;
-//			minIndex = i;
-//		}
-//		if (poly.vertices[i].y > maxY) {
-//			maxY = poly.vertices[i].y;
-//			maxIndex = i;
-//		}
-//	}
-	
-	FragmentInfo fragments[3];
-	fragments[0].location3D = poly.vertices[0];
-	fragments[0].color = poly.colors[0];
-	fragments[0].normal = poly.normals[0];
-	for (int i = 2; i < poly.numVertices; i++) {
-		fragments[1].location3D = poly.vertices[i-1];
-		fragments[2].location3D = poly.vertices[i];
-		fragments[1].color = poly.colors[i-1];
-		fragments[2].color = poly.colors[i];
-		fragments[1].normal = poly.normals[i-1];
-		fragments[2].normal = poly.normals[i];
-		triangleFill(fragments);
-	}
-	
-	
-}
-
-void RenderPipeline::triangleFill(FragmentInfo* fragments) {
-	ColorRGBA color1, color2;
-	
-	FragmentInfo fragment;
-	
-	std::vector<FragmentInfo> f(fragments, fragments+3);
-	
-//	for (int i = 0; i < 3; i++) {
-//		fragment.location3D = vertices[i];
-//		fragment.color = colors[i];
-//		f.push_back(fragment);
-//	}
-	std::sort(f.begin(), f.end(), compareCoordinatesFrag);
-
-//	std::vector<Coordinates4D> v(vertices, vertices+3);
-//	std::sort(v.begin(), v.end(), compareCoordinates);
-
-	
-//	drawHorizonalLineRGBA(v[0].x, v[0].x, v[0].y, color, fbo);
-//	setFrameBufferRGBA(v[0].x, v[0].y, fbo, color);
-//	setFrameBufferRGBA(v[1].x, v[1].y, fbo, color);
-//	setFrameBufferRGBA(v[2].x, v[2].y, fbo, color);
-	
-	double slope12 = (f[1].location3D.x - f[0].location3D.x)/(f[1].location3D.y-f[0].location3D.y);
-	if((int)f[1].location3D.y == (int)f[0].location3D.y) {
-		slope12 = 0;
-	}
-	double slope13 = (f[2].location3D.x - f[0].location3D.x)/(f[2].location3D.y-f[0].location3D.y);
-	
-	double y = f[0].location3D.y;
-	double yp = 0;// = y - v[0].y; <- add v[0].y to get y
-	double x1, x2;
-	
-//	color.r = 0;
-	
-	// y goes from v[0].y to v[2].y;
-	// yp goes from 0 to v[2].y - v[0].y
-	// cf2 goes from 0 to 1, or along yp/(v[2].y - v[0].y)
-	double colorFactor = 1.0/(f[2].location3D.y - f[0].location3D.y);
-	
-	// cf goes from 0 to 1, or along yp/(v[1].y - v[0].y)
-	double colorFactor2 = 1.0/(f[1].location3D.y - f[0].location3D.y);
-	
-	
-	for( ; (yp+f[0].location3D.y) < f[1].location3D.y; yp += 1.0) {
-		
-//		x1 = slope12*(y-v[0].y) + v[0].x;
-//		x2 = slope13*(y-v[0].y) + v[0].x;
-		x1 = slope12*(yp) + f[0].location3D.x;
-		x2 = slope13*(yp) + f[0].location3D.x;
-//		drawHorizonalLineRGBA(x1, x2, y, color, fbo);
-		
-//		color.r = color[0].r + colorFactor*(color[2].r - color[0].r);
-		color2 = interpolate(f[0].color, f[2].color, colorFactor*yp);
-		color1 = interpolate(f[0].color, f[1].color, colorFactor2*yp);
-		
-		drawHorizonalLineRGBA(x1, x2, yp+f[0].location3D.y, color1, color2);
-	}
-	yp =f[1].location3D.y - f[0].location3D.y;
-	
-	double slope23 = (f[2].location3D.x - f[1].location3D.x)/(f[2].location3D.y-f[1].location3D.y);
-	if((int)f[2].location3D.y == (int)f[1].location3D.y) {
-		slope23 = 0;
-	}
-	
-	// now yp goes from v[1].y-v[0].y to v[2].y - v[0].y
-	// cf2 goes from 0 to 1, or along (yp-(v[1].y-v[0].y))/((v[2].y - v[0].y) - (v[1].y-v[0].y))
-//	colorFactor2 = 1.0/(f[2].location3D.y - (f[1].location3D.y-f[0].location3D.y));
-	colorFactor2 = 1.0/((f[2].location3D.y-f[0].location3D.y) - (f[1].location3D.y-f[0].location3D.y));
-	
-	double end = f[2].location3D.y;
-	for ( ; (yp+f[0].location3D.y) < end; yp += 1.0) {
-		
-//		x1 = slope23*(yp+v[0].y-v[1].y) + v[1].x;
-//		x2 = slope13*(yp+v[0].y-v[0].y) + v[0].x;
-		x1 = slope23*(yp+f[0].location3D.y-f[1].location3D.y) + f[1].location3D.x;
-		x2 = slope13*(yp) + f[0].location3D.x;
-
-		
-		color2 = interpolate(f[0].color, f[2].color, colorFactor*yp);
-		color1 = interpolate(f[1].color, f[2].color, colorFactor2*(yp-(f[1].location3D.y-f[0].location3D.y)));
-		drawHorizonalLineRGBA(x1, x2, yp+f[0].location3D.y, color1, color2);
-	}
-	
-}
-
-void RenderPipeline::drawHorizonalLineRGBA(double x1, double x2, int y, ColorRGBA& color1, ColorRGBA& color2) {
-//	Coordinates2D pixel;
-//	int diff = x2-x1;
-//	if (abs(diff) < 2) {
-//		return;
-//	}
-	if ((int)x1 == (int)x2) {
-		
-		setFrameBufferRGBA(x1, y, fbo, interpolate(color1, color2, 0.5));
-		return;
-	}
-	
-	int increment = x2 > x1 ? 1.0 : -1.0;
-//	double factor;
-	
-//	Coordinates4D point;
-//	Coordinates3D normal;
-//	double depth;
-	
-//	pixel.y = y;
-//	for (int i = x1+increment; i != x2; i += increment) {
-	int i;
-	int end = x2+increment;
-	
-	// i goes from x1 to x2
-	// c goes from 0 to 1, or from i-x1 to
-	double cF = increment/((double)x2 - (double)x1);
-	ColorRGBA color;
-	double factor = ( x1-floor(x1))*cF;
-	
-	for (i = x1; i != end; i += increment, factor += cF) {
-//		pixel.x = i;
-		
-//		color = interpolate(color1, color2, ((double)i-x1)*cF);
-		color = interpolate(color1, color2, factor);
-//		color = interpolate(color1, color2, (double)(xDouble-x1)*cF);
-		
-		setFrameBufferRGBA(i, y, fbo, color);
-		
-	}
-//	setFrameBufferRGBA(i, y, fbo, color);
-	
-}
-
-
-
-
 
 void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, void* userData, int &line) {
-	
+
 	if (poly.numVertices < 3) {
 //		mvprintw(line++, 0, "Not enough Polygon vertices: %d", poly.numVertices);
 		return;
@@ -508,7 +268,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 //		mvprintw(line++, 0, "%d %c %f,%f %s", i, c, poly.vertices[i].x, poly.vertices[i].y, i == minIndex ? "Min" : (i == maxIndex ? "Max" : ""));
 //		setWithDepthBuffer(onlyXY(poly.vertices[i]), 'o', poly.vertices[i].z, depthBuffer);
 //		setFloatDotWithDepthBuffer(poly.vertices[i].x+0.5, poly.vertices[i].y+0.5, poly.vertices[i].z, depthBuffer);
-		setFloatDotWithDepthBuffer(poly.vertices[i].x+0.5, poly.vertices[i].y+0.5, 1.0/poly.vertices[i].z);
+		setFloatDotWithDepthBuffer(poly.vertices[i].x+0.5, poly.vertices[i].y+0.5, poly.vertices[i].z);
 //		refresh();
 		i = mod(i + 1, poly.numVertices);
 		if (i == minIndex)
@@ -525,10 +285,8 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 	Coordinates4D ar3dPoint = restored.vertices[minIndex];
 	Coordinates3D brNormal = restored.normals[mod(minIndex+1, poly.numVertices)];
 	Coordinates4D br3dPoint = restored.vertices[mod(minIndex+1, poly.numVertices)];
-//	double arDepth = poly.vertices[minIndex].z;
-//	double brDepth = poly.vertices[mod(minIndex+1, poly.numVertices)].z;
-	double arInvDepth = 1.0/poly.vertices[minIndex].z;
-	double brInvDepth = 1.0/poly.vertices[mod(minIndex+1, poly.numVertices)].z;
+	double arDepth = poly.vertices[minIndex].z;
+	double brDepth = poly.vertices[mod(minIndex+1, poly.numVertices)].z;
 	
 	Coordinates2D al = onlyXY(poly.vertices[minIndex]);
 	Coordinates2D bl = onlyXY(poly.vertices[mod(minIndex-1, poly.numVertices)]);
@@ -536,10 +294,8 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 	Coordinates4D al3dPoint = restored.vertices[minIndex];
 	Coordinates3D blNormal = restored.normals[mod(minIndex-1, poly.numVertices)];
 	Coordinates4D bl3dPoint = restored.vertices[mod(minIndex-1, poly.numVertices)];
-//	double alDepth = poly.vertices[minIndex].z;
-//	double blDepth = poly.vertices[mod(minIndex-1, poly.numVertices)].z;
-	double alInvDepth = 1.0/poly.vertices[minIndex].z;
-	double blInvDepth = 1.0/poly.vertices[mod(minIndex-1, poly.numVertices)].z;
+	double alDepth = poly.vertices[minIndex].z;
+	double blDepth = poly.vertices[mod(minIndex-1, poly.numVertices)].z;
 	
 	// The right line:
 	int dxr = abs(br.x - ar.x);
@@ -548,8 +304,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 	int syr = ar.y < br.y ? 1 : -1;
 	int errr = dxr + dyr;
 	int e2r;
-	double lineInvMagnitudeSqr = 1.0/sqrt(dxr*dxr + dyr*dyr);
-	
+	double lineMagnitudeSqr = sqrt(dxr*dxr + dyr*dyr);
 	
 	int errsr[3];
 	double errsNormalizedr[3];
@@ -557,8 +312,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 	
 	double alphar;
 	double dxnr, dynr;
-//	double depthsr[3];
-	double invDepthsr[3];
+	double depthsr[3];
 	
 	// The left line:
 	int dxl = abs(bl.x - al.x);
@@ -567,7 +321,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 	int syl = al.y < bl.y ? 1 : -1;
 	int errl = dxl + dyl;
 	int e2l;
-	double lineInvMagnitudeSql = 1.0/sqrt(dxl*dxl + dyl*dyl);
+	double lineMagnitudeSql = sqrt(dxl*dxl + dyl*dyl);
 	
 	int errsl[3];
 	double errsNormalizedl[3];
@@ -575,18 +329,15 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 	
 	double alphal;
 	double dxnl, dynl;
-//	double depthsl[3];
-	double invDepthsl[3];
+	double depthsl[3];
 	
 	
 	
 	int lineStartX[3] = {0,0,0};// = a.x - sx;
 	int lineEndX[3] = {0,0,0};
 //	int lineY[3] = {0,0,0};// = a.y;
-	//double lineDepthStart;//[3] = {0,0,0};
-//	double lineDepthEnd;
-	double lineInvDepthStart;//[3] = {0,0,0};
-	double lineInvDepthEnd;
+	double lineDepthStart;//[3] = {0,0,0};
+	double lineDepthEnd;
 	
 	FragmentInfo fragStart, fragEnd;
 	
@@ -606,11 +357,11 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 	int tr = 0;
 	int tl = 0;
 	
-	double savearInvDepth, savebrInvDepth, savedInvMagnitudeR = 1;
+	double savearDepth, savebrDepth, savedMagnitudeR = 1;
 	Coordinates2D savedBr;
 	Coordinates4D savedBr3dPoint, savedAr3dPoint;
 	
-	double savealInvDepth, saveblInvDepth, savedInvMagnitude = 1;
+	double savealDepth, saveblDepth, savedMagnitude = 1;
 	Coordinates2D savedBl;
 	Coordinates4D savedBl3dPoint, savedAl3dPoint;
 	
@@ -640,8 +391,8 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			
 			if (tr++ > 2) {
 //				setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), depthsr[1], depthBuffer);
-//				setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), depthsr[1]);
-				setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), invDepthsr[1]);
+				setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), depthsr[1]);
+
 				//				setWithDepthBuffer( pts[2], '.', depths[1], depthBuffer);
 			}
 			ptsr[0] = ptsr[1];
@@ -661,12 +412,11 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			
 			dxnr = ar.x-br.x;
 			dynr = ar.y-br.y;
-//			alphar = ((double)sqrt(dxnr*dxnr + dynr*dynr))/lineMagnitudeSqr;
-			alphar = ((double)sqrt(dxnr*dxnr + dynr*dynr)) * lineInvMagnitudeSqr;
-			
-			invDepthsr[0] = invDepthsr[1];
-			invDepthsr[1] = invDepthsr[2];
-			invDepthsr[2] = brInvDepth + alphar*(arInvDepth - brInvDepth);
+			alphar = ((double)sqrt(dxnr*dxnr + dynr*dynr))/lineMagnitudeSqr;
+			depthsr[0] = depthsr[1];
+			depthsr[1] = depthsr[2];
+//			depthsr[2] = brDepth - alphar*(brDepth - arDepth);
+			depthsr[2] = 1.0/(1.0/brDepth + alphar*(1.0/arDepth - 1.0/brDepth));
 //			lineDepthStart = depthsr[2];
 //
 //			normalr = interpolate(brNormal, arNormal, alphar);
@@ -679,8 +429,8 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			// new line time
 			
 //			setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), depthsr[1], depthBuffer);
-//			setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), depthsr[1]);
-			setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), invDepthsr[1]);
+			setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), depthsr[1]);
+			
 			
 			indexRight = mod(indexRight + 1, poly.numVertices);
 			
@@ -698,9 +448,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			ar = onlyXY(poly.vertices[indexRight]);
 			arNormal = restored.normals[indexRight];
 			ar3dPoint = restored.vertices[indexRight];
-//			arDepth = poly.vertices[indexRight].z;
-			arInvDepth = 1.0/poly.vertices[indexRight].z;
-//			arInvDepth = 1.0/restored.vertices[indexRight].z;
+			arDepth = poly.vertices[indexRight].z;
 			
 //			lineStartX[2] = ar.x;
 			
@@ -708,9 +456,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			br = onlyXY(poly.vertices[nextIndex]);
 			brNormal = restored.normals[nextIndex];
 			br3dPoint = restored.vertices[nextIndex];
-//			brDepth = poly.vertices[nextIndex].z;
-			brInvDepth = 1.0/poly.vertices[nextIndex].z;
-//			brInvDepth = 1.0/restored.vertices[nextIndex].z;
+			brDepth = poly.vertices[nextIndex].z;
 			
 			dxr = abs(br.x - ar.x);
 			sxr = ar.x < br.x ? 1 : -1;
@@ -718,7 +464,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			syr = ar.y < br.y ? 1 : -1;
 			errr = dxr + dyr;
 //			e2r;
-			lineInvMagnitudeSqr = 1.0/sqrt(dxr*dxr + dyr*dyr);
+			lineMagnitudeSqr = sqrt(dxr*dxr + dyr*dyr);
 			
 			tr = 0;
 			
@@ -743,28 +489,58 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 				
 				lineStartX[0] = lineStartX[1];
 				lineStartX[1] = lineStartX[2];
+//				lineY[0] = lineY[1];
+//				lineY[1] = lineY[2];
+//				lineEndX[0] = lineEndX[1];
+//				lineEndX[1] = lineEndX[2];
+				
+//				lineDepthStart[0] = lineDepthStart[1];
+//				lineDepthStart[1] = lineDepthStart[2];
+//				lineDepthEnd[0] = lineDepthEnd[1];
+//				lineDepthEnd[1] = lineDepthEnd[2];
+//				if (sx > 0 && sx2 > 0) {
+//					lineStartX[2] = a.x + (a2.x < a.x ? 0 : 1);
+//				} else {
 				lineStartX[2] = ar.x;// + (a2.x < a.x ? -1 : 1);
+				
+//				savedMagnitudeR = lineMagnitudeSqr;
+//				savedBr = br;
+//				savearDepth = arDepth;
+//				savebrDepth = brDepth;
+//				savedAr3dPoint = ar3dPoint;
+//				savedBr3dPoint = br3dPoint;
+				
+//				dxnr = lineStartX[1]-br.x;
+//				dynr = (ar.y-1)-br.y;
+//				alphar = ((double)sqrt(dxnr*dxnr + dynr*dynr))/lineMagnitudeSqr;
+//
+//				lineDepthStart = 1.0/(1.0/brDepth + alphar*(1.0/arDepth - 1.0/brDepth));
+////				normalr = interpolate(brNormal, arNormal, alphar);
+////				point3dr = perspectiveInterpolate(br3dPoint, ar3dPoint, brDepth, arDepth, lineDepthStart, alphar);
+//
+//
+//				fragStart.pixel.x = lineStartX[1];
+//				fragStart.pixel.y = ar.y-1;
+//				fragStart.normal = interpolate(brNormal, arNormal, alphar);
+//				fragStart.location3D = perspectiveInterpolate(br3dPoint, ar3dPoint, brDepth, arDepth, lineDepthStart, alphar);
 					
 				
 				dxnr = lineStartX[1]-savedBr.x;
 				dynr = (ar.y-1)-savedBr.y;
-				alphar = ((double)sqrt(dxnr*dxnr + dynr*dynr)) * savedInvMagnitudeR;
+				alphar = ((double)sqrt(dxnr*dxnr + dynr*dynr))/savedMagnitudeR;
 				
-				lineInvDepthStart = savebrInvDepth + alphar*(savearInvDepth - savebrInvDepth);
+				lineDepthStart = 1.0/(1.0/savebrDepth + alphar*(1.0/savearDepth - 1.0/savebrDepth));
+				
 				
 				fragStart.pixel.x = lineStartX[1];
 				fragStart.pixel.y = ar.y-1;
 				fragStart.normal = interpolate(brNormal, arNormal, alphar);
+				fragStart.location3D = perspectiveInterpolate(savedBr3dPoint, savedAr3dPoint, savebrDepth, savearDepth, lineDepthStart, alphar);
 				
-//				fragStart.location3D = perspectiveInterpolateInv(savedBr3dPoint, savedAr3dPoint, alphar);
-				fragStart.location3D = perspectiveInterpolateInv(savedBr3dPoint, savedAr3dPoint, 1.0/savedBr3dPoint.z, 1.0/savedAr3dPoint.z, 0, alphar);
-				
-				savedInvMagnitudeR = lineInvMagnitudeSqr;
+				savedMagnitudeR = lineMagnitudeSqr;
 				savedBr = br;
-//				savearDepth = arDepth;
-//				savebrDepth = brDepth;
-				savearInvDepth = arInvDepth;
-				savebrInvDepth = brInvDepth;
+				savearDepth = arDepth;
+				savebrDepth = brDepth;
 				savedAr3dPoint = ar3dPoint;
 				savedBr3dPoint = br3dPoint;
 
@@ -774,12 +550,10 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 					lineStartX[2] = ar.x;// + (a2.x < a.x ? -1 : 1);
 //					sprintf(string, "lineStartX[1] corrected = %d", lineStartX[2]);
 					
-					savedInvMagnitudeR = lineInvMagnitudeSqr;
+					savedMagnitudeR = lineMagnitudeSqr;
 					savedBr = br;
-//					savearDepth = arDepth;
-//					savebrDepth = brDepth;
-					savearInvDepth = arInvDepth;
-					savebrInvDepth = brInvDepth;
+					savearDepth = arDepth;
+					savebrDepth = brDepth;
 					savedAr3dPoint = ar3dPoint;
 					savedBr3dPoint = br3dPoint;
 				}
@@ -791,8 +565,10 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 		
 		if (!skipLeftLine) {
 			if (tl++ > 2) {
+//				setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), depthsl[1], depthBuffer);
+				setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), depthsl[1]);
+				//				setWithDepthBuffer( pts2[2], '`', depths2[1], depthBuffer);
 				
-				setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), invDepthsl[1]);
 				
 			}
 			ptsl[0] = ptsl[1];
@@ -810,18 +586,38 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			}
 			dxnl = al.x-bl.x;
 			dynl = al.y-bl.y;
-			alphal = ((double)sqrt(dxnl*dxnl + dynl*dynl)) * lineInvMagnitudeSql;
+			alphal = ((double)sqrt(dxnl*dxnl + dynl*dynl))/lineMagnitudeSql;
+			depthsl[0] = depthsl[1];
+			depthsl[1] = depthsl[2];
+//			depthsl[2] = blDepth - alphal*(blDepth - alDepth);
+			depthsl[2] = 1.0/(1.0/blDepth + alphal*(1.0/alDepth - 1.0/blDepth));
+//			lineDepthEnd[2] = depthsl[2];
 			
-			invDepthsl[0] = invDepthsl[1];
-			invDepthsl[1] = invDepthsl[2];
-			invDepthsl[2] = (blInvDepth + alphal*(alInvDepth - blInvDepth));
 			
+//			normall[0] = normall[1];
+//			normall[1] = normall[2];
+//			normall[2] = interpolate(blNormal, alNormal, alphal);
+			
+//			point3dl[0] = point3dl[1];
+//			point3dl[1] = point3dl[2];
+////			point3dl[2] = interpolate(bl3dPoint, al3dPoint, alphal);
+////
+////			point3dl[2].z = 1.0/(1.0/bl3dPoint.z + alphal*(1.0/al3dPoint.z - 1.0/bl3dPoint.z));
+//
+//
+//			point3dl[2] = perspectiveInterpolate(bl3dPoint, al3dPoint, blDepth, alDepth, depthsl[2], alphal);
+//
+//			if(al.x == bl.x && al.y == bl.y) {
+//				setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), depthsl[1], depthBuffer);
+//			}
+//		}
 		
 		if (al.x == bl.x && al.y == bl.y && indexLeft != maxIndex) {
 			// new line time
 //			mvprintw(line++, 0, "New Left line!");
-			
-			setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), invDepthsl[1]);
+//
+//			setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), depthsl[1], depthBuffer);
+			setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), depthsl[1]);
 			
 			indexLeft = mod(indexLeft - 1, poly.numVertices);
 			
@@ -841,8 +637,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			al = onlyXY(poly.vertices[indexLeft]);
 			alNormal = restored.normals[indexLeft];
 			al3dPoint = restored.vertices[indexLeft];
-//			alDepth = poly.vertices[indexLeft].z;
-			alInvDepth = 1.0/poly.vertices[indexLeft].z;
+			alDepth = poly.vertices[indexLeft].z;
 			
 //			if (abs(al.x - lineStartX[1]) < abs(lineEndX[1] - lineStartX[1])) {
 ////						mvprintw(line++, 1, "Correcting lineEndX[1]");
@@ -853,8 +648,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			bl = onlyXY(poly.vertices[nextIndex]);
 			blNormal = restored.normals[nextIndex];
 			bl3dPoint = restored.vertices[nextIndex];
-//			blDepth = poly.vertices[nextIndex].z;
-			blInvDepth = 1.0/poly.vertices[nextIndex].z;
+			blDepth = poly.vertices[nextIndex].z;
 			
 			
 			
@@ -864,7 +658,7 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 			syl = al.y < bl.y ? 1 : -1;
 			errl = dxl + dyl;
 //			e2l;
-			lineInvMagnitudeSql = 1.0/sqrt(dxl*dxl + dyl*dyl);
+			lineMagnitudeSql = sqrt(dxl*dxl + dyl*dyl);
 			
 //			skipLeftLine = false;
 //			skipRightLine = true;
@@ -899,29 +693,25 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 					
 					dxnl = lineEndX[1]-savedBl.x;
 					dynl = (al.y-1)-savedBl.y;
-					alphal = ((double)sqrt(dxnl*dxnl + dynl*dynl)) * savedInvMagnitude;
-					
-					lineInvDepthEnd = saveblInvDepth + alphal*(savealInvDepth - saveblInvDepth);
+					alphal = ((double)sqrt(dxnl*dxnl + dynl*dynl))/savedMagnitude;
+					lineDepthEnd = 1.0/(1.0/saveblDepth + alphal*(1.0/savealDepth - 1.0/saveblDepth));
 					
 					fragEnd.pixel.x = lineEndX[1];
 					fragEnd.pixel.y = al.y-1;
 					fragEnd.normal = interpolate(blNormal, alNormal, alphal);
+					fragEnd.location3D = perspectiveInterpolate(savedBl3dPoint, savedAl3dPoint, saveblDepth, savealDepth, lineDepthEnd, alphal);
 					
-//					fragEnd.location3D = perspectiveInterpolateInv(savedBl3dPoint, savedAl3dPoint, alphal);
-//					fragEnd.location3D = perspectiveInterpolateInv(savedBl3dPoint, savedAl3dPoint, saveblInvDepth, savealInvDepth, 0, alphal);
-					fragEnd.location3D = perspectiveInterpolateInv(savedBl3dPoint, savedAl3dPoint, 1.0/savedBl3dPoint.z, 1.0/savedAl3dPoint.z, 0, alphal);
 					
 //						drawHorizonalLineWithDepthBuffer(lineStartX[0], lineEndX[0], lineY[0], fill, lineDepthStart[0], lineDepthEnd[0], depthBuffer);
 					//drawHorizonalLineWithShader(lineStartX[1], lineEndX[1], lineY[1], lineDepthStart[1], lineDepthEnd[1], point3dr[1],  point3dl[1], normalr[1], normall[1], modelView, userData, depthBuffer, fragmentShader);
 //					drawHorizonalLineWithShader(lineStartX[1], lineEndX[1], al.y-1, lineDepthStart, lineDepthEnd, point3dr,  point3dl, normalr, normall, modelView, userData, depthBuffer, fragmentShader);
-//					static bool shouldPlot = true;
-//					if (shouldPlot) {
-////						shouldPlot = false;
-////						drawHorizonalLineWithShader(fragStart, fragEnd, lineDepthStart, lineDepthEnd, userData);
-						this->drawHorizonalLineWithShader(fragStart, fragEnd, lineInvDepthStart, lineInvDepthEnd, userData);
-//					} else {
-//						shouldPlot = true;
-//					}
+					static bool shouldPlot = true;
+					if (shouldPlot) {
+//						shouldPlot = false;
+						drawHorizonalLineWithShader(fragStart, fragEnd, lineDepthStart, lineDepthEnd, userData);
+					} else {
+						shouldPlot = true;
+					}
 					
 					
 
@@ -930,11 +720,9 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 				lineEndX[1] = lineEndX[2];
 				
 				savedBl = bl;
-				savedInvMagnitude = lineInvMagnitudeSql;
-//				savealDepth = alDepth;
-//				saveblDepth = blDepth;
-				savealInvDepth = alInvDepth;
-				saveblInvDepth = blInvDepth;
+				savedMagnitude = lineMagnitudeSql;
+				savealDepth = alDepth;
+				saveblDepth = blDepth;
 				savedAl3dPoint = al3dPoint;
 				savedBl3dPoint = bl3dPoint;
 				
@@ -947,12 +735,10 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 //						mvprintw(line++, 1, "Correcting lineEndX[1]");
 						lineEndX[1] = al.x;
 						
-						savedInvMagnitude = lineInvMagnitudeSql;
+						savedMagnitude = lineMagnitudeSql;
 						savedBl = bl;
-//						savealDepth = alDepth;
-//						saveblDepth = blDepth;
-						savealInvDepth = alInvDepth;
-						saveblInvDepth = blInvDepth;
+						savealDepth = alDepth;
+						saveblDepth = blDepth;
 						savedAl3dPoint = al3dPoint;
 						savedBl3dPoint = bl3dPoint;
 //						dxnl = lineEndX[1]-bl.x;
@@ -968,34 +754,38 @@ void RenderPipeline::drawPolygonShader( Polygon4D& poly, Polygon4D& restored, vo
 		
 	}
 	if (tr > 2) {
-//		setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), depthsr[1]);
-		setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), invDepthsr[1]);
+		setWithDepthBuffer( ptsr[1], getp( ptsr, errsNormalizedr[1] + 0.5), depthsr[1]);
 	}
 	if (tl > 2) {
-//		setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), depthsl[1]);
-		setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), invDepthsl[1]);
+		setWithDepthBuffer( ptsl[1], getp( ptsl, errsNormalizedl[1] + 0.5), depthsl[1]);
 	}
 	// draw the final fill line
+	
+	if ( lineCount > 0 ) {
+//		mvprintw(line++, 0, "final line: %d,%d", lineStartX[1],lineEndX[1]);
+//		drawHorizonalLineWithDepthBuffer(lineStartX[1], lineEndX[1], lineY[1], fill, lineDepthStart[1], lineDepthEnd[1], depthBuffer);
+		
+//		mvprintw(line++, 1, "Final line from %d-%d @ row %d", lineStartX[1], lineEndX[1], lineY[1]);
+		//drawHorizonalLineWithShader(lineStartX[1], lineEndX[1], lineY[1], lineDepthStart[1], lineDepthEnd[1], point3dr[1],  point3dl[1], normalr[1], normall[1], modelView, userData, depthBuffer, fragmentShader);
+	}
 		
 }
 
 
-void RenderPipeline::setWithDepthBuffer( Coordinates2D pt, char c, double invDepth) {
+void RenderPipeline::setWithDepthBuffer( Coordinates2D pt, char c, double depth) {
 	if (depthBuffer != NULL) {
 		if ( pt.x < 0 || pt.y < 0 || depthBuffer->cols <= pt.x || depthBuffer->rows <= pt.y) {
 			return;
 		}
-		int depthIndex = pt.x + depthBuffer->cols*pt.y;
-		if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
+		if (1.0/depth > ((double*)depthBuffer->data)[pt.x + depthBuffer->cols*pt.y]) {
 			ColorRGBA color;
 			color.b = 255;
 			color.g = 255;
 			color.r = 255;
 			color.a = c;
-//			setRenderBuffer(pt.x, pt.y, color);
-			setRenderBuffer(depthIndex, color);
+			setRenderBuffer(pt.x, pt.y, color);
 			
-			((double*)depthBuffer->data)[depthIndex] = invDepth;
+			((double*)depthBuffer->data)[pt.x + depthBuffer->cols*pt.y] = 1.0/depth;
 //			return;
 //
 //
@@ -1031,18 +821,16 @@ void RenderPipeline::setWithDepthBuffer( Coordinates2D pt, char c, double invDep
 	}
 }
 
-void RenderPipeline::setWithDepthBuffer( Coordinates4D pt, char c, double invDepth) {
-	setWithDepthBuffer(onlyXY(pt), c, invDepth);
+void RenderPipeline::setWithDepthBuffer( Coordinates4D pt, char c, double depth) {
+	setWithDepthBuffer(onlyXY(pt), c, depth);
 }
 
-void RenderPipeline::drawHorizonalLineWithShader( FragmentInfo& start, FragmentInfo& end, double invDepth1, double invDepth2, void* userData) {
+void RenderPipeline::drawHorizonalLineWithShader( FragmentInfo& start, FragmentInfo& end, double depth1, double depth2, void* userData) {
 	Coordinates2D pixel;
 	int diff = end.pixel.x-start.pixel.x;
 	if (abs(diff) < 2) {
 		return;
 	}
-	double invDiff = 1.0/(double)diff;
-	
 	if (start.pixel.y != end.pixel.y) {
 //		mvprintw(20, 10, "start.pixel.y != end.pixel.y: %d,%d", start.pixel.y, end.pixel.y);
 		return;
@@ -1055,14 +843,11 @@ void RenderPipeline::drawHorizonalLineWithShader( FragmentInfo& start, FragmentI
 	Coordinates3D normal;
 	double invDepth;
 	
-	double startLocation3DInvDepth = 1.0/start.location3D.z;
-	double endLocation3DInvDepth = 1.0/end.location3D.z;
-	
 	pixel.y = start.pixel.y;
 	for (int i = start.pixel.x+increment; i != end.pixel.x; i += increment) {
 		pixel.x = i;
 		
-		factor = ((double)(i - start.pixel.x))*invDiff;
+		factor = ((double)(i - start.pixel.x)/(double)diff);
 		
 //		point = vectorSubtract(point2, point1);
 //		point.x *= factor;
@@ -1073,10 +858,10 @@ void RenderPipeline::drawHorizonalLineWithShader( FragmentInfo& start, FragmentI
 //		point = interpolate(point1, point2, factor);
 //		point.z = 1.0/(1.0/point1.z + factor*(1.0/point2.z - 1.0/point1.z));
 		
-//		point = perspectiveInterpolate(start.location3D, end.location3D, factor);
-		point = perspectiveInterpolateInv(start.location3D, end.location3D, startLocation3DInvDepth, endLocation3DInvDepth, 0, factor);
+		point = perspectiveInterpolate(start.location3D, end.location3D, 0, 0, 0, factor);
 		
-		invDepth = (invDepth1 + factor*(invDepth2 - invDepth1));
+//		depth = 1.0/(1.0/depth1 + factor*(1.0/depth2 - 1.0/depth1));
+		invDepth = (1.0/depth1 + factor*(1.0/depth2 - 1.0/depth1));
 		
 //		normal = vectorSubtract(normal2, normal1);
 //		normal.x *= factor;
@@ -1085,7 +870,7 @@ void RenderPipeline::drawHorizonalLineWithShader( FragmentInfo& start, FragmentI
 //		normal = vectorAdd(normal, normal1);
 		
 //		normal = interpolate(start.normal, end.normal, factor);
-		normal = perspectiveInterpolateInv(start.normal, end.normal, startLocation3DInvDepth, endLocation3DInvDepth, point.z, factor);
+		normal = perspectiveInterpolate(start.normal, end.normal, start.location3D.z, end.location3D.z, point.z, factor);
 		normal = normalizeVectorFast(normal);
 		
 		setWithShader(pixel, invDepth, point, normal, userData);
@@ -1113,20 +898,19 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
 		fInfo.colorOutput = &colorOutput;
 		fragmentShader(fInfo);
 		
-//		setRenderBuffer(pixel.x, pixel.y, colorOutput);
-		setRenderBuffer(depthIndex, colorOutput);
+		setRenderBuffer(pixel.x, pixel.y, colorOutput);
 	}
 }
 
 
-void RenderPipeline::setFloatDotWithDepthBuffer( double x, double y, double invDepth) {
+void RenderPipeline::setFloatDotWithDepthBuffer( double x, double y, double depth) {
 	if (depthBuffer != NULL) {
 		if ( (int)x < 0 || (int)y < 0 || depthBuffer->cols <= (int)x || depthBuffer->rows <= (int)y) {
 			return;
 		}
-		if (invDepth > ((double*)depthBuffer->data)[(int)x + depthBuffer->cols*(int)y]) {
+		if (1.0/depth > ((double*)depthBuffer->data)[(int)x + depthBuffer->cols*(int)y]) {
 			drawDotFloat(x, y);
-			((double*)depthBuffer->data)[(int)x + depthBuffer->cols*(int)y] = invDepth;
+			((double*)depthBuffer->data)[(int)x + depthBuffer->cols*(int)y] = 1.0/depth;
 		}
 	} else {
 		drawDotFloat(x, y);
@@ -1171,17 +955,12 @@ void RenderPipeline::drawDotFloat(double x, double y) {
 
 
 
-void RenderPipeline::setRenderBuffer(const int& x, const int& y, ColorRGBA& color) {
+void RenderPipeline::setRenderBuffer(int x, int y, ColorRGBA& color) {
 	((ColorRGBA*)(fbo[0].data))[x + fbo[0].cols * y] = color;
-}
-void RenderPipeline::setRenderBuffer(const int& index, ColorRGBA& color) {
-	((ColorRGBA*)(fbo[0].data))[index] = color;
 }
 
 
 void RenderPipeline::renderBufferToTerminal() {
-	waitForThreads();
-	
 	Coordinates2D pixel;
 	Coordinates3D color;
 	int offset, index;
@@ -1217,15 +996,15 @@ void RenderPipeline::renderBufferToTerminal() {
 			
 #else
 			int offsetfb = (y * (fb_bytes_per_length) + x)*fb_bytes;
-//			uint16_t finalcolor = 0;
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].r & 0xF8) << (11-3);
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].g & 0xFC) << (5-2);
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].b & 0xF8) >> (3);
-//			*(uint16_t*)&fbdata[0 + offsetfb] = finalcolor;
+			uint16_t finalcolor = 0;
+			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].r & 0xF8) << (11-3);
+			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].g & 0xFC) << (5-2);
+			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].b & 0xF8) >> (3);
+//			fbdata[2 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].r;
+//			fbdata[1 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].g;
+//			fbdata[0 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].b;
 			
-			fbdata[2 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].r;
-   			fbdata[1 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].g;
-   			fbdata[0 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].b;
+			*(uint16_t*)&fbdata[0 + offsetfb] = finalcolor;
 			
 #endif
 		}
@@ -1233,8 +1012,6 @@ void RenderPipeline::renderBufferToTerminal() {
 }
 
 void RenderPipeline::depthBufferToTerminal() {
-	waitForThreads();
-	
 	Coordinates2D pixel;
 	Coordinates3D color;
 	int offset, index;
@@ -1247,17 +1024,7 @@ void RenderPipeline::depthBufferToTerminal() {
 			pixel.x = x;
 			pixel.y = y;
 			
-//			double zFar = 100;
-//			double zNear = 0.001;
-//
-//			double z = 1.0/((((double*)depthBuffer->data)[index] - (zFar+zNear)/(zFar-zNear)) * );
-			
-//			uint8_t luminosity = (((double*)depthBuffer->data)[index]-1)*150000;
-			int L = ((((double*)depthBuffer->data)[index])-1)*25500000.0;
-			//printf("d = %f\n",  1.0/((double*)depthBuffer->data)[index]);
-			L = L > 255 ? 255 : L;
-			L = L < 0 ? 0 : L;
-			uint8_t luminosity = L;//(((double*)depthBuffer->data)[index]+1)*255.0/2.0;
+			uint8_t luminosity = (((double*)depthBuffer->data)[index]-1)*200000;
 			
 			color.x = (double)luminosity / 255.0;
 			color.y = (double)luminosity / 255.0;
@@ -1282,16 +1049,16 @@ void RenderPipeline::depthBufferToTerminal() {
 			
 #else
 			int offsetfb = (y * (fb_bytes_per_length) + x)*fb_bytes;
-//			uint16_t finalcolor = 0;
-//			finalcolor |= (luminosity & 0xF8) << (11-3);
-//			finalcolor |= (luminosity & 0xFC) << (5-2);
-//			finalcolor |= (luminosity & 0xF8) >> (3);
-//			*(uint16_t*)&fbdata[0 + offsetfb] = finalcolor;
+			uint16_t finalcolor = 0;
+			finalcolor |= (luminosity & 0xF8) << (11-3);
+			finalcolor |= (luminosity & 0xFC) << (5-2);
+			finalcolor |= (luminosity & 0xF8) >> (3);
+//			fbdata[2 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].r;
+//			fbdata[1 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].g;
+//			fbdata[0 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].b;
 			
+			*(uint16_t*)&fbdata[0 + offsetfb] = finalcolor;
 			
-			fbdata[2 + offsetfb] = luminosity;
-			fbdata[1 + offsetfb] = luminosity;
-			fbdata[0 + offsetfb] = luminosity;
 #endif
 		}
 	}

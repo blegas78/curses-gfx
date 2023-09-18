@@ -88,7 +88,7 @@ int main(void) {
 	int screenSizeX, screenSizeY;
 	getmaxyx(stdscr, screenSizeY, screenSizeX);
 	double size = (screenSizeY-1)/(2*aspect);	// radius in x
-	Coordinates2D center = {screenSizeX/2, (int)(size*aspect)};
+	Coordinates2D center = {screenSizeX/2, size*aspect};
 	
 	
 	while (keepRunning == true) {

@@ -16,5 +16,4 @@ char getp( Coordinates2D* pts, double err);
 void ln( Coordinates2D a, Coordinates2D b);
 
 
-
 #endif

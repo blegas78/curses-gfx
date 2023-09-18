@@ -88,36 +88,25 @@ void lightFs2(const FragmentInfo& fInfo) {
 	
 	Coordinates3D colorRGB = {0,0,0};
 	
-	Coordinates4D lightToFrag;
-	Coordinates3D lightToFragNoramlized;
-	double intensity2;
-//	double lightMagnitudeSquared;
-	double lightMagnitude;
-	Coordinates3D lightReflected;
-	double intensitySpecular;
-	double intensity;
-	
 	for (int i = 0; i < lights->numLights; i++) {
-		lightToFrag = vectorSubtract(lights->modelView[i], fInfo.location3D);
+		Coordinates4D lightToFrag = vectorSubtract(lights->modelView[i], fInfo.location3D);
 		if(dotProduct(lightToFrag, fInfo.normal) < 0) {
 			continue;
 		}
-		lightToFragNoramlized = normalizeVectorFast(lightToFrag);
-		intensity2 = 5.0*1.0;//dotProduct(lightToFragNoramlized, fInfo.normal) *0.75;
+		Coordinates3D lightToFragNoramlized = normalizeVectorFast(lightToFrag);
+		double intensity2 = 5.0*1.0;//dotProduct(lightToFragNoramlized, fInfo.normal) *0.75;
 		
-//		lightMagnitudeSquared = dotProduct(lightToFrag, lightToFrag) ;
-		lightMagnitude = Q_rsqrt( dotProduct(lightToFrag, lightToFrag) );
+		double lightMagnitudeSquared = dotProduct(lightToFrag, lightToFrag) ;
 		
-		lightReflected = vectorScale(fInfo.normal, 2*dotProduct(fInfo.normal, lightToFragNoramlized));
+		Coordinates3D lightReflected = vectorScale(fInfo.normal, 2*dotProduct(fInfo.normal, lightToFragNoramlized));
 		lightReflected = vectorSubtract(lightToFragNoramlized, lightReflected);
 		
-		intensitySpecular = dotProduct(lightReflected, fInfo.location3D);
+		double intensitySpecular = dotProduct(lightReflected, fInfo.location3D);
 //		intensitySpecular /= sqrt(dotProduct(fInfo.location3D, 	fInfo.location3D));
 		intensitySpecular *= Q_rsqrt(dotProduct(fInfo.location3D, fInfo.location3D));
-		intensitySpecular = pow(intensitySpecular, 32)*0.9;
+		intensitySpecular = pow(intensitySpecular, 32)*0.9*2.0;
 		
-//		intensity = (1/(lightMagnitudeSquared) * intensity2 +  intensitySpecular);
-		intensity = (lightMagnitude*lightMagnitude * intensity2 +  intensitySpecular);
+		double intensity = (1/(lightMagnitudeSquared) * intensity2 +  intensitySpecular);
 		
 		
 		colorRGB.x += intensity*lights->color[i].x;
@@ -323,17 +312,6 @@ int main(int argc, char** argv) {
 //			ground[p].normals[i].x = 0;
 //			ground[p].normals[i].y = 0;
 //			ground[p].normals[i].z = 1;
-			
-			Coordinates3D hsv, rgb;
-			hsv.x = (i*5+p)*360/20;
-			hsv.y = 0.5;
-			hsv.z = 0.5;
-			rgb = hslToRgb(hsv);
-			
-			ground[p].colors[i].r = rgb.x;
-			ground[p].colors[i].g = rgb.y;
-			ground[p].colors[i].b = rgb.z;
-			ground[p].colors[i].a = 0;
 		}
 	}
 	Coordinates4D wallHeight = {0,0,10,0};
@@ -366,8 +344,8 @@ int main(int argc, char** argv) {
 	
 #ifdef FB_SUPPORT	// HACK
 	characterAspect = 1.0;	// RGB panel
-#define PANEL_X_RES (64)
-#define PANEL_Y_RES (64)
+#define PANEL_X_RES (256*2)
+#define PANEL_Y_RES (128*2)
 	screenSizeY = PANEL_Y_RES;
 	screenSizeX = PANEL_X_RES;
 #endif
@@ -392,8 +370,8 @@ int main(int argc, char** argv) {
 	Mat4D viewMatrix = matrixMultiply( cameraOrientation, cameraTranslation );
 	
 	// Projection
-	double zFar = 30;
-	double zNear = 0.1;
+	double zFar = 100;
+	double zNear = .001;
 	Mat4D projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
 	
 	// Viewport
@@ -419,7 +397,7 @@ int main(int argc, char** argv) {
 	bool showGrid = false;
 	bool autoRotate = true;
 	bool showDepth = true;
-	double delayTime = 0;//1.0/60;
+	double delayTime = 1.0/60;
 	while (keepRunning == true) {
 		debugLine = 0;
 		
@@ -432,9 +410,8 @@ int main(int argc, char** argv) {
 		usleep(1000000.0*delayTime);
 //		depthBuffer.reset();
 		mRenderPipeline.reset();
-		//erase();
-		mvprintw(debugLine++, 0, "FPS: %f", 1000.0/float_ms.count());
-		mvprintw(debugLine++, 0, "Delay time %f", delayTime);
+		erase();
+//		mvprintw(debugLine++, 0, "FPS: %f", 1000.0/float_ms.count());
 //		mvprintw(debugLine++, 0, "tilt: %f", tilt*180.0/M_PI);
 		
 		
@@ -472,8 +449,8 @@ int main(int argc, char** argv) {
 		LightParams mLightParams;
 		mLightParams.numLights = 3;
 		mLightParams.modelView[0] = lightModelView;
-		mLightParams.color[0].x = 0.0;//1.25/3.0;
-		mLightParams.color[0].y = 0.0;//0.9/3.0;
+		mLightParams.color[0].x = 0.1;//1.25/3.0;
+		mLightParams.color[0].y = 0.1;//0.9/3.0;
 		mLightParams.color[0].z = 3.0/3.0;
 		
 		
@@ -483,17 +460,17 @@ int main(int argc, char** argv) {
 		light[1].w = 1;
 		mLightParams.modelView[1] = matrixVectorMultiply(viewMatrix, light[1]);
 		mLightParams.color[1].x = 1.0;
-		mLightParams.color[1].y = 0.0;//0.1;
-		mLightParams.color[1].z = 0.0;
+		mLightParams.color[1].y = 0.1;//0.1;
+		mLightParams.color[1].z = 0.1;
 		
 		light[2].x = 6*cos(lightAngle*1.75);
 		light[2].y = 6*sin(lightAngle*1.75);
 		light[2].z = 3 + 1.0*sin(lightAngle*7.0);
 		light[2].w = 1;
 		mLightParams.modelView[2] = matrixVectorMultiply(viewMatrix, light[2]);
-		mLightParams.color[2].x = 0.0;
+		mLightParams.color[2].x = 0.1;
 		mLightParams.color[2].y = 1.0;
-		mLightParams.color[2].z = 0.0;
+		mLightParams.color[2].z = 0.1;
 		
 		for (int i = 0; i < mLightParams.numLights; i++) {
 			Mat4D lightScale = scaleMatrix(0.15, 0.15, 0.15);
@@ -538,7 +515,7 @@ int main(int argc, char** argv) {
 		Coordinates3D cube2roationAxis = {1+sin(0.9*cube2angle), sin(0.8*cube2angle), sin(0.7*cube2angle)};
 		cube2roationAxis = normalizeVector(cube2roationAxis);
 		Mat4D cube2rotation = rotationFromAngleAndUnitAxis(cube2angle*1.1, cube2roationAxis);
-		Mat4D cube2translation = translationMatrix(1, -1, 0.1);
+		Mat4D cube2translation = translationMatrix(1, -1, 0);
 		Mat4D modelViewCube2 = matrixMultiply(cube2translation, cube2rotation);
 		modelViewCube2 = matrixMultiply(viewMatrix, modelViewCube2);
 //		for (int i = 0; i < sizeof(cube)/sizeof(cube[0]); i++) {

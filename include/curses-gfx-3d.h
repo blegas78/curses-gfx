@@ -53,7 +53,6 @@ typedef struct _Polygon4D {
 	int numVertices;
 	Coordinates4D vertices[10];
 	Coordinates3D normals[10];
-	ColorRGBA colors[10];
 } Polygon4D;
 
 
@@ -136,7 +135,6 @@ typedef struct _FragmentInfo {
 	Coordinates2D pixel;
 	Coordinates4D location3D;
 	Coordinates3D normal;
-	ColorRGBA color;
 //	Mat4D modeView;
 	void* data;
 	ColorRGBA* colorOutput;
@@ -202,25 +200,15 @@ Coordinates3D vectorScale(Coordinates3D a, double scale);
 
 Coordinates3D interpolate(Coordinates3D& a, Coordinates3D& b, double factor);
 Coordinates4D interpolate(Coordinates4D& a, Coordinates4D& b, double factor);
-ColorRGBA interpolate(ColorRGBA& a, ColorRGBA& b, double factor);
 //Coordinates4D perspectiveInterpolate(Coordinates4D& a, Coordinates4D& b, double aDepth, double bDepth, double factor);
-Coordinates4D perspectiveInterpolate(Coordinates4D& a, Coordinates4D& b, double factor);
+Coordinates4D perspectiveInterpolate(Coordinates4D& a, Coordinates4D& b, double aDepth, double bDepth, double correctDepth, double factor);
 Coordinates3D perspectiveInterpolate(Coordinates3D& a, Coordinates3D& b, double aDepth, double bDepth, double correctDepth, double factor);
-Coordinates4D perspectiveInterpolateInv(Coordinates4D& a, Coordinates4D& b, double aInvDepth, double bInvDepth, double correctDepth, double factor);
-Coordinates3D perspectiveInterpolateInv(Coordinates3D& a, Coordinates3D& b, double aInvDepth, double bInvDepth, double correctDepth, double factor);
 
 // Rendering
 Coordinates3D clipRGB(Coordinates3D rgb);
 Coordinates3D rgbToHsv( const Coordinates3D& rgb);
-Coordinates3D hslToRgb(Coordinates3D hsl);
 void setRGB( const Coordinates2D& pt, const Coordinates3D& rgb);
-void setFrameBufferRGBA(int x, int y, FrameBuffer* fbo, const ColorRGBA& value);
 void rasterize(Coordinates4D* vertices, int edgeIndices[][2], int numEdges, Mat4D& windowTransform, DepthBuffer* depthBuffer);
-//void triangleFill(Coordinates4D& p1, Coordinates4D& p2, Coordinates4D& p3, FrameBuffer* output);
-//void triangleFill(Coordinates4D* vertices, ColorRGBA* colors, FrameBuffer* fbo);
-bool compareCoordinatesFrag(FragmentInfo i1, FragmentInfo i2);
-void triangleFill(FragmentInfo* fragments, FrameBuffer* fbo);
-void drawPolygonWithTriangles( Polygon4D& poly, FrameBuffer* fbo);
 void rasterizeTriangle(Coordinates4D* vertices, int edgeIndices[][3], int numEdges, Mat4D& windowTransform, DepthBuffer* depthBuffer, char fill=' ', int line=0);
 void rasterizeQuads(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& windowTransform, DepthBuffer* depthBuffer, char fill, int &line);
 void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, DepthBuffer* depthBuffer, void (*fragmentShader)(const FragmentInfo&), int &line);

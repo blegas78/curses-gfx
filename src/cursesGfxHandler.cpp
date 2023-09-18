@@ -3,7 +3,6 @@
 void *cursesHandlerRender(void *data) {
 	CursesGfxHandler* This = (CursesGfxHandler*)data;
 	
-	return NULL;
 }
 
 

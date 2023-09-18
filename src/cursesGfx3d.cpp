@@ -7,8 +7,7 @@
 #include <stdint.h>
 
 #include <ncurses.h>
-#include <vector>
-#include <algorithm>
+
 
 float Q_rsqrt( float number )
 {
@@ -351,8 +350,7 @@ void drawHorizonalLineWithShader(int x1, int x2, int y, double depth1, double de
 //		point = interpolate(point1, point2, factor);
 //		point.z = 1.0/(1.0/point1.z + factor*(1.0/point2.z - 1.0/point1.z));
 		
-//		point = perspectiveInterpolate(point1, point2, 0, 0, 0, factor);
-		point = perspectiveInterpolate(point1, point2, factor);
+		point = perspectiveInterpolate(point1, point2, 0, 0, 0, factor);
 		
 		depth = 1.0/(1.0/depth1 + factor*(1.0/depth2 - 1.0/depth1));
 		
@@ -1173,26 +1171,14 @@ Coordinates4D interpolate(Coordinates4D& a, Coordinates4D& b, double factor) {
 double perspectiveInterpolate(double& a, double& b, double& aDepth, double& bDepth, double& correctDepth, double& factor) {
 	return correctDepth*(a/aDepth + factor*(b/bDepth - a/aDepth));
 }
-double perspectiveInterpolateInv(double& a, double& b, double& aInvDepth, double& bInvDepth, double& correctDepth, double& factor) {
-	return correctDepth*(a*aInvDepth + factor*(b*bInvDepth - a*aInvDepth));
-	//return correctDepth*(a*aInvDepth* (1 - factor) + factor*(b*bInvDepth));
-}
 
-Coordinates4D perspectiveInterpolate(Coordinates4D& a, Coordinates4D& b, double factor) {
+Coordinates4D perspectiveInterpolate(Coordinates4D& a, Coordinates4D& b, double aDepth, double bDepth, double correctDepth, double factor) {
 	Coordinates4D result;
 	
-//	result.z = 1.0/(1.0/a.z + factor*(1.0/b.z - 1.0/a.z));	// This is Zt, where Z1 is with "a" and Z2 is with "b"
-//	result.x = perspectiveInterpolate(a.x, b.x, a.z, b.z, result.z, factor);
-//	result.y = perspectiveInterpolate(a.y, b.y, a.z, b.z, result.z, factor);
-//	result.w = perspectiveInterpolate(a.w, b.w, a.z, b.z, result.z, factor);
-	
-	double aInvDepth = 1.0/a.z;
-	double bInvDepth = 1.0/b.z;
-	result.z = 1.0/(aInvDepth + factor*(bInvDepth - aInvDepth));	// This is Zt, where Z1 is with "a" and Z2 is with "b"
-	result.x = perspectiveInterpolateInv(a.x, b.x, aInvDepth, bInvDepth, result.z, factor);
-	result.y = perspectiveInterpolateInv(a.y, b.y, aInvDepth, bInvDepth, result.z, factor);
-	result.w = perspectiveInterpolateInv(a.w, b.w, aInvDepth, bInvDepth, result.z, factor);
-	
+	result.z = 1.0/(1.0/a.z + factor*(1.0/b.z - 1.0/a.z));	// This is Zt, where Z1 is with "a" and Z2 is with "b"
+	result.x = perspectiveInterpolate(a.x, b.x, a.z, b.z, result.z, factor);
+	result.y = perspectiveInterpolate(a.y, b.y, a.z, b.z, result.z, factor);
+	result.w = perspectiveInterpolate(a.w, b.w, a.z, b.z, result.z, factor);
 	
 	return result;
 }
@@ -1200,62 +1186,32 @@ Coordinates4D perspectiveInterpolate(Coordinates4D& a, Coordinates4D& b, double 
 Coordinates3D perspectiveInterpolate(Coordinates3D& a, Coordinates3D& b, double aDepth, double bDepth, double correctDepth, double factor) {
 	Coordinates3D result;
 	
-//	result.z = perspectiveInterpolate(a.z, b.z, aDepth, bDepth, correctDepth, factor);
-//	result.x = perspectiveInterpolate(a.x, b.x, aDepth, bDepth, correctDepth, factor);
-//	result.y = perspectiveInterpolate(a.y, b.y, aDepth, bDepth, correctDepth, factor);
+	result.z = perspectiveInterpolate(a.z, b.z, aDepth, bDepth, correctDepth, factor);
+	result.x = perspectiveInterpolate(a.x, b.x, aDepth, bDepth, correctDepth, factor);
+	result.y = perspectiveInterpolate(a.y, b.y, aDepth, bDepth, correctDepth, factor);
 	//result.w = perspectiveInterpolate(a.w, b.w, a.z, b.z, result.z, factor);
-	
-	double aInvDepth = 1.0/aDepth;
-	double bInvDepth = 1.0/bDepth;
-	result.z = perspectiveInterpolateInv(a.z, b.z, aInvDepth, bInvDepth, correctDepth, factor);
-	result.x = perspectiveInterpolateInv(a.x, b.x, aInvDepth, bInvDepth, correctDepth, factor);
-	result.y = perspectiveInterpolateInv(a.y, b.y, aInvDepth, bInvDepth, correctDepth, factor);
-	
-	return result;
-}
-
-Coordinates4D perspectiveInterpolateInv(Coordinates4D& a, Coordinates4D& b, double aInvDepth, double bInvDepth, double correctDepth, double factor) {
-	Coordinates4D result;
-
-//	 aInvDepth = 1.0/a.z;
-//	 bInvDepth = 1.0/b.z;
-	result.z = 1.0/(aInvDepth + factor*(bInvDepth - aInvDepth));	// This is Zt, where Z1 is with "a" and Z2 is with "b"
-	result.x = perspectiveInterpolateInv(a.x, b.x, aInvDepth, bInvDepth, result.z, factor);
-	result.y = perspectiveInterpolateInv(a.y, b.y, aInvDepth, bInvDepth, result.z, factor);
-	result.w = perspectiveInterpolateInv(a.w, b.w, aInvDepth, bInvDepth, result.z, factor);
-	
-	
-	return result;
-}
-
-Coordinates3D perspectiveInterpolateInv(Coordinates3D& a, Coordinates3D& b, double aInvDepth, double bInvDepth, double correctDepth, double factor) {
-	Coordinates3D result;
-
-	result.z = perspectiveInterpolateInv(a.z, b.z, aInvDepth, bInvDepth, correctDepth, factor);
-	result.x = perspectiveInterpolateInv(a.x, b.x, aInvDepth, bInvDepth, correctDepth, factor);
-	result.y = perspectiveInterpolateInv(a.y, b.y, aInvDepth, bInvDepth, correctDepth, factor);
 	
 	return result;
 }
 
 Coordinates3D normalizeVector(Coordinates3D& input) {
 	Coordinates3D result;
-	double invMag = 1.0/sqrt(input.x*input.x + input.y*input.y + input.z*input.z);
+	double mag = sqrt(input.x*input.x + input.y*input.y + input.z*input.z);
 
-	result.x = input.x*invMag;
-	result.y = input.y*invMag;
-	result.z = input.z*invMag;
+	result.x = input.x/mag;
+	result.y = input.y/mag;
+	result.z = input.z/mag;
 	
 	return result;
 }
 
 Coordinates3D normalizeVector(Coordinates4D& input) {
 	Coordinates3D result;
-	double invMag = 1.0/sqrt(input.x*input.x + input.y*input.y + input.z*input.z);
+	double mag = sqrt(input.x*input.x + input.y*input.y + input.z*input.z);
 
-	result.x = input.x*invMag;
-	result.y = input.y*invMag;
-	result.z = input.z*invMag;
+	result.x = input.x/mag;
+	result.y = input.y/mag;
+	result.z = input.z/mag;
 	
 	return result;
 }
@@ -2754,7 +2710,6 @@ int clipPlane(Polygon4D input, Polygon4D* output, int axis, int plane, int& line
 	
 	Coordinates4D *current = &input.vertices[0];
 	Coordinates3D *currentNormal = &input.normals[0];
-	ColorRGBA *currentColor = &input.colors[0];
 	Coordinates4D *prior = &input.vertices[input.numVertices-1];
 	previousDot = ((double*)prior)[axis] <= prior->w ;
 	for (; current != &input.vertices[input.numVertices]; ) {
@@ -2774,7 +2729,6 @@ int clipPlane(Polygon4D input, Polygon4D* output, int axis, int plane, int& line
 			
 			output->vertices[output->numVertices] = diff;
 			output->normals[output->numVertices] = *currentNormal; // this should be interpolated as well
-			output->colors[output->numVertices] = *currentColor; // this should be interpolated as well
 			output->numVertices++;
 		}
 		
@@ -2782,7 +2736,6 @@ int clipPlane(Polygon4D input, Polygon4D* output, int axis, int plane, int& line
 //				mvprintw(line++, 0, " - - Vertex Insertion");
 			output->vertices[output->numVertices] = *current;
 			output->normals[output->numVertices] = *currentNormal;
-			output->colors[output->numVertices] = *currentColor;
 			output->numVertices++;
 		}
 		
@@ -2790,7 +2743,6 @@ int clipPlane(Polygon4D input, Polygon4D* output, int axis, int plane, int& line
 		prior = current;
 		current++;
 		currentNormal++;
-		currentColor++;
 	}
 	
 	input = *output;
@@ -2798,7 +2750,6 @@ int clipPlane(Polygon4D input, Polygon4D* output, int axis, int plane, int& line
 	
 	current = &input.vertices[0];
 	currentNormal = &input.normals[0];
-	currentColor = &input.colors[0];
 	prior = &input.vertices[input.numVertices-1];
 	previousDot = -((double*)prior)[axis] <= prior->w;
 	for (; current != &input.vertices[input.numVertices]; ) {
@@ -2819,7 +2770,6 @@ int clipPlane(Polygon4D input, Polygon4D* output, int axis, int plane, int& line
 			
 			output->vertices[output->numVertices] = diff;
 			output->normals[output->numVertices] = *currentNormal; // this should be interpolated as well
-			output->colors[output->numVertices] = *currentColor; // this should be interpolated as well
 			output->numVertices++;
 		}
 		
@@ -2827,7 +2777,6 @@ int clipPlane(Polygon4D input, Polygon4D* output, int axis, int plane, int& line
 //				mvprintw(line++, 0, " - - Vertex Insertion");
 			output->vertices[output->numVertices] = *current;
 			output->normals[output->numVertices] = *currentNormal;
-			output->colors[output->numVertices] = *currentColor;
 			output->numVertices++;
 		}
 		
@@ -2835,7 +2784,6 @@ int clipPlane(Polygon4D input, Polygon4D* output, int axis, int plane, int& line
 		prior = current;
 		current++;
 		currentNormal++;
-		currentColor++;
 	}
 	return 1;
 }
@@ -2852,7 +2800,7 @@ int clipPolygon(Polygon4D& input, Polygon4D* output, int& line) {
 	
 	// The following functions are from https://fabiensanglard.net/polygon_codec/
 	
-//	clipW(input, output, line);	// I don't think this is necessary
+	//clipW(input, output, line);	// I don't think this is necessary
 	clipPlane(input, output, 0, 1, line);
 	clipPlane(*output, output, 1, 1, line);
 	clipPlane(*output, output, 2, 1, line);
@@ -2885,225 +2833,4 @@ void asTexImage2d(FrameBuffer* fbo, FrameBufferType type, int width, int height)
 		free(fbo->data);
 	}
 	fbo->data = (uint8_t*)malloc(width*height*channels);
-}
-
-
-
-void setFrameBufferRGBA(int x, int y, FrameBuffer* fbo, const ColorRGBA& value) {
-	if (x < 0 || y < 0 || x >= fbo->cols || y >= fbo->rows) {
-		return;
-	}
-	
-	((ColorRGBA*)fbo->data)[y*fbo->cols + x] = value;
-	
-}
-
-
-ColorRGBA interpolate(ColorRGBA& a, ColorRGBA& b, double factor) {
-	ColorRGBA result;
-	result.r = a.r + factor*(b.r - a.r);
-	result.g = a.g + factor*(b.g - a.g);
-	result.b = a.b + factor*(b.b - a.b);
-	result.a = a.a + factor*(b.a - a.a);
-	
-	return result;
-}
-
-void drawHorizonalLineRGBA(double x1, double x2, int y, ColorRGBA& color1, ColorRGBA& color2, FrameBuffer* fbo) {
-//	Coordinates2D pixel;
-//	int diff = x2-x1;
-//	if (abs(diff) < 2) {
-//		return;
-//	}
-	if ((int)x1 == (int)x2) {
-		
-		setFrameBufferRGBA(x1, y, fbo, interpolate(color1, color2, 0.5));
-		return;
-	}
-	
-	int increment = x2 > x1 ? 1.0 : -1.0;
-//	double factor;
-	
-//	Coordinates4D point;
-//	Coordinates3D normal;
-//	double depth;
-	
-//	pixel.y = y;
-//	for (int i = x1+increment; i != x2; i += increment) {
-	int i;
-	int end = x2+increment;
-	
-	// i goes from x1 to x2
-	// c goes from 0 to 1, or from i-x1 to
-	double cF = increment/((double)x2 - (double)x1);
-	ColorRGBA color;
-	double factor = ( x1-floor(x1))*cF;
-	
-	for (i = x1; i != end; i += increment, factor += cF) {
-//		pixel.x = i;
-		
-//		color = interpolate(color1, color2, ((double)i-x1)*cF);
-		color = interpolate(color1, color2, factor);
-//		color = interpolate(color1, color2, (double)(xDouble-x1)*cF);
-		
-		setFrameBufferRGBA(i, y, fbo, color);
-		
-	}
-//	setFrameBufferRGBA(i, y, fbo, color);
-	
-}
-
-void sortedIndicesByY(Coordinates4D* points, int* indices, int count, int level=0) {
-	
-	if (count == level) {
-		return;
-	}
-	indices[level] = level;
-	double minY = points[level].y;
-	
-	for(int i = level+1; i < count; i++) {
-		if (points[i].y < minY) {
-			minY = points[i].y;
-			indices[i] = i;
-		}
-	}
-	
-	sortedIndicesByY(points, indices, count, level+1);
-	
-}
-
-
-bool compareCoordinates(Coordinates4D i1, Coordinates4D i2)
-{
-	return (i1.y < i2.y);
-}
-
-bool compareCoordinatesFrag(FragmentInfo i1, FragmentInfo i2)
-{
-	return (i1.location3D.y < i2.location3D.y);
-}
-
-
-//void triangleFill(Coordinates4D& p1, Coordinates4D& p2, Coordinates4D& p3, FrameBuffer* fbo) {
-//void triangleFill(Coordinates4D* vertices, ColorRGBA* colors, FrameBuffer* fbo) {
-void triangleFill(FragmentInfo* fragments, FrameBuffer* fbo) {
-	ColorRGBA color1, color2;
-	
-	FragmentInfo fragment;
-	
-	std::vector<FragmentInfo> f(fragments, fragments+3);
-	
-//	for (int i = 0; i < 3; i++) {
-//		fragment.location3D = vertices[i];
-//		fragment.color = colors[i];
-//		f.push_back(fragment);
-//	}
-	std::sort(f.begin(), f.end(), compareCoordinatesFrag);
-
-//	std::vector<Coordinates4D> v(vertices, vertices+3);
-//	std::sort(v.begin(), v.end(), compareCoordinates);
-
-	
-//	drawHorizonalLineRGBA(v[0].x, v[0].x, v[0].y, color, fbo);
-//	setFrameBufferRGBA(v[0].x, v[0].y, fbo, color);
-//	setFrameBufferRGBA(v[1].x, v[1].y, fbo, color);
-//	setFrameBufferRGBA(v[2].x, v[2].y, fbo, color);
-	
-	double slope12 = (f[1].location3D.x - f[0].location3D.x)/(f[1].location3D.y-f[0].location3D.y);
-	if((int)f[1].location3D.y == (int)f[0].location3D.y) {
-		slope12 = 0;
-	}
-	double slope13 = (f[2].location3D.x - f[0].location3D.x)/(f[2].location3D.y-f[0].location3D.y);
-	
-	double y = f[0].location3D.y;
-	double yp = 0;// = y - v[0].y; <- add v[0].y to get y
-	double x1, x2;
-	
-//	color.r = 0;
-	
-	// y goes from v[0].y to v[2].y;
-	// yp goes from 0 to v[2].y - v[0].y
-	// cf2 goes from 0 to 1, or along yp/(v[2].y - v[0].y)
-	double colorFactor = 1.0/(f[2].location3D.y - f[0].location3D.y);
-	
-	// cf goes from 0 to 1, or along yp/(v[1].y - v[0].y)
-	double colorFactor2 = 1.0/(f[1].location3D.y - f[0].location3D.y);
-	
-	
-	for( ; (yp+f[0].location3D.y) < f[1].location3D.y; yp += 1.0) {
-		
-//		x1 = slope12*(y-v[0].y) + v[0].x;
-//		x2 = slope13*(y-v[0].y) + v[0].x;
-		x1 = slope12*(yp) + f[0].location3D.x;
-		x2 = slope13*(yp) + f[0].location3D.x;
-//		drawHorizonalLineRGBA(x1, x2, y, color, fbo);
-		
-//		color.r = color[0].r + colorFactor*(color[2].r - color[0].r);
-		color2 = interpolate(f[0].color, f[2].color, colorFactor*yp);
-		color1 = interpolate(f[0].color, f[1].color, colorFactor2*yp);
-		
-		drawHorizonalLineRGBA(x1, x2, yp+f[0].location3D.y, color1, color2, fbo);
-	}
-	yp =f[1].location3D.y - f[0].location3D.y;
-	
-	double slope23 = (f[2].location3D.x - f[1].location3D.x)/(f[2].location3D.y-f[1].location3D.y);
-	if((int)f[2].location3D.y == (int)f[1].location3D.y) {
-		slope23 = 0;
-	}
-	
-	// now yp goes from v[1].y-v[0].y to v[2].y - v[0].y
-	// cf2 goes from 0 to 1, or along (yp-(v[1].y-v[0].y))/((v[2].y - v[0].y) - (v[1].y-v[0].y))
-//	colorFactor2 = 1.0/(f[2].location3D.y - (f[1].location3D.y-f[0].location3D.y));
-	colorFactor2 = 1.0/((f[2].location3D.y-f[0].location3D.y) - (f[1].location3D.y-f[0].location3D.y));
-	
-	double end = f[2].location3D.y;
-	for ( ; (yp+f[0].location3D.y) < end; yp += 1.0) {
-		
-//		x1 = slope23*(yp+v[0].y-v[1].y) + v[1].x;
-//		x2 = slope13*(yp+v[0].y-v[0].y) + v[0].x;
-		x1 = slope23*(yp+f[0].location3D.y-f[1].location3D.y) + f[1].location3D.x;
-		x2 = slope13*(yp) + f[0].location3D.x;
-
-		
-		color2 = interpolate(f[0].color, f[2].color, colorFactor*yp);
-		color1 = interpolate(f[1].color, f[2].color, colorFactor2*(yp-(f[1].location3D.y-f[0].location3D.y)));
-		drawHorizonalLineRGBA(x1, x2, yp+f[0].location3D.y, color1, color2, fbo);
-	}
-	
-}
-
-
-//void drawPolygonWithTriangles( Polygon4D& poly, DepthBuffer* depthBuffer, char fill) {
-void drawPolygonWithTriangles( Polygon4D& poly, FrameBuffer* fbo) {
-//void drawPolygonWithTriangles( Polygon4D& poly, FrameBuffer* fbo) {
-	if (poly.numVertices < 3) {
-//		mvprintw(line++, 0, "Not enough Polygon vertices: %d", poly.numVertices);
-		return;
-	}
-//	int minIndex = 0, maxIndex = 0;
-//	double minY = poly.vertices[0].y;
-//	double maxY = poly.vertices[0].y;
-//	for (int i = 1; i < poly.numVertices; i++) {
-//		if (poly.vertices[i].y < minY) {
-//			minY = poly.vertices[i].y;
-//			minIndex = i;
-//		}
-//		if (poly.vertices[i].y > maxY) {
-//			maxY = poly.vertices[i].y;
-//			maxIndex = i;
-//		}
-//	}
-	
-	FragmentInfo fragments[3];
-	fragments[0].location3D = poly.vertices[0];
-	fragments[0].color = poly.colors[0];
-	for (int i = 2; i < poly.numVertices; i++) {
-		fragments[1].location3D = poly.vertices[i-1];
-		fragments[2].location3D = poly.vertices[i];
-		fragments[1].color = poly.colors[i-1];
-		fragments[2].color = poly.colors[i];
-		triangleFill(fragments, fbo);
-	}
-	
-	
 }

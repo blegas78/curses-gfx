@@ -2,7 +2,6 @@
 #define CURSES_GFX_HANDLER_H
 
 #include <pthread.h>
-#include <queue>
 #ifdef FB_SUPPORT
 #include <linux/fb.h>
 #include <sys/ioctl.h>
@@ -13,19 +12,18 @@
 #include "curses-gfx.h"
 #include "curses-gfx-3d.h"
 
-class RenderPipeline;
+
 
 typedef struct _Renderable {
-	RenderPipeline* pipeline;
 	Polygon4D* polygons;
 	int count;
-	Mat4D modelView;
-	Mat4D projection;
-	Mat4D viewPort;
+	Mat4D& modelView;
+	Mat4D& projection;
+	Mat4D& viewPort;
 	void* userData;
-//	DepthBuffer* depthBuffer;
+	DepthBuffer* depthBuffer;
 	void (*fragmentShader)(const FragmentInfo&);
-	int line;
+	int &line;
 } Renderable;
 
 
@@ -59,20 +57,14 @@ private:
 	
 	double depthClearColor;
 	
-	std::queue<pthread_t*> renderThreads;
-	
 //	DepthBuffer tempD;
 	
 	void (*fragmentShader)(const FragmentInfo&);
 	
-	void drawPolygonWithTriangles( Polygon4D& poly, Polygon4D& restored, void* userData);
 	void drawPolygonShader( Polygon4D& poly, Polygon4D& restored, void* userData, int &line);
 	
-	void triangleFill(FragmentInfo* fragments);
-	void drawHorizonalLineRGBA(double x1, double x2, int y, ColorRGBA& color1, ColorRGBA& color2);
-	
-	void setWithDepthBuffer( Coordinates2D pt, char c, double invDepth);
-	void setWithDepthBuffer( Coordinates4D pt, char c, double invDepth);
+	void setWithDepthBuffer( Coordinates2D pt, char c, double depth);
+	void setWithDepthBuffer( Coordinates4D pt, char c, double depth);
 	
 	void drawHorizonalLineWithShader( FragmentInfo& start, FragmentInfo& end, double depth1, double depth2, void* userData);
 	
@@ -80,9 +72,6 @@ private:
 	void drawDotFloat(double x, double y);
 	
 	void setWithShader( Coordinates2D& pixel, double invDepth, Coordinates4D& pt3D, Coordinates3D& normal, void* userData);
-	
-	static void* renderThread(void* info);
-	void waitForThreads();
 	
 #ifdef FB_SUPPORT
 	int fbfd;
@@ -111,10 +100,8 @@ public:
 	
 	void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 	void rasterizePolygonsShader(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
-	void rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 	
-	void setRenderBuffer(const int& x, const int& y, ColorRGBA& color);
-	void setRenderBuffer(const int& index, ColorRGBA& color);
+	void setRenderBuffer(int x, int y, ColorRGBA& color);
 	
 	void renderBufferToTerminal();
 	void depthBufferToTerminal();
