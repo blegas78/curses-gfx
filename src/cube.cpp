@@ -28,7 +28,7 @@ void killPanda(int killSignal) {
 
 void setupTerminal()
 {
-	
+//    return;
 	setlocale(LC_ALL, "");
 	
 	// Start up Curses window
@@ -59,11 +59,13 @@ void setupTerminal()
 }
 
 void cleanupConsole() {
+//    return;
 	clear();
 	endwin();
 
 	std::cout << "Console has been cleaned!" << std::endl;
 }
+
 
 typedef struct _LightParams {
 	Coordinates4D modelView[10];
@@ -72,10 +74,26 @@ typedef struct _LightParams {
 } LightParams;
 
 
+void defaultFragmentLegacy(const FragmentInfo& fInfo) {
+//    set(fInfo.pixel, '.');
+#ifdef ASCII_EXTENDED
+    //mvprintw(fInfo.pixel.y, fInfo.pixel.x, "░"); // light "▒" ▓ █
+#else
+    //set(fInfo.pixel, '+');
+#endif
+//    fInfo.colorOutput->r = 255;
+//    fInfo.colorOutput->g = 255;
+//    fInfo.colorOutput->b = 0;
+//    fInfo.colorOutput->a = '+';
+    set(fInfo.pixel, '+');
+}
+
 void lightModelFs(const FragmentInfo& fInfo) {
 	Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
 	setRGB(fInfo.pixel, *colorRGB);
 }
+
+
 
 
 
@@ -382,8 +400,8 @@ int main(void) {
 	
 	
 	
-//	double characterAspect = 28.0/12.0; // macOs terminal
-	double characterAspect = 28.0/14.0; // raspbian terminal
+	double characterAspect = 28.0/12.0; // macOs terminal
+//	double characterAspect = 28.0/14.0; // raspbian terminal
 //	double characterAspect = 6.0/4.0; // zipitZ2
 	
 	int screenSizeX, screenSizeY;
@@ -450,7 +468,7 @@ int main(void) {
 		mvprintw(debugLine++, 0, "FPS: %f", 1000.0/float_ms.count());
 		mvprintw(debugLine++, 0, "tilt: %f", tilt*180.0/M_PI);
 		
-		
+       
 		
 		/*
 		 Build the view/camera matrix:
@@ -509,7 +527,7 @@ int main(void) {
 			lightModelView = matrixVectorMultiply(viewMatrix, light[i]);
 			rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, windowFull, (void*)&mLightParams.color[i], &depthBuffer, lightModelFs, debugLine);
 		}
-		
+        
 //		rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, windowFull, (void*)&mLightParams, &depthBuffer, lightFs2, debugLine);
 		
 		// Cube
@@ -556,6 +574,7 @@ int main(void) {
 //			// Projection (final step)
 //			cubeRotated[i] = matrixVectorMultiply(projection, cubeRotated[i]);
 //		}
+        
 		attron(COLOR_PAIR(2));
 		attron(A_BOLD);
 //		rasterize(cubeRotated, edgeIndices, numEdges, windowFull, &depthBuffer);
@@ -563,10 +582,11 @@ int main(void) {
 //		rasterizeTriangle(cubeRotated, cubeTriangleIndices, numEdges, windowFull, &depthBuffer, '`', 12);
 		numEdges = sizeof(cubeQuadIndices)/sizeof(cubeQuadIndices[0]);
 //		rasterizeQuads(cubeRotated, cubeQuadIndices, numEdges, windowFull, &depthBuffer, '`', debugLine);
-		rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewCube2, projection, windowFull, NULL, &depthBuffer, defaultFragment, debugLine);
+		rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewCube2, projection, windowFull, NULL, &depthBuffer, defaultFragmentLegacy, debugLine);
 		attroff(A_BOLD);
 		attroff(COLOR_PAIR(2));
-		
+        
+        
 		// Pyramid
 		Coordinates4D pyramid2[sizeof(pyramid)/sizeof(pyramid[0])];
 //		Mat4D pyramidTranslation = translationMatrix(0, 0, sin(cube2angle*2));
@@ -593,7 +613,7 @@ int main(void) {
 		attroff(A_BOLD);
 		attroff(COLOR_PAIR(1));
 		
-		
+        
 		// Grid
 		if (showGrid) {
 			Coordinates4D grid2[sizeof(grid)/sizeof(grid[0])];
@@ -731,7 +751,6 @@ int main(void) {
 		}
 
 	}
-	
 	cleanupConsole();
 	
 	return 0;
