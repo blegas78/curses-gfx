@@ -128,7 +128,6 @@ void defaultFragment(const FragmentInfo& fInfo) {
 #else
 	//set(fInfo.pixel, '+');
 #endif
-	
 	fInfo.colorOutput->r = 255;
 	fInfo.colorOutput->g = 255;
 	fInfo.colorOutput->b = 0;
@@ -151,33 +150,38 @@ void setWithShader( Coordinates2D& pixel, double depth, Coordinates4D& pt3D, Coo
 		fInfo.pixel = pixel;
 		fInfo.location3D = pt3D;
 		fInfo.normal = normal;
-		fInfo.data = userData;
+        fInfo.data = userData;
+//        ColorRGBA colorOutput;
+//        fInfo.colorOutput = &colorOutput;
 		fragmentShader(fInfo);
+//        Coordinates3D color = {(double)colorOutput.r, (double)colorOutput.g, (double)colorOutput.b};
+        
+        //setRGB(pixel, color);
 		return;
-		const double maxDepth = 10.0;
-		const double minDepth = 3.0;
-		depth = -pt3D.z;
-		if (depth > maxDepth) {
-			set(pixel, ' ');
-		} else if (depth > maxDepth*0.9) {
-			set(pixel, '`');
-		} else if (depth > maxDepth*0.8) {
-			set(pixel, '.');
-		} else if (depth > maxDepth*0.7) {
-			set(pixel, ',');
-		} else if (depth > maxDepth*0.6) {
-			set(pixel, '=');
-		} else if (depth > maxDepth*0.5) {
-			set(pixel, '+');
-		} else if (depth > maxDepth*0.4) {
-			set(pixel, '*');
-		} else if (depth > maxDepth*0.3) {
-			set(pixel, '#');
-		} else if (depth > maxDepth*0.2) {
-			set(pixel, '%');
-		} else {
-			set(pixel, '@');
-		}
+//		const double maxDepth = 10.0;
+//		const double minDepth = 3.0;
+//		depth = -pt3D.z;
+//		if (depth > maxDepth) {
+//			set(pixel, ' ');
+//		} else if (depth > maxDepth*0.9) {
+//			set(pixel, '`');
+//		} else if (depth > maxDepth*0.8) {
+//			set(pixel, '.');
+//		} else if (depth > maxDepth*0.7) {
+//			set(pixel, ',');
+//		} else if (depth > maxDepth*0.6) {
+//			set(pixel, '=');
+//		} else 250if (depth > maxDepth*0.5) {
+//			set(pixel, '+');
+//		} else if (depth > maxDepth*0.4) {
+//			set(pixel, '*');
+//		} else if (depth > maxDepth*0.3) {
+//			set(pixel, '#');
+//		} else if (depth > maxDepth*0.2) {
+//			set(pixel, '%');
+//		} else {
+//			set(pixel, '@');
+//		}
 	}
 }
 

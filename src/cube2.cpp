@@ -357,8 +357,8 @@ int main(int argc, char** argv) {
 	
 	
 	
-//	double characterAspect = 28.0/12.0; // macOs terminal
-	double characterAspect = 28.0/14.0; // raspbian terminal
+	double characterAspect = 28.0/12.0; // macOs terminal
+//	double characterAspect = 28.0/14.0; // raspbian terminal
 //	double characterAspect = 6.0/4.0; // zipitZ2
 	
 	int screenSizeX, screenSizeY;
@@ -418,7 +418,7 @@ int main(int argc, char** argv) {
 	bool usePerspective = true;
 	bool showGrid = false;
 	bool autoRotate = true;
-	bool showDepth = true;
+	bool showDepth = false;
 	double delayTime = 0;//1.0/60;
 	while (keepRunning == true) {
 		debugLine = 0;

@@ -305,8 +305,8 @@ void RenderPipeline::rasterizePolygonsShader(Polygon4D* polygons, int count, Mat
 ////		refresh();
 //
 //
-//		drawPolygonShader( polygonProjected, polygonRestored, userData, line);
-		drawPolygonWithTriangles( polygonProjected, polygonRestored, userData);
+		drawPolygonShader( polygonProjected, polygonRestored, userData, line);
+//		drawPolygonWithTriangles( polygonProjected, polygonRestored, userData);
 		
 	}
 }
@@ -1200,6 +1200,7 @@ void RenderPipeline::renderBufferToTerminal() {
 #ifndef FB_SUPPORT
 			if (((ColorRGBA*)fbo[0].data)[index].a == 0) {
 				setRGB(pixel, color);
+//                set(pixel, 'k');
 			} else {
 				Coordinates3D clippedRGB = clipRGB(color);
 				Coordinates3D hsl = rgbToHsv(clippedRGB);
@@ -1238,7 +1239,23 @@ void RenderPipeline::depthBufferToTerminal() {
 	Coordinates2D pixel;
 	Coordinates3D color;
 	int offset, index;
-	
+    
+    double minDepth = std::numeric_limits<double>::max(), maxDepth = std::numeric_limits<double>::min();
+    for (int y = 0; y < depthBuffer->rows; y++) {
+        offset = y * depthBuffer->cols;
+        for (int x = 0; x < depthBuffer->cols; x++) {
+            index = x + offset;
+            if(((double*)depthBuffer->data)[index] < minDepth) {
+                minDepth =((double*)depthBuffer->data)[index];
+            }
+            if(((double*)depthBuffer->data)[index] > maxDepth) {
+                maxDepth = ((double*)depthBuffer->data)[index];
+            }
+        }
+    }
+    //minDepth = 0;
+    double scale = 255.0/(maxDepth-minDepth);
+//    scale = 100.;
 	for (int y = 0; y < depthBuffer->rows; y++) {
 		offset = y * depthBuffer->cols;
 		for (int x = 0; x < depthBuffer->cols; x++) {
@@ -1253,7 +1270,9 @@ void RenderPipeline::depthBufferToTerminal() {
 //			double z = 1.0/((((double*)depthBuffer->data)[index] - (zFar+zNear)/(zFar-zNear)) * );
 			
 //			uint8_t luminosity = (((double*)depthBuffer->data)[index]-1)*150000;
-			int L = ((((double*)depthBuffer->data)[index])-1)*25500000.0;
+//			int L = ((((double*)depthBuffer->data)[index])-1)*25500000.0;
+            int L = ((((double*)depthBuffer->data)[index])-minDepth)*scale;
+//            int L = ((((double*)depthBuffer->data)[index]))*scale;
 			//printf("d = %f\n",  1.0/((double*)depthBuffer->data)[index]);
 			L = L > 255 ? 255 : L;
 			L = L < 0 ? 0 : L;

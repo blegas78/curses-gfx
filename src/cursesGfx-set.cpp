@@ -184,6 +184,7 @@ void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
 	}
 	
 	attron(COLOR_PAIR(hueIndex));
+//    attron(COLOR_PAIR(1));
 	
 
 	
@@ -269,6 +270,7 @@ void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
 	set(pixel, c);
 	
 	attroff(COLOR_PAIR(hueIndex));
+//    attroff(COLOR_PAIR(1));
 }
 
 
