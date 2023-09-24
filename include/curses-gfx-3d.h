@@ -124,7 +124,8 @@ typedef struct _DepthBuffer {
 	
 	void reset() {
 //		memset(d, 0, sizeof(double)*width*height);
-		std::fill_n(&d[0], width*height, 10000000000);
+//        std::fill_n(&d[0], width*height, 0);
+		std::fill_n(&d[0], width*height, std::numeric_limits<double>::max());
 	}
 	
 	~_DepthBuffer() {
@@ -143,7 +144,7 @@ typedef struct _FragmentInfo {
 } FragmentInfo;
 
 
-// Can any softwre renderer not use this gem from Quake?
+// Can any software renderer not use this gem from Quake?
 float Q_rsqrt( float number );
 
 // Shader stuff
