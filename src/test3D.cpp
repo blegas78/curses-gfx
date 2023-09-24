@@ -65,7 +65,6 @@ void cleanupConsole() {
 int main(void) {
 
 	setupTerminal();
-
 //	Coordinates4D vertices[] = {
 //		{8, 2, 0, 1},
 //		{-4, 0.0, 0, 1},
@@ -162,7 +161,7 @@ int main(void) {
 		 */
 		Coordinates3D modelAxis = {0,1,0};
 		Mat4D modelMatrix = rotationFromAngleAndUnitAxis(modelAngle, modelAxis);
-		
+        
 		/*
 		 Build the view/camera matrix:
 		 */
@@ -194,15 +193,17 @@ int main(void) {
 		attroff(COLOR_PAIR(3));
 		
 
-		
+        
 		drawHorizonalLineWithDepthBuffer(48, 50, 0, '0', 0, 0, NULL);
 //		drawHorizonalLineWithDepthBuffer(50, 70, 0, '1', 0, 0, NULL);
 		Coordinates4D dummy;
 		Coordinates3D dummy3D;
-		drawHorizonalLineWithShader(50, 70, 0, 1, 1, dummy, dummy, dummy3D, dummy3D, NULL, &depthBuffer, defaultFragment);
+		//drawHorizonalLineWithShader(50, 70, 0, 1, 1, dummy, dummy, dummy3D, dummy3D, NULL, &depthBuffer, defaultFragment);
+        
 		drawHorizonalLineWithDepthBuffer(70, 72, 0, '0', 0, 0, NULL);
 		
-		
+        
+        
 		// Polygon
 		int numPolys = sizeof(polygon)/sizeof(polygon[0]);
 		Polygon4D polyCopy[numPolys];
@@ -223,7 +224,7 @@ int main(void) {
 		attron(A_BOLD);
 //		rasterizePolygon(polyCopy, numPolys, windowFull, &depthBuffer, '*', line);
 		Mat4D polyModelView = matrixMultiply(viewMatrix, modelMatrix);
-		rasterizePolygonsShader(polygon, numPolys, polyModelView, projection, windowFull, NULL, &depthBuffer, defaultFragment, line);
+		//rasterizePolygonsShader(polygon, numPolys, polyModelView, projection, windowFull, NULL, &depthBuffer, defaultFragment, line);
 		attroff(A_BOLD);
 		attroff(COLOR_PAIR(2));
 		
