@@ -17,6 +17,12 @@ sudo make install
 
 
 ## Examples:
+
+#### cube2
+Rasterization using different shaders and three moving light sources
+
+![cube2](https://github.com/blegas78/curses-gfx/blob/main/docs/images/cube2.png?raw=true)
+
 #### stopwatch
 
 ![Stopwatch](https://github.com/blegas78/curses-gfx/blob/main/docs/images/stopwatch.png?raw=true)
@@ -24,6 +30,7 @@ sudo make install
 #### chaos_clocks
 
 ![Clocks](https://github.com/blegas78/curses-gfx/blob/main/docs/images/clocks.png?raw=true)
+
 
 #### aviz
 
