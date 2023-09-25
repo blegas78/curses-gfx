@@ -177,7 +177,10 @@ void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
 	Coordinates3D clippedRGB = clipRGB(rgb);
 	Coordinates3D hsl = rgbToHsv(clippedRGB);
 	
-	int hueIndex = floor(hsl.x + 1);
+	int hueIndex = floor(hsl.x + 1.5);
+    if(hueIndex > 6) {
+        hueIndex = 1;
+    }
 	
 	if (hsl.y < 0.33) {
 		hueIndex = 7;
