@@ -223,6 +223,10 @@ void shaderBasic(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
     
     *fInfo.colorOutput = testTexture.sample(mMyShaderAttributes->textureCoord.x, mMyShaderAttributes->textureCoord.y)*0.5 + (*fInfo.colorOutput)*0.5;
+    
+//    fInfo.colorOutput->r = pow((double)fInfo.colorOutput->r/255.0, 2.)*255;
+//    fInfo.colorOutput->g = pow((double)fInfo.colorOutput->g/255.0, 2.)*255;
+//    fInfo.colorOutput->b = pow((double)fInfo.colorOutput->b/255.0, 2.)*255;
 //    *fInfo.colorOutput = mMyShaderAttributes->color;
 }
 
@@ -288,7 +292,7 @@ int main(void) {
         mMyShaderAttributes[i].textureCoord.x = 10+1.*cos(3.14159/3.0 * (double)i);
         mMyShaderAttributes[i].textureCoord.y = 10+1.*sin(3.14159/3.0 * (double)i);
 		
-        points[i].z = 1.0;
+        points[i].z = 0;
 		
         mMyShaderAttributes[i].vertex.x = points[i].x;
         mMyShaderAttributes[i].vertex.y = points[i].y;
@@ -300,7 +304,9 @@ int main(void) {
 //
 //    mMyShaderAttributes[1].textureCoord.x = 1;
 //    mMyShaderAttributes[1].textureCoord.y = 1;
-////    mMyShaderAttributes[1].vertex.z = 100;
+//    points[0].z = 0.5;
+//    points[3].z = 2;
+    mMyShaderAttributes[0].vertex.z = 0.5;
 //
 //    mMyShaderAttributes[2].textureCoord.x = 0;
 //    mMyShaderAttributes[2].textureCoord.y = 1;
@@ -372,9 +378,12 @@ int main(void) {
 	
 		Coordinates3D axis = {0,0,1};
 		Mat4D rotation = rotationFromAngleAndUnitAxis(angle, axis);
+        Coordinates3D axis2 = {0,1,0};
+        Mat4D rotation2 = rotationFromAngleAndUnitAxis(sin(angle/2.1)*M_PI/2, axis2);
         Mat4D scale = scaleMatrix(1,12.0/28.0,1);
-		Mat4D translation = translationMatrix(64, 64, 0);
-		Mat4D model = matrixMultiply(translation, rotation);
+		Mat4D translation = translationMatrix(64, 64, 128);
+		Mat4D model = matrixMultiply(rotation2, rotation);
+        model = matrixMultiply(translation, model);
         model = matrixMultiply(scale, model);
 //		Coordinates4D p[3];
 		for(int i = 0; i < poly.numVertices; i++) {

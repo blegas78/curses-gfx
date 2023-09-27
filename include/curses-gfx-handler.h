@@ -177,6 +177,9 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
     double invDepth1 = 1.0/fragment1->vertex.z;
     double invDepth2 = 1.0/fragment2->vertex.z;
     double invDepth3 = 1.0/fragment3->vertex.z;
+    double invW1 = 1.0/fragment1->vertex.w;
+    double invW2 = 1.0/fragment2->vertex.w;
+    double invW3 = 1.0/fragment3->vertex.w;
 
            // Deltas
            const int DX12 = X1 - X2;
@@ -258,17 +261,25 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
    //                    color.b = alpha * fragments[0].color.b + beta * fragments[2].color.b + gamma * fragments[1].color.b;
                        
                        double correctInvDepth = invDepth1 * alpha + invDepth2 * beta + invDepth3 * gamma;
-                       double correctDepth = 1.0/correctInvDepth;
-   //                    perspectiveInterpolateInv(<#T &a#>, <#T &b#>, <#T &c#>, <#double &aInvDepth#>, <#double &bInvDepth#>, <#double &cInvDepth#>, <#double &correctDepth#>, <#double &alpha#>, <#double &beta#>, <#double &gamma#>)
-   //                    (T& a, T& b, T& c, double& aInvDepth, double& bInvDepth, double& cInvDepth, double& correctDepth, double& alpha, double& beta, double& gamma)
-   //                    color.a = perspectiveInterpolateBary<uint8_t>(fragments[0].color.a, fragments[2].color.a, fragments[1].color.a, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
-   //                    color.r = perspectiveInterpolateBary<uint8_t>(fragments[0].color.r, fragments[2].color.r, fragments[1].color.r, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
-   //                    color.g = perspectiveInterpolateBary<uint8_t>(fragments[0].color.g, fragments[2].color.g, fragments[1].color.g, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
-   //                    color.b = perspectiveInterpolateBary<uint8_t>(fragments[0].color.b, fragments[2].color.b, fragments[1].color.b, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+//                       double correctDepth = 1.0/correctInvDepth;
+////                       double correctDepth = 1.0/invDepth1 * alpha + 1.0/invDepth2 * beta + 1.0/invDepth3 * gamma;
+//   //                    perspectiveInterpolateInv(<#T &a#>, <#T &b#>, <#T &c#>, <#double &aInvDepth#>, <#double &bInvDepth#>, <#double &cInvDepth#>, <#double &correctDepth#>, <#double &alpha#>, <#double &beta#>, <#double &gamma#>)
+//   //                    (T& a, T& b, T& c, double& aInvDepth, double& bInvDepth, double& cInvDepth, double& correctDepth, double& alpha, double& beta, double& gamma)
+//   //                    color.a = perspectiveInterpolateBary<uint8_t>(fragments[0].color.a, fragments[2].color.a, fragments[1].color.a, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+//   //                    color.r = perspectiveInterpolateBary<uint8_t>(fragments[0].color.r, fragments[2].color.r, fragments[1].color.r, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+//   //                    color.g = perspectiveInterpolateBary<uint8_t>(fragments[0].color.g, fragments[2].color.g, fragments[1].color.g, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+//   //                    color.b = perspectiveInterpolateBary<uint8_t>(fragments[0].color.b, fragments[2].color.b, fragments[1].color.b, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+//
+//                       alpha *= invDepth1*correctDepth;
+//                       beta *= invDepth2*correctDepth;
+//                       gamma *= invDepth3*correctDepth;
                        
-                       alpha *= invDepth1*correctDepth;
-                       beta *= invDepth2*correctDepth;
-                       gamma *= invDepth3*correctDepth;
+                       double pBaryDivisor = 1.0/(alpha*invW1 + beta*invW2 + gamma*invW3);
+                       alpha *= invW1 * pBaryDivisor;
+                       beta  *= invW2 * pBaryDivisor;
+                       gamma *= invW3 * pBaryDivisor;
+                       
+                       
    //                    color.a = perspectiveIntBary<uint8_t>(fragments[0].color.a, fragments[2].color.a, fragments[1].color.a, alpha, beta, gamma, correctDepth);
    //                    color.r = perspectiveIntBary<uint8_t>(fragments[0].color.r, fragments[2].color.r, fragments[1].color.r, alpha, beta, gamma, correctDepth);
    //                    color.g = perspectiveIntBary<uint8_t>(fragments[0].color.g, fragments[2].color.g, fragments[1].color.g, alpha, beta, gamma, correctDepth);
