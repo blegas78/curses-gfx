@@ -71,6 +71,21 @@ void saveFrameBufferToFile(const char* filename, FrameBuffer* fbo) {
 	fclose(fp);
 }
 
+template <typename T> T perspectiveInterpolateBary(T& a, T& b, T& c, double& aInvDepth, double& bInvDepth, double& cInvDepth, double& correctDepth, double& alpha, double& beta, double& gamma) {
+    return correctDepth*(a*(aInvDepth * alpha) + b*(bInvDepth * beta) + c*(cInvDepth * gamma));
+}
+
+template <typename T> T perspectiveIntBary(T& a, T& b, T& c, double& aInvDepthAlpha, double& bInvDepthBeta, double& cInvDepthGamma, double& correctDepth) {
+    return correctDepth*(a*aInvDepthAlpha + b*bInvDepthBeta + c*cInvDepthGamma);
+}
+template <typename T, int count> void perspectiveIntBary2(void* result, const void* a, const void* b, const void* c, double& aInvDepthAlpha, double& bInvDepthBeta, double& cInvDepthGamma, double& correctDepth) {
+//    T result;
+
+    for(int i = count-1; i >= 0; i--)
+        ((T*)result)[i] = correctDepth*( ((T*)a)[i] *aInvDepthAlpha + ((T*)b)[i]*bInvDepthBeta + ((T*)c)[i]*cInvDepthGamma);
+//    return result;
+}
+
 RenderPipeline::~RenderPipeline() {
 	// Fuck it, save the render and depth buffer to a file:
 
@@ -312,6 +327,7 @@ void RenderPipeline::rasterizePolygonsShader(Polygon4D* polygons, int count, Mat
 }
 
 void RenderPipeline::drawPolygonWithTriangles( Polygon4D& poly, Polygon4D& restored, void* userData) {
+    this->userData = userData;
 //void drawPolygonWithTriangles( Polygon4D& poly, FrameBuffer* fbo) {
 	if (poly.numVertices < 3) {
 //		mvprintw(line++, 0, "Not enough Polygon vertices: %d", poly.numVertices);
@@ -349,90 +365,220 @@ void RenderPipeline::drawPolygonWithTriangles( Polygon4D& poly, Polygon4D& resto
 }
 
 void RenderPipeline::triangleFill(FragmentInfo* fragments) {
-	ColorRGBA color1, color2;
-	
-	FragmentInfo fragment;
-	
-	std::vector<FragmentInfo> f(fragments, fragments+3);
-	
-//	for (int i = 0; i < 3; i++) {
-//		fragment.location3D = vertices[i];
-//		fragment.color = colors[i];
-//		f.push_back(fragment);
-//	}
-	std::sort(f.begin(), f.end(), compareCoordinatesFrag);
+ //https://web.archive.org/web/20050408192410/http://sw-shader.sourceforge.net/rasterizer.html
+    // 28.4 fixed-point coordinates
+    
+    const int Y1 = round(16.0f * fragments[0].location3D.y);
+        const int Y2 = round(16.0f * fragments[2].location3D.y);
+        const int Y3 = round(16.0f * fragments[1].location3D.y);
 
-//	std::vector<Coordinates4D> v(vertices, vertices+3);
-//	std::sort(v.begin(), v.end(), compareCoordinates);
+    const int X1 = round(16.0f * fragments[0].location3D.x);
+    const int X2 = round(16.0f * fragments[2].location3D.x);
+    const int X3 = round(16.0f * fragments[1].location3D.x);
+    
+    
+    double invDepth1 = 1.0/fragments[0].location3D.z;
+    double invDepth2 = 1.0/fragments[2].location3D.z;
+    double invDepth3 = 1.0/fragments[1].location3D.z;
 
-	
-//	drawHorizonalLineRGBA(v[0].x, v[0].x, v[0].y, color, fbo);
-//	setFrameBufferRGBA(v[0].x, v[0].y, fbo, color);
-//	setFrameBufferRGBA(v[1].x, v[1].y, fbo, color);
-//	setFrameBufferRGBA(v[2].x, v[2].y, fbo, color);
-	
-	double slope12 = (f[1].location3D.x - f[0].location3D.x)/(f[1].location3D.y-f[0].location3D.y);
-	if((int)f[1].location3D.y == (int)f[0].location3D.y) {
-		slope12 = 0;
-	}
-	double slope13 = (f[2].location3D.x - f[0].location3D.x)/(f[2].location3D.y-f[0].location3D.y);
-	
-	double y = f[0].location3D.y;
-	double yp = 0;// = y - v[0].y; <- add v[0].y to get y
-	double x1, x2;
-	
-//	color.r = 0;
-	
-	// y goes from v[0].y to v[2].y;
-	// yp goes from 0 to v[2].y - v[0].y
-	// cf2 goes from 0 to 1, or along yp/(v[2].y - v[0].y)
-	double colorFactor = 1.0/(f[2].location3D.y - f[0].location3D.y);
-	
-	// cf goes from 0 to 1, or along yp/(v[1].y - v[0].y)
-	double colorFactor2 = 1.0/(f[1].location3D.y - f[0].location3D.y);
-	
-	
-	for( ; (yp+f[0].location3D.y) < f[1].location3D.y; yp += 1.0) {
-		
-//		x1 = slope12*(y-v[0].y) + v[0].x;
-//		x2 = slope13*(y-v[0].y) + v[0].x;
-		x1 = slope12*(yp) + f[0].location3D.x;
-		x2 = slope13*(yp) + f[0].location3D.x;
-//		drawHorizonalLineRGBA(x1, x2, y, color, fbo);
-		
-//		color.r = color[0].r + colorFactor*(color[2].r - color[0].r);
-		color2 = interpolate(f[0].color, f[2].color, colorFactor*yp);
-		color1 = interpolate(f[0].color, f[1].color, colorFactor2*yp);
-		
-		drawHorizonalLineRGBA(x1, x2, yp+f[0].location3D.y, color1, color2);
-	}
-	yp =f[1].location3D.y - f[0].location3D.y;
-	
-	double slope23 = (f[2].location3D.x - f[1].location3D.x)/(f[2].location3D.y-f[1].location3D.y);
-	if((int)f[2].location3D.y == (int)f[1].location3D.y) {
-		slope23 = 0;
-	}
-	
-	// now yp goes from v[1].y-v[0].y to v[2].y - v[0].y
-	// cf2 goes from 0 to 1, or along (yp-(v[1].y-v[0].y))/((v[2].y - v[0].y) - (v[1].y-v[0].y))
-//	colorFactor2 = 1.0/(f[2].location3D.y - (f[1].location3D.y-f[0].location3D.y));
-	colorFactor2 = 1.0/((f[2].location3D.y-f[0].location3D.y) - (f[1].location3D.y-f[0].location3D.y));
-	
-	double end = f[2].location3D.y;
-	for ( ; (yp+f[0].location3D.y) < end; yp += 1.0) {
-		
-//		x1 = slope23*(yp+v[0].y-v[1].y) + v[1].x;
-//		x2 = slope13*(yp+v[0].y-v[0].y) + v[0].x;
-		x1 = slope23*(yp+f[0].location3D.y-f[1].location3D.y) + f[1].location3D.x;
-		x2 = slope13*(yp) + f[0].location3D.x;
+        // Deltas
+        const int DX12 = X1 - X2;
+        const int DX23 = X2 - X3;
+        const int DX31 = X3 - X1;
 
-		
-		color2 = interpolate(f[0].color, f[2].color, colorFactor*yp);
-		color1 = interpolate(f[1].color, f[2].color, colorFactor2*(yp-(f[1].location3D.y-f[0].location3D.y)));
-		drawHorizonalLineRGBA(x1, x2, yp+f[0].location3D.y, color1, color2);
-	}
-	
+        const int DY12 = Y1 - Y2;
+        const int DY23 = Y2 - Y3;
+        const int DY31 = Y3 - Y1;
+
+        // Fixed-point deltas
+        const int FDX12 = DX12 << 4;
+        const int FDX23 = DX23 << 4;
+        const int FDX31 = DX31 << 4;
+
+        const int FDY12 = DY12 << 4;
+        const int FDY23 = DY23 << 4;
+        const int FDY31 = DY31 << 4;
+
+        // Bounding rectangle
+        int minx = (std::min(X1, std::min(X2, X3)) + 0xF) >> 4;
+        int maxx = (std::max(X1, std::max(X2, X3)) + 0xF) >> 4;
+        int miny = (std::min(Y1, std::min(Y2, Y3)) + 0xF) >> 4;
+        int maxy = (std::max(Y1, std::max(Y2, Y3)) + 0xF) >> 4;
+
+        //barycentric parameters:
+//    int A = X1*Y2 + X2*Y3 + X3*Y1 - X1*Y3 - X2*Y1 - X3*Y2;
+    double A = 1.0/(double)(X1*(Y2-Y3) + X2*(Y3 - Y1) + X3*(Y1 - Y2));
+    int aX2Y3mX3Y2 = X2*Y3 - X3*Y2;
+    int bX3Y1mX1Y3 = X3*Y1 - X1*Y3;
+//    int cX1Y2mX2Y1 = X1*Y2 - X2*Y1;
+    double alpha, beta, gamma;
+    
+//        (char*&)colorBuffer += miny * stride;
+//    ColorRGBA color = {255,255,0,'^'};
+//    setFrameBufferRGBA(1, 1, fbo, color);
+        // Half-edge constants
+        int C1 = DY12 * X1 - DX12 * Y1;
+        int C2 = DY23 * X2 - DX23 * Y2;
+        int C3 = DY31 * X3 - DX31 * Y3;
+
+        // Correct for fill convention
+        if(DY12 < 0 || (DY12 == 0 && DX12 > 0)) C1++;
+        if(DY23 < 0 || (DY23 == 0 && DX23 > 0)) C2++;
+        if(DY31 < 0 || (DY31 == 0 && DX31 > 0)) C3++;
+
+        int CY1 = C1 + DX12 * (miny << 4) - DY12 * (minx << 4);
+        int CY2 = C2 + DX23 * (miny << 4) - DY23 * (minx << 4);
+        int CY3 = C3 + DX31 * (miny << 4) - DY31 * (minx << 4);
+    Coordinates2D pt;
+    
+        for(pt.y = miny; pt.y < maxy; pt.y++)
+        {
+            int CX1 = CY1;
+            int CX2 = CY2;
+            int CX3 = CY3;
+       
+            for(pt.x = minx; pt.x < maxx; pt.x++)
+            {
+                if(CX1 > 0 && CX2 > 0 && CX3 > 0)
+                {
+//                    colorBuffer[x] = 0x00FFFFFF;
+                    int xp = pt.x << 4;
+                    int yp = pt.y << 4;
+                    alpha = (double)(xp*Y2 + aX2Y3mX3Y2 + X3*yp - xp*Y3 - X2*yp)*A;
+                    beta = (double)(X1*yp + xp*Y3 + bX3Y1mX1Y3 - xp*Y1 - X3*yp)*A;
+//                    gamma = (double)(cX1Y2mX2Y1 + X2*yp + xp*Y1 - X1*yp - xp*Y2)*A;
+                    gamma = 1.0 - alpha - beta;
+                    
+                    ColorRGBA color;
+//                    color.a = alpha * fragments[0].color.a + beta * fragments[2].color.a + gamma * fragments[1].color.a;
+//                    color.r = alpha * fragments[0].color.r + beta * fragments[2].color.r + gamma * fragments[1].color.r;
+//                    color.g = alpha * fragments[0].color.g + beta * fragments[2].color.g + gamma * fragments[1].color.g;
+//                    color.b = alpha * fragments[0].color.b + beta * fragments[2].color.b + gamma * fragments[1].color.b;
+                    
+                    double correctInvDepth = invDepth1 * alpha + invDepth2 * beta + invDepth3 * gamma;
+                    double correctDepth = 1.0/correctInvDepth;
+//                    perspectiveInterpolateInv(<#T &a#>, <#T &b#>, <#T &c#>, <#double &aInvDepth#>, <#double &bInvDepth#>, <#double &cInvDepth#>, <#double &correctDepth#>, <#double &alpha#>, <#double &beta#>, <#double &gamma#>)
+//                    (T& a, T& b, T& c, double& aInvDepth, double& bInvDepth, double& cInvDepth, double& correctDepth, double& alpha, double& beta, double& gamma)
+//                    color.a = perspectiveInterpolateBary<uint8_t>(fragments[0].color.a, fragments[2].color.a, fragments[1].color.a, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+//                    color.r = perspectiveInterpolateBary<uint8_t>(fragments[0].color.r, fragments[2].color.r, fragments[1].color.r, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+//                    color.g = perspectiveInterpolateBary<uint8_t>(fragments[0].color.g, fragments[2].color.g, fragments[1].color.g, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+//                    color.b = perspectiveInterpolateBary<uint8_t>(fragments[0].color.b, fragments[2].color.b, fragments[1].color.b, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
+                    
+                    alpha *= invDepth1;
+                    beta *= invDepth2;
+                    gamma *= invDepth3;
+//                    color.a = perspectiveIntBary<uint8_t>(fragments[0].color.a, fragments[2].color.a, fragments[1].color.a, alpha, beta, gamma, correctDepth);
+//                    color.r = perspectiveIntBary<uint8_t>(fragments[0].color.r, fragments[2].color.r, fragments[1].color.r, alpha, beta, gamma, correctDepth);
+//                    color.g = perspectiveIntBary<uint8_t>(fragments[0].color.g, fragments[2].color.g, fragments[1].color.g, alpha, beta, gamma, correctDepth);
+//                    color.b = perspectiveIntBary<uint8_t>(fragments[0].color.b, fragments[2].color.b, fragments[1].color.b, alpha, beta, gamma, correctDepth);
+                    perspectiveIntBary2<uint8_t,4>(&color, &fragments[0].color, &fragments[2].color, &fragments[1].color, alpha, beta, gamma, correctDepth);
+                    Coordinates3D normal;
+                    perspectiveIntBary2<double,3>(&normal, &fragments[0].normal, &fragments[2].normal, &fragments[1].normal, alpha, beta, gamma, correctDepth);
+                    Coordinates4D point;
+                    perspectiveIntBary2<double,4>(&normal, &fragments[0].location3D, &fragments[2].location3D, &fragments[1].location3D, alpha, beta, gamma, correctDepth);
+                    
+                    
+                    setFrameBufferRGBA(pt.x, pt.y, fbo, color);
+//                    setFragmentShader(defaultFragment);
+//                    setWithShader(pt, correctInvDepth, point, normal, this->userData);
+                }
+
+                CX1 -= FDY12;
+                CX2 -= FDY23;
+                CX3 -= FDY31;
+            }
+
+            CY1 += FDX12;
+            CY2 += FDX23;
+            CY3 += FDX31;
+
+//            (char*&)colorBuffer += stride;
+        }
 }
+//	ColorRGBA color1, color2;
+//
+//	FragmentInfo fragment;
+//
+//	std::vector<FragmentInfo> f(fragments, fragments+3);
+//
+////	for (int i = 0; i < 3; i++) {
+////		fragment.location3D = vertices[i];
+////		fragment.color = colors[i];
+////		f.push_back(fragment);
+////	}
+//	std::sort(f.begin(), f.end(), compareCoordinatesFrag);
+//
+////	std::vector<Coordinates4D> v(vertices, vertices+3);
+////	std::sort(v.begin(), v.end(), compareCoordinates);
+//
+//
+////	drawHorizonalLineRGBA(v[0].x, v[0].x, v[0].y, color, fbo);
+////	setFrameBufferRGBA(v[0].x, v[0].y, fbo, color);
+////	setFrameBufferRGBA(v[1].x, v[1].y, fbo, color);
+////	setFrameBufferRGBA(v[2].x, v[2].y, fbo, color);
+//
+//	double slope12 = (f[1].location3D.x - f[0].location3D.x)/(f[1].location3D.y-f[0].location3D.y);
+//	if((int)f[1].location3D.y == (int)f[0].location3D.y) {
+//		slope12 = 0;
+//	}
+//	double slope13 = (f[2].location3D.x - f[0].location3D.x)/(f[2].location3D.y-f[0].location3D.y);
+//
+//	double y = f[0].location3D.y;
+//	double yp = 0;// = y - v[0].y; <- add v[0].y to get y
+//	double x1, x2;
+//
+////	color.r = 0;
+//
+//	// y goes from v[0].y to v[2].y;
+//	// yp goes from 0 to v[2].y - v[0].y
+//	// cf2 goes from 0 to 1, or along yp/(v[2].y - v[0].y)
+//	double colorFactor = 1.0/(f[2].location3D.y - f[0].location3D.y);
+//
+//	// cf goes from 0 to 1, or along yp/(v[1].y - v[0].y)
+//	double colorFactor2 = 1.0/(f[1].location3D.y - f[0].location3D.y);
+//
+//
+//	for( ; (yp+f[0].location3D.y) < f[1].location3D.y; yp += 1.0) {
+//
+////		x1 = slope12*(y-v[0].y) + v[0].x;
+////		x2 = slope13*(y-v[0].y) + v[0].x;
+//		x1 = slope12*(yp) + f[0].location3D.x;
+//		x2 = slope13*(yp) + f[0].location3D.x;
+////		drawHorizonalLineRGBA(x1, x2, y, color, fbo);
+//
+////		color.r = color[0].r + colorFactor*(color[2].r - color[0].r);
+//		color2 = interpolate(f[0].color, f[2].color, colorFactor*yp);
+//		color1 = interpolate(f[0].color, f[1].color, colorFactor2*yp);
+//
+//		drawHorizonalLineRGBA(x1, x2, yp+f[0].location3D.y, color1, color2);
+//	}
+//	yp =f[1].location3D.y - f[0].location3D.y;
+//
+//	double slope23 = (f[2].location3D.x - f[1].location3D.x)/(f[2].location3D.y-f[1].location3D.y);
+//	if((int)f[2].location3D.y == (int)f[1].location3D.y) {
+//		slope23 = 0;
+//	}
+//
+//	// now yp goes from v[1].y-v[0].y to v[2].y - v[0].y
+//	// cf2 goes from 0 to 1, or along (yp-(v[1].y-v[0].y))/((v[2].y - v[0].y) - (v[1].y-v[0].y))
+////	colorFactor2 = 1.0/(f[2].location3D.y - (f[1].location3D.y-f[0].location3D.y));
+//	colorFactor2 = 1.0/((f[2].location3D.y-f[0].location3D.y) - (f[1].location3D.y-f[0].location3D.y));
+//
+//	double end = f[2].location3D.y;
+//	for ( ; (yp+f[0].location3D.y) < end; yp += 1.0) {
+//
+////		x1 = slope23*(yp+v[0].y-v[1].y) + v[1].x;
+////		x2 = slope13*(yp+v[0].y-v[0].y) + v[0].x;
+//		x1 = slope23*(yp+f[0].location3D.y-f[1].location3D.y) + f[1].location3D.x;
+//		x2 = slope13*(yp) + f[0].location3D.x;
+//
+//
+//		color2 = interpolate(f[0].color, f[2].color, colorFactor*yp);
+//		color1 = interpolate(f[1].color, f[2].color, colorFactor2*(yp-(f[1].location3D.y-f[0].location3D.y)));
+//		drawHorizonalLineRGBA(x1, x2, yp+f[0].location3D.y, color1, color2);
+//	}
+//
+//}
 
 void RenderPipeline::drawHorizonalLineRGBA(double x1, double x2, int y, ColorRGBA& color1, ColorRGBA& color2) {
 //	Coordinates2D pixel;
@@ -1035,6 +1181,40 @@ void RenderPipeline::setWithDepthBuffer( Coordinates4D pt, char c, double invDep
 	setWithDepthBuffer(onlyXY(pt), c, invDepth);
 }
 
+//double perspectiveInterpolateInv(double& a, double& b, double &c, double& aInvDepth, double& bInvDepth, double& cInvDepth, double& correctDepth, double& alpha, double& beta, double& gamma) {
+//    return correctDepth*(a*aInvDepth * alpha + a*bInvDepth * beta + c*cInvDepth * gamma);
+//}
+
+
+
+//double perspectiveInterpolateInv(double& a, double& b, double &c, double& aInvDepth, double& bInvDepth, double& cInvDepth, double& correctDepth, double& alpha, double& beta, double& gamma) {
+//    return correctDepth*(a*aInvDepth * alpha + a*bInvDepth * beta + c*cInvDepth * gamma);
+//}
+
+Coordinates4D perspectiveInterpolateBary(Coordinates4D& a, Coordinates4D& b, Coordinates4D& c, double aInvDepth, double bInvDepth, double cInvDepth, double correctDepth, double& alpha, double& beta, double& gamma) {
+    Coordinates4D result;
+
+//     aInvDepth = 1.0/a.z;
+//     bInvDepth = 1.0/b.z;
+    result.z = 1.0/(aInvDepth *alpha + bInvDepth*beta + cInvDepth*gamma);    // This is Zt, where Z1 is with "a" and Z2 is with "b"
+    result.x = perspectiveInterpolateBary<double>(a.x, b.x, c.x, aInvDepth, bInvDepth, cInvDepth, result.z, alpha, beta, gamma);
+    result.y = perspectiveInterpolateBary<double>(a.y, b.y, c.y, aInvDepth, bInvDepth, cInvDepth, result.z, alpha, beta, gamma);
+    result.w = perspectiveInterpolateBary<double>(a.w, b.w, c.w, aInvDepth, bInvDepth, cInvDepth, result.z, alpha, beta, gamma);
+    
+    
+    return result;
+}
+
+Coordinates3D perspectiveInterpolateBary(Coordinates3D& a, Coordinates3D& b, Coordinates3D& c, double aInvDepth, double bInvDepth, double cInvDepth, double correctDepth, double& alpha, double& beta, double& gamma) {
+    Coordinates3D result;
+
+    result.x = perspectiveInterpolateBary<double>(a.x, b.x, c.x, aInvDepth, bInvDepth, cInvDepth, result.z, alpha, beta, gamma);
+    result.y = perspectiveInterpolateBary<double>(a.y, b.y, c.y, aInvDepth, bInvDepth, cInvDepth, result.z, alpha, beta, gamma);
+    result.y = perspectiveInterpolateBary<double>(a.z, b.z, c.z, aInvDepth, bInvDepth, cInvDepth, result.z, alpha, beta, gamma);
+    
+    return result;
+}
+
 void RenderPipeline::drawHorizonalLineWithShader( FragmentInfo& start, FragmentInfo& end, double invDepth1, double invDepth2, void* userData) {
 	Coordinates2D pixel;
 	int diff = end.pixel.x-start.pixel.x;
@@ -1116,6 +1296,28 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
 //		setRenderBuffer(pixel.x, pixel.y, colorOutput);
 		setRenderBuffer(depthIndex, colorOutput);
 	}
+}
+
+void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void* userData, void* interpolatedData) {
+    if ( pixel.x < 0 || pixel.y < 0 || depthBuffer->cols <= pixel.x || depthBuffer->rows <= pixel.y) {
+        return;
+    }
+    int depthIndex = pixel.x + depthBuffer->cols*pixel.y;
+    if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
+        ((double*)depthBuffer->data)[depthIndex] = invDepth;
+        
+        
+        ColorRGBA colorOutput;
+        FragmentInfo fInfo;
+        fInfo.pixel = pixel;
+        fInfo.data = userData;
+        fInfo.interpolated = interpolatedData;
+        fInfo.colorOutput = &colorOutput;
+        fragmentShader(fInfo);
+        
+//        setRenderBuffer(pixel.x, pixel.y, colorOutput);
+        setRenderBuffer(depthIndex, colorOutput);
+    }
 }
 
 
