@@ -63,8 +63,9 @@ Mat4D makeWindowTransform(int screenSizeX, int screenSizeY, double characterAspe
 	// Window
 //	Mat4D windowScale = scaleMatrix((double)(screenSizeX-1)/2, (double)(screenSizeY-1)/2, 1);	// Full accurate
 	//	Mat4D translationScreen = translationMatrix((double)screenSizeX/2 - 0.5, (double)screenSizeY/2 - 0.5, 0);
-	Mat4D windowScale = scaleMatrix((double)(screenSizeX+2)/2, (double)(screenSizeY+2)/2, 1);	// Cheats outpur polygons
-	Mat4D translationScreen = translationMatrix((double)screenSizeX/2 - 1.0, (double)screenSizeY/2 - 1.0, 0);
+//	Mat4D windowScale = scaleMatrix((double)(screenSizeX+2)/2, -(double)(screenSizeY+2)/2, 1);	// note the negative in Y, since y is positive down in a terminal
+    Mat4D windowScale = scaleMatrix((double)(screenSizeX)/2, -(double)(screenSizeY)/2, 1);    // note the negative in Y, since y is positive down in a terminal
+	Mat4D translationScreen = translationMatrix((double)screenSizeX/2, (double)screenSizeY/2, 0);
 	return matrixMultiply(translationScreen, windowScale);
 }
 
@@ -1294,7 +1295,7 @@ Mat4D projectionMatrixOrtho(double width, double height, double zfar, double zne
 	memset(&result, 0, sizeof(result));
 	
 	result.d[0][0] = 1/width;
-	result.d[1][1] = -1/height;
+	result.d[1][1] = 1/height;
 	result.d[2][2] = -2/(zfar-znear);
 	result.d[2][3] = -(zfar+znear)/(zfar-znear);
 	
@@ -1378,7 +1379,7 @@ void rasterize(Coordinates4D* vertices, int edgeIndices[][2], int numEdges, Mat4
 		for (int v = 0; v < 2; v++) {
 			if( imagePoints[i][v].w != 1) {
 				imagePoints[i][v].x = imagePoints[i][v].x / imagePoints[i][v].w;
-				imagePoints[i][v].y = -imagePoints[i][v].y / imagePoints[i][v].w;
+				imagePoints[i][v].y = imagePoints[i][v].y / imagePoints[i][v].w;
 				imagePoints[i][v].z = imagePoints[i][v].z / imagePoints[i][v].w;
 				imagePoints[i][v].w = 1;
 			}
@@ -1637,7 +1638,7 @@ void rasterizePolygon(Polygon4D* polygons, int count, Mat4D& windowTransform, De
 		for (int v = 0; v < polygon.numVertices; v++) {
 			if( polygon.vertices[v].w != 1) {
 				polygon.vertices[v].x = polygon.vertices[v].x / polygon.vertices[v].w;
-				polygon.vertices[v].y = -polygon.vertices[v].y / polygon.vertices[v].w;
+				polygon.vertices[v].y = polygon.vertices[v].y / polygon.vertices[v].w;
 				polygon.vertices[v].z = polygon.vertices[v].z / polygon.vertices[v].w;
 				polygon.vertices[v].w = 1;
 			}
@@ -1756,7 +1757,7 @@ void rasterizePolygonsShader(Polygon4D* polygons, int count,  Mat4D& modelView, 
 		for (int v = 0; v < polygonProjected.numVertices; v++) {
 			if( polygonProjected.vertices[v].w != 1) {
 				polygonProjected.vertices[v].x = polygonProjected.vertices[v].x / polygonProjected.vertices[v].w;
-				polygonProjected.vertices[v].y = -polygonProjected.vertices[v].y / polygonProjected.vertices[v].w;
+				polygonProjected.vertices[v].y = polygonProjected.vertices[v].y / polygonProjected.vertices[v].w;
 				polygonProjected.vertices[v].z = polygonProjected.vertices[v].z / polygonProjected.vertices[v].w;
 				polygonProjected.vertices[v].w = 1;
 			}
@@ -2856,7 +2857,7 @@ int clipPolygon(Polygon4D& input, Polygon4D* output, int& line) {
 	
 	// The following functions are from https://fabiensanglard.net/polygon_codec/
 	
-//	clipW(input, output, line);	// I don't think this is necessary
+//	clipW(input, output, line);	// I don't think this is necessary (well it is, but it's an ultra rare corner case?)
 	clipPlane(input, output, 0, 1, line);
 	clipPlane(*output, output, 1, 1, line);
 	clipPlane(*output, output, 2, 1, line);
@@ -2872,7 +2873,7 @@ void asTexImage2d(FrameBuffer* fbo, FrameBufferType type, int width, int height)
 	fbo->rows = height;
 	fbo->cols = width;
 	fbo->type = type;
-
+    
 	int channels = 0;
 	switch (type) {
 		case FBT_RGB:

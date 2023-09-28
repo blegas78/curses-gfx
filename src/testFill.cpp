@@ -258,32 +258,14 @@ int main(void) {
         skip = !skip;
     }
 
-//    ColorRGBA color = {0,0,255,0};
-//    testTexture.set(1.0,1.0, color);
-//    testTexture.set(0.0,0.0, color);
-//    testTexture.set(0.75,0.75, color);
-    
     
     setupTerminal();
 	
-//	FragmentInfo fragments[3];
 
 	Coordinates4D points[6];
     
     MyShaderAttributes mMyShaderAttributes[6];
 	
-//	points[0].x = 3*3 - 32;
-//	points[0].y = 3*3 - 32;
-//
-//	points[2].x = 12.*3 - 32;
-//	points[2].y = 15.*3 - 32;
-//
-//	points[1].x = 1.*3 - 32;
-//	points[1].y = 15.*3 - 32;
-//
-//
-//	points[3].x = 15.*3 - 32;
-//	points[3].y = 1.*3 - 32;
 	
 	for (int i = 0; i < 6; i++) {
 		points[i].x = 63*cos(3.14159/3.0 * (double)i);
@@ -293,47 +275,16 @@ int main(void) {
         mMyShaderAttributes[i].textureCoord.y = 10+1.*sin(3.14159/3.0 * (double)i);
 		
         points[i].z = 0;
+        points[i].w = 1;
 		
         mMyShaderAttributes[i].vertex.x = points[i].x;
         mMyShaderAttributes[i].vertex.y = points[i].y;
         mMyShaderAttributes[i].vertex.z = points[i].z;
 	}
 	
-//    mMyShaderAttributes[0].textureCoord.x = 1.5;
-//    mMyShaderAttributes[0].textureCoord.y = 0;
-//
-//    mMyShaderAttributes[1].textureCoord.x = 1;
-//    mMyShaderAttributes[1].textureCoord.y = 1;
-//    points[0].z = 0.5;
-//    points[3].z = 2;
-    mMyShaderAttributes[0].vertex.z = 0.5;
-//
-//    mMyShaderAttributes[2].textureCoord.x = 0;
-//    mMyShaderAttributes[2].textureCoord.y = 1;
-//	for (int i = 0; i < 3; i++) {
-//		fragments[i].color.r = 0;
-//		fragments[i].color.g = 0;
-//		fragments[i].color.b = 0;
-//		fragments[i].color.a = 0;
-//	}
-//	fragments[0].color.r = 255;
-////	fragments[0].color.g = 255;
-//
-//	fragments[1].color.g = 255;
-////	fragments[1].color.b = 255;
-//
-//	fragments[2].color.b = 255;
-////	fragments[2].color.r = 255;
-//
-////	fragments[2].location3D.y = fragments[1].location3D.y;
-	
-	Polygon4D poly;
-	poly.numVertices = 6;
-	for (int i = 0; i < poly.numVertices; i++) {
-		poly.colors[i].r = 0;
-		poly.colors[i].g = 0;
-		poly.colors[i].b = 0;
-		poly.colors[i].a = 0;
+//	Polygon4D poly;
+//	poly.numVertices = 6;
+	for (int i = 0; i < 6; i++) {
 		
 		Coordinates3D hsv, rgb;
 		hsv.x = i*60;
@@ -341,21 +292,12 @@ int main(void) {
 		hsv.z = 0.5;
 		rgb = hslToRgb(hsv);
 		
-		poly.colors[i].r = rgb.x;
-		poly.colors[i].g = rgb.y;
-		poly.colors[i].b = rgb.z;
-		poly.colors[i].a = 0;
         
         mMyShaderAttributes[i].color.r = rgb.x;
         mMyShaderAttributes[i].color.g = rgb.y;
         mMyShaderAttributes[i].color.b = rgb.z;
         mMyShaderAttributes[i].color.a = 0;
 	}
-//	poly.colors[0].r = 255;
-//	poly.colors[2].b = 255;
-//	poly.colors[1].r = 255;
-//	poly.colors[1].b = 255;
-//	poly.colors[1].g = 255;
     RenderPipeline mRenderPipeline;
     
 	
@@ -385,23 +327,17 @@ int main(void) {
 		Mat4D model = matrixMultiply(rotation2, rotation);
         model = matrixMultiply(translation, model);
         model = matrixMultiply(scale, model);
+        Mat4D perspective = projectionMatrixPerspective(M_PI_2, 12.0/28.0, 100, 0.01);
 //		Coordinates4D p[3];
-		for(int i = 0; i < poly.numVertices; i++) {
-			points[i].w = 1;
+		for(int i = 0; i < 6; i++) {
 //			fragments[i].location3D = matrixVectorMultiply(model, points[i]);
-			poly.vertices[i] = matrixVectorMultiply(model, points[i]);
-            mMyShaderAttributes[i].vertex = poly.vertices[i];
+//			poly.vertices[i] = matrixVectorMultiply(model, points[i]);
+            mMyShaderAttributes[i].vertex = matrixVectorMultiply(model, points[i]);
+//            mMyShaderAttributes[i].vertex = matrixVectorMultiply(perspective, mMyShaderAttributes[i].vertex);
 		}
 
         mRenderPipeline.setFragmentShader(shaderBasic);
-//		triangleFill(fragments, &renderBuffer);
-//		drawPolygonWithTriangles(poly, &renderBuffer);
-//        mRenderPipeline.drawPolygonWithTriangles(poly, poly, NULL);
         
-//        mRenderPipeline.triangleFill(&mMyShaderAttributes[0], &mMyShaderAttributes[1], &mMyShaderAttributes[2] );
-//        mRenderPipeline.triangleFill(&mMyShaderAttributes[2], &mMyShaderAttributes[3], &mMyShaderAttributes[4] );
-//        mRenderPipeline.triangleFill(&mMyShaderAttributes[5], &mMyShaderAttributes[0], &mMyShaderAttributes[2] );
-//        mRenderPipeline.triangleFill(&mMyShaderAttributes[2], &mMyShaderAttributes[4], &mMyShaderAttributes[5] );
         int hexagonIndes[][3] = {
             {0, 1, 2},
             {2, 3, 4},
@@ -411,12 +347,6 @@ int main(void) {
         
         mRenderPipeline.trianglesFill(mMyShaderAttributes, hexagonIndes, 4);
 		
-//		if(showPoints)
-//		for (int i = 0; i < poly.numVertices; i++) {
-//			((ColorRGBA*)renderBuffer.data)[(int)poly.vertices[i].y * renderBuffer.cols + (int)poly.vertices[i].x] = whiteColor;
-//		}
-//		showPoints = !showPoints;
-//		renderBufferToTerminal(&renderBuffer);
         mRenderPipeline.renderBufferToTerminal();
 		
 		

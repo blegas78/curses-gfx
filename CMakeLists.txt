@@ -138,6 +138,9 @@ target_link_libraries(cube ncurses ${LIBNAME})
 add_executable(cube2 src/cube2.cpp)
 target_link_libraries(cube2 ncurses ${LIBNAME})
 
+add_executable(cube3 src/cube3.cpp)
+target_link_libraries(cube3 ncurses ${LIBNAME})
+
 add_executable(aviz src/aviz.cpp)
 target_link_libraries(aviz ncurses ${LIBNAME})
 

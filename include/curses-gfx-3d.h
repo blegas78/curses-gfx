@@ -174,6 +174,7 @@ typedef struct _FragmentInfo {
 } FragmentInfo;
 
 
+
 // Can any software renderer not use this gem from Quake?
 float Q_rsqrt( float number );
 

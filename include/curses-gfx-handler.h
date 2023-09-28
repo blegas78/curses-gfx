@@ -53,6 +53,8 @@ public:
 };
 
 
+//template <class T> void clipPolygon(T* input, int inputCount, T* output, int& outputCountResult);
+
 class RenderPipeline {
 public:
 	FrameBuffer* fbo;
@@ -65,6 +67,9 @@ public:
 //	DepthBuffer tempD;
     void* userData;
     
+    Mat4D viewport;
+    
+//    void (*vertexShader)(...);
 	void (*fragmentShader)(const FragmentInfo&);
 	
 	void drawPolygonWithTriangles( Polygon4D& poly, Polygon4D& restored, void* userData);
@@ -116,6 +121,7 @@ public:
 	void setFragmentShader(void (*fragmentShader)(const FragmentInfo&));
 	
 	void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
+    template <class T, class U> void rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&));
 	void rasterizePolygonsShader(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 	void rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 	
@@ -124,8 +130,76 @@ public:
 	
 	void renderBufferToTerminal();
 	void depthBufferToTerminal();
+    
+    template <class T> void clipPolygon(T* input, int inputCount, T* output, int& outputCountResult);
+    template <class T> void clipW(T* input, int inputCount, T* output, int& outputCountResult);
+    template <class T> void clipPlane(T* input, int inputCount, T* output, int& outputCountResult, int axis, int plane);
+    
+    
+    void mvaddstring(int x, int y, const char* string);
 };
 
+
+
+template <class T, class U> void RenderPipeline::rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&)) {
+    T scratch[3];
+    int scratchLayout[][3] = {
+        {0, 1, 2}
+    };
+    T scratchClipped[10];
+    int clippedVertexCount;
+    
+    this->userData = userData;
+    
+    for (int t = 0; t < numTriangles; t++) {
+        scratch[0] = vertexInfo[triangleLayout[t][0]];
+        scratch[1] = vertexInfo[triangleLayout[t][1]];
+        scratch[2] = vertexInfo[triangleLayout[t][2]];
+        
+        for(int i = 0; i < 3; i++) {
+            //            scratch[i].vertex = matrixVectorMultiply(modelView, scratch[i].vertex);
+            //            scratch[i].location = scratch[i].vertex;
+            //            scratch[i].normal = matrixVectorMultiply(modelView, scratch[i].normal);
+            //            scratch[i].vertex = matrixVectorMultiply(projection, scratch[i].vertex);
+            //            vertexShader = (void*)myVertexShader;
+            //            myVertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
+            vertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
+            //            scratch[i].vertex.y = -scratch[i].vertex.y;
+            
+            // For every vertex, perform a vertex shading:
+            // Should be able to take inputs from a set of custom VertexInformation like model, projection, view matrics
+            // Give to a user-defined shader which produces user-defined struct of vertex attributes
+        }
+        
+        // Then.. clip geometry?
+        clipPolygon(scratch, 3, scratchClipped, clippedVertexCount);
+            
+        for(int i = 0; i < clippedVertexCount; i++) {
+            // Then.. apply a viewport and provide to triangle rasterizer
+//            scratch[i].vertex = matrixVectorMultiply(viewport, scratch[i].vertex);
+            scratchClipped[i].vertex = matrixVectorMultiply(viewport, scratchClipped[i].vertex);
+        }
+        
+        
+//            triangleFill(&scratch[0], &scratch[1], &scratch[2]);
+        for(int i = 2; i < clippedVertexCount; i++) {
+            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
+        }
+//        fbo->data[20*4 + 3] = '0'+clippedVertexCount;
+
+    }
+}
+
+template<class T> void baryInterpolate2d(T& output, const T& input, const T& input2, const double& alpha, const double& beta, std::integral_constant<int, 0>)
+{
+}
+    
+template<class T, int index = std::tuple_size_v<T>>
+void baryInterpolate2d(T& output, const T& input, const T& input2, const double& alpha, const double& beta, std::integral_constant<int, index> = std::integral_constant<int, std::tuple_size_v<T>>())
+{
+    *std::get<index-1>(output) = *std::get<index-1>(input)*alpha + *std::get<index-1>(input2)*beta;
+    baryInterpolate2d(output, input, input2, alpha, beta, std::integral_constant<int, index - 1>());
+}
 
 template<class T> void baryInterpolate(T& output, const T& input, const T& input2, const T& input3, const double& alpha, const double& beta, const double& gamma, std::integral_constant<int, 0>)
 {
@@ -164,22 +238,25 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
 //       double invDepth2 = 1.0/fragments[1].vertex.z;
 //       double invDepth3 = 1.0/fragments[2].vertex.z;
     
-    
-    const int Y1 = round(16.0f * fragment1->vertex.y);
-        const int Y2 = round(16.0f * fragment2->vertex.y);
-        const int Y3 = round(16.0f * fragment3->vertex.y);
-
-    const int X1 = round(16.0f * fragment1->vertex.x);
-    const int X2 = round(16.0f * fragment2->vertex.x);
-    const int X3 = round(16.0f * fragment3->vertex.x);
-    
-    
-    double invDepth1 = 1.0/fragment1->vertex.z;
-    double invDepth2 = 1.0/fragment2->vertex.z;
-    double invDepth3 = 1.0/fragment3->vertex.z;
     double invW1 = 1.0/fragment1->vertex.w;
     double invW2 = 1.0/fragment2->vertex.w;
     double invW3 = 1.0/fragment3->vertex.w;
+    
+    const int Y1 = round(16.0f * fragment1->vertex.y*invW1);
+        const int Y2 = round(16.0f * fragment2->vertex.y*invW2);
+        const int Y3 = round(16.0f * fragment3->vertex.y*invW3);
+
+    const int X1 = round(16.0f * fragment1->vertex.x*invW1);
+    const int X2 = round(16.0f * fragment2->vertex.x*invW2);
+    const int X3 = round(16.0f * fragment3->vertex.x*invW3);
+    
+    
+//    double invDepth1 = 1.0/fragment1->vertex.z;
+//    double invDepth2 = 1.0/fragment2->vertex.z;
+//    double invDepth3 = 1.0/fragment3->vertex.z;
+    double invDepth1 = fragment1->vertex.w/fragment1->vertex.z;
+    double invDepth2 = fragment2->vertex.w/fragment2->vertex.z;
+    double invDepth3 = fragment3->vertex.w/fragment3->vertex.z;
 
            // Deltas
            const int DX12 = X1 - X2;
@@ -302,7 +379,7 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
    //                    setWithShader(pt, correctInvDepth, point, normal, this->userData);
                        
                        
-                       setWithShader2( pt, correctInvDepth, NULL, (void*) &fragment);
+                       setWithShader2( pt, correctInvDepth, userData, (void*) &fragment);
                    }
 
                    CX1 -= FDY12;
@@ -318,5 +395,230 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
            }
 }
 
+#define CLIP_PLANE_W_2 (0.0001)
+template <class T> void RenderPipeline::clipW(T* input, int inputCount, T* output, int& outputCountResult) {
+//    output->numVertices = 0;
+    outputCountResult = 0;
+    
+    double factor;
+    
+//    char previousDot;
+//    char currentDot;
+    bool previousDot;
+    bool currentDot;
+    
+//    Coordinates4D *current = &input.vertices[0];
+    T* current = &input[0];
+//    Coordinates4D *prior = &input.vertices[input.numVertices-1];
+    T* prior = &input[inputCount-1];
+//    previousDot = prior->w < CLIP_PLANE_W_2 ? -1 : 1;
+    previousDot = prior->vertex.w > CLIP_PLANE_W_2;
+//    for (; current != &input.vertices[input.numVertices]; ) {
+    for (; current != &input[inputCount]; ) {
+//        currentDot = (current->w < CLIP_PLANE_W) ? -1 : 1;
+        currentDot = current->vertex.w > CLIP_PLANE_W_2;
+        
+//        if (previousDot * currentDot < 0) {
+        if (previousDot != currentDot) {
+//            factor = (CLIP_PLANE_W_2 - prior->w) / (prior->w - current->w);
+            factor = (CLIP_PLANE_W_2 - prior->vertex.w) / (current->vertex.w - prior->vertex.w );
+//            Coordinates4D diff = vectorSubtract(*current, *prior);
+            Coordinates4D diff = vectorSubtract(current->vertex, prior->vertex);
+            diff.x *= factor;
+            diff.y *= factor;
+            diff.z *= factor;
+            diff.w *= factor;
+//            diff = vectorAdd(*prior, diff);
+            diff = vectorAdd(prior->vertex, diff);
+            
+//            output->vertices[output->numVertices] = diff;
+//            output->numVertices++;
+            
+//            double alpha = factor;
+//            double beta = 1.0 - alpha;
+//            double invW1 = current->vertex.w/current->vertex.z;
+//            double invW2 = prior->vertex.w/prior->vertex.z;
+//            double currentDepth = 1.0/(alpha*invW1 + beta*invW2);
+////            double pBaryDivisor = 1.0/(alpha*invW1 + beta*invW2);
+//            alpha *= invW1 * currentDepth;
+//            beta  *= invW2 * currentDepth;
+            
+            
+            auto f1 = regist(*current);
+            auto f2 = regist(*prior);
+            auto o1 = regist(output[outputCountResult]);
+            
+//            if(alpha > 0 && beta > 0 && alpha < 1 && beta < 1)
+                baryInterpolate2d(o1, f1, f2, factor, 1.0-factor);
+//            else
+//                output[outputCountResult] = *current;   // HACK just to get attribute to be non-0
+            output[outputCountResult].vertex = diff;
+            outputCountResult++;
+        }
+        
+//        if (currentDot > 0) {
+        if (currentDot ) {
+//            output->vertices[output->numVertices] = *current;
+//            output->numVertices++;
+            output[outputCountResult] = *current;
+            outputCountResult++;
+        } //else {
+          //  this->mvaddstring(0, 2, "W clipped");
+        //}
+        
+        previousDot = currentDot;
+        prior = current;
+        current++;
+    }
+}
+
+template <class T> void RenderPipeline::clipPlane(T* input, int inputCount, T* output, int& outputCountResult, int axis, int plane) {
+//    output->numVertices = 0;
+    outputCountResult = 0;
+    
+    double factor;
+    
+//    char previousDot;
+//    char currentDot;
+//    int previousDot;
+//    int currentDot;
+    bool previousDot;
+    bool currentDot;
+    
+//    Coordinates4D *current = &input.vertices[0];
+//    Coordinates3D *currentNormal = &input.normals[0];
+//    ColorRGBA *currentColor = &input.colors[0];
+    T *current = &input[0];
+    
+//    Coordinates4D *prior = &input.vertices[input.numVertices-1];
+    T *prior = &input[inputCount-1];
+//    previousDot = ((double*)prior)[axis] <= prior->w ;
+    if(plane == 1) {
+        previousDot = ((double*)&prior->vertex)[axis] <= prior->vertex.w ;
+    } else {
+        previousDot = -((double*)&prior->vertex)[axis] <= prior->vertex.w;
+    }
+//    for (; current != &input.vertices[input.numVertices]; ) {
+    for (; current != &input[inputCount]; ) {
+//        currentDot = ((double*)current)[axis] <= current->w;
+        if(plane == 1) {
+            currentDot = ((double*)&current->vertex)[axis] <= current->vertex.w;
+        } else {
+            currentDot = -((double*)&current->vertex)[axis] <= current->vertex.w;
+        }
+//            factor = current->w/current->x;
+        // duplicate and shift
+        
+        if (previousDot != currentDot ) {
+//            mvprintw(line++, 0, " - - Clip against plane %d", axis);
+//            factor = (prior->w - ((double*)prior)[axis])/((prior->w - ((double*)prior)[axis]) - (current->w - ((double*)current)[axis])) ;
+            if(plane == 1) {
+                factor = (prior->vertex.w - ((double*)&prior->vertex)[axis])/((prior->vertex.w - ((double*)&prior->vertex)[axis]) - (current->vertex.w - ((double*)&current->vertex)[axis])) ;
+            } else {
+                factor = (prior->vertex.w + ((double*)&prior->vertex)[axis])/((prior->vertex.w + ((double*)&prior->vertex)[axis]) - (current->vertex.w + ((double*)&current->vertex)[axis])) ;
+            }
+//            Coordinates4D diff = vectorSubtract(*current, *prior);
+            Coordinates4D diff = vectorSubtract(current->vertex, prior->vertex);
+            diff.x *= factor;
+            diff.y *= factor;
+            diff.z *= factor;
+            diff.w *= factor;
+            diff = vectorAdd(prior->vertex, diff);
+            
+//            output->vertices[output->numVertices] = diff;
+//            output->normals[output->numVertices] = *currentNormal; // this should be interpolated as well
+//            output->colors[output->numVertices] = *currentColor; // this should be interpolated as well
+//            output->numVertices++;
+//            double alpha = factor;
+//            double beta = 1.0 - alpha;
+//            double invW1 = current->vertex.w/current->vertex.z;
+//            double invW2 = prior->vertex.w/prior->vertex.z;
+//            double currentDepth = 1.0/(alpha*invW1 + beta*invW2);
+//            double pBaryDivisor = 1.0/(alpha*invW1 + beta*invW2);
+//            alpha *= invW1 * currentDepth;
+//            beta  *= invW2 * currentDepth;
+            
+            
+            auto f1 = regist(*current);
+            auto f2 = regist(*prior);
+            auto o1 = regist(output[outputCountResult]);
+            
+//            baryInterpolate2d(o1, f1, f2, alpha, beta);
+            baryInterpolate2d(o1, f1, f2, factor, 1.0-factor);
+//            output[outputCountResult] = *current;   // HACK just to get attribute to be non-0
+            output[outputCountResult].vertex = diff;
+            // TODO: interpolate rest of output[outputCountResult] using factor
+            outputCountResult++;
+        }
+        
+        if (currentDot ) {
+//                mvprintw(line++, 0, " - - Vertex Insertion");
+//            output->vertices[output->numVertices] = *current;
+//            output->normals[output->numVertices] = *currentNormal;
+//            output->colors[output->numVertices] = *currentColor;
+//            output->numVertices++;
+            output[outputCountResult] = *current;
+            outputCountResult++;
+        } //else {
+          //  this->mvaddstring(axis, 3+axis, "Plane clipped");
+        //}
+        
+        previousDot = currentDot;
+        prior = current;
+        current++;
+//        currentNormal++;
+//        currentColor++;
+    }
+    return;
+}
+
+template <class T> void RenderPipeline::clipPolygon(T* input, int inputCount, T* output, int& outputCountResult) {
+    T copy[20];
+//    mvprintw(line++, 0, "Polygon %d");
+//    for (int i = 0; i < input.numVertices; i++) {
+//        if (input.vertices[i].w <= 0) {
+//            mvprintw(line++, 0, "Polygon W clip needed: %f", input.vertices[i].w);
+//            return 0;
+//        }
+//    }
+    
+    // The following functions are from https://fabiensanglard.net/polygon_codec/
+    
+//    clipW(input, output, line);    // I don't think this is necessary (well it is, but it's an ultra rare corner case?)
+    
+    
+// For debugging:
+    outputCountResult = inputCount;
+    for(int i = 0; i < inputCount; i++)
+        copy[i] = input[i];
+    
+    
+        clipW(copy, outputCountResult, output, outputCountResult);
+    for(int i = 0; i < outputCountResult; i++)
+        copy[i] = output[i];
+    
+    clipPlane(copy, outputCountResult, output, outputCountResult, 0, 1);
+    for(int i = 0; i < outputCountResult; i++)
+        copy[i] = output[i];
+    clipPlane(copy, outputCountResult, output, outputCountResult, 0, -1);
+    
+    for(int i = 0; i < outputCountResult; i++)
+        copy[i] = output[i];
+    clipPlane(copy, outputCountResult, output, outputCountResult, 1, 1);
+    for(int i = 0; i < outputCountResult; i++)
+        copy[i] = output[i];
+    clipPlane(copy, outputCountResult, output, outputCountResult, 1, -1);
+    
+    for(int i = 0; i < outputCountResult; i++)
+        copy[i] = output[i];
+    clipPlane(copy, outputCountResult, output, outputCountResult, 2, 1);
+//    for(int i = 0; i < outputCountResult; i++)
+//        copy[i] = output[i];
+//    clipPlane(copy, outputCountResult, output, outputCountResult, 2, -1);
+    
+    
+   // return 1;
+
+}
 
 #endif

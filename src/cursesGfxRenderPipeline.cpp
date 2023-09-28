@@ -15,6 +15,21 @@ RenderPipeline::RenderPipeline() {
 #endif
 }
 
+
+void RenderPipeline::mvaddstring(int x, int y, const char* string) {
+
+    
+    if (fbo->type == FBT_RGBA) {
+        for (int i=x; i < x+strlen(string); i++) {
+            fbo->data[(i + y*fbo->cols)*4+0] = 255;
+            fbo->data[(i + y*fbo->cols)*4+1] = 255;
+            fbo->data[(i + y*fbo->cols)*4+2] = 255;
+            fbo->data[(i + y*fbo->cols)*4+3] = string[i-x];
+            ((double*)depthBuffer->data)[i + y*depthBuffer->cols] = 0;
+        }
+    }
+}
+
 #ifdef FB_SUPPORT
 void RenderPipeline::setupLinuxFb() {
 	fbfd = open ("/dev/fb0", O_RDWR);
@@ -286,7 +301,7 @@ void RenderPipeline::rasterizePolygonsShader(Polygon4D* polygons, int count, Mat
 		
 		
 		// Homogenous clipping:
-		int valid = clipPolygon(polygonProjected, &polygonProjected, line);
+		int valid = ::clipPolygon(polygonProjected, &polygonProjected, line);
 		
 		// now get back the original coordinates for separate handling
 		polygonRestored.numVertices = polygonProjected.numVertices;
@@ -299,7 +314,7 @@ void RenderPipeline::rasterizePolygonsShader(Polygon4D* polygons, int count, Mat
 		for (int v = 0; v < polygonProjected.numVertices; v++) {
 			if( polygonProjected.vertices[v].w != 1) {
 				polygonProjected.vertices[v].x = polygonProjected.vertices[v].x / polygonProjected.vertices[v].w;
-				polygonProjected.vertices[v].y = -polygonProjected.vertices[v].y / polygonProjected.vertices[v].w;
+				polygonProjected.vertices[v].y = polygonProjected.vertices[v].y / polygonProjected.vertices[v].w;
 				polygonProjected.vertices[v].z = polygonProjected.vertices[v].z / polygonProjected.vertices[v].w;
 				polygonProjected.vertices[v].w = 1;
 			}
@@ -1456,8 +1471,9 @@ void RenderPipeline::depthBufferToTerminal() {
         }
     }
     //minDepth = 0;
-    double scale = 255.0/(maxDepth-minDepth);
-//    scale = 100.;
+    double scale = 255.0/(1-(1.0/100.0));
+    scale = 2500;
+    minDepth = 1;
 	for (int y = 0; y < depthBuffer->rows; y++) {
 		offset = y * depthBuffer->cols;
 		for (int x = 0; x < depthBuffer->cols; x++) {
