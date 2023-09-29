@@ -251,12 +251,7 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
     const int X3 = round(16.0f * fragment3->vertex.x*invW3);
     
     
-//    double invDepth1 = 1.0/fragment1->vertex.z;
-//    double invDepth2 = 1.0/fragment2->vertex.z;
-//    double invDepth3 = 1.0/fragment3->vertex.z;
-    double invDepth1 = fragment1->vertex.w/fragment1->vertex.z;
-    double invDepth2 = fragment2->vertex.w/fragment2->vertex.z;
-    double invDepth3 = fragment3->vertex.w/fragment3->vertex.z;
+    
 
            // Deltas
            const int DX12 = X1 - X2;
@@ -266,7 +261,15 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
            const int DY12 = Y1 - Y2;
            const int DY23 = Y2 - Y3;
            const int DY31 = Y3 - Y1;
-
+    
+    // Cross product check for CCW, otherwis return:
+    if(DX12*DY23 - DX23*DY12 > 0)
+        return;
+    
+    
+    double invDepth1 = fragment1->vertex.w/fragment1->vertex.z;
+    double invDepth2 = fragment2->vertex.w/fragment2->vertex.z;
+    double invDepth3 = fragment3->vertex.w/fragment3->vertex.z;
            // Fixed-point deltas
            const int FDX12 = DX12 << 4;
            const int FDX23 = DX23 << 4;
