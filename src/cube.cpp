@@ -462,7 +462,9 @@ int main(void) {
 		
 		
 		delayTime += 0.001*(1.0/60.0 - float_ms.count()/1000.0);
-		usleep(1000000.0*delayTime);
+        if (delayTime> 0 && delayTime < 0.1) {
+            usleep(1000000.0*delayTime);
+        }
 		depthBuffer.reset();
 		erase();
 		mvprintw(debugLine++, 0, "FPS: %f", 1000.0/float_ms.count());

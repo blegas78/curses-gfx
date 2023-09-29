@@ -88,6 +88,13 @@ public:
         data[ xPart + width*yPart] = value;
     }
     
+    void setPixel(const int& x, const int& y, const ColorRGBA& value) {
+        int xPart = mod(x,width);
+        int yPart = mod(y,height);
+//        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
+        data[ xPart + width*yPart] = value;
+    }
+    
     ColorRGBA sample( const double& x, const double& y) {
         int xPart = mod(x*(double)width,width);
         int yPart = mod(y*(double)height,height);
@@ -97,7 +104,7 @@ public:
 
 
 
-Texture testTexture(6,6);
+Texture testTexture(10,10);
 
 typedef struct _LightParams {
 	Coordinates4D modelView[10];
@@ -332,12 +339,12 @@ void lightFs4(const FragmentInfo& fInfo) {
     //setRGB(fInfo.pixel, colorRGB);
     
     //    ColorRGBA result;
-//    colorRGB.x *= 0.5;
-//    colorRGB.y *= 0.5;
-//    colorRGB.z *= 0.5;
-    colorRGB.x += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).r * (1.0/255.0 * 0.5);
-    colorRGB.y += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).g * (1.0/255.0 * 0.5);
-    colorRGB.z += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).b * (1.0/255.0 * 0.5);
+    colorRGB.x *= 0.5;
+    colorRGB.y *= 0.5;
+    colorRGB.z *= 0.5;
+    colorRGB.x += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).r * (1.0/255.0 * 0.75);
+    colorRGB.y += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).g * (1.0/255.0 * 0.75);
+    colorRGB.z += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).b * (1.0/255.0 * 0.75);
     Coordinates3D clippedRGB = clipRGB(colorRGB);
     fInfo.colorOutput->r = clippedRGB.x*255;
     fInfo.colorOutput->g = clippedRGB.y*255;
@@ -346,6 +353,11 @@ void lightFs4(const FragmentInfo& fInfo) {
     
     //    fInfo.colorOutput = result;
 }
+
+
+
+
+
 
 
 int main(int argc, char** argv) {
@@ -363,7 +375,7 @@ int main(int argc, char** argv) {
 
             if(skip) {
                 skip = false;
-                ColorRGBA color = {50,50,50,0};
+                ColorRGBA color = {0,0,0,0};
                 testTexture.set(((double)i)/(double)testTexture.width, ((double)j)/(double)testTexture.height, color);
             } else {
                 skip = true;
@@ -371,6 +383,9 @@ int main(int argc, char** argv) {
         }
         skip = !skip;
     }
+    
+    
+    testTexture.set(0.2, 0.2, {255,0,0,0});
 
 	setupTerminal();
     
@@ -536,7 +551,9 @@ int main(int argc, char** argv) {
 		
 		
 		delayTime += 0.001*(1.0/60.0 - float_ms.count()/1000.0);
-		usleep(1000000.0*delayTime);
+        if (delayTime> 0 && delayTime < 0.1) {
+            usleep(1000000.0*delayTime);
+        }
 //		depthBuffer.reset();
 		mRenderPipeline.reset();
 		//erase();

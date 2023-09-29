@@ -2,6 +2,8 @@
 
 cmake_minimum_required(VERSION 3.1)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
+
 
 function( new_install LIBNAME )
 	# Install
@@ -52,8 +54,12 @@ if(APPLE)
 endif()
 
 
-project(asciilines)
+project(curses-gfx)
 set(LIBNAME cursesgfx)
+
+find_package(LibPng)
+
+
 
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -75,6 +81,10 @@ option( BUILD_STATIC_LIBS "Build the static library" ON)
 find_package(Threads REQUIRED)
 
 include_directories(include)
+if(PNG_FOUND)
+	include_directories(${PNG_INCLUDE_DIR})
+	message(" ----- ${PNG_INCLUDE_DIR}")
+endif(PNG_FOUND)
 
 include(CheckIncludeFileCXX)
 CHECK_INCLUDE_FILE_CXX("linux/fb.h" FB_EXISTS)
@@ -119,7 +129,12 @@ target_link_libraries(${LIBNAME} ncurses ${CMAKE_THREAD_LIBS_INIT})
 
 new_install( ${LIBNAME} )
 
-
+#find_package(PkgConfig REQUIRED)
+#pkg_check_modules(ncurses  REQUIRED ncurses )
+#if(ncurses_FOUND)
+#    message(" --- ncurses_FOUND")
+#    message(" --- ${ncurses_LIBRARIES}")
+#endif(ncurses_FOUND)
 
 
 add_executable(asciilines src/testAsciiLines.cpp)
@@ -140,6 +155,12 @@ target_link_libraries(cube2 ncurses ${LIBNAME})
 
 add_executable(cube3 src/cube3.cpp)
 target_link_libraries(cube3 ncurses ${LIBNAME})
+
+if(PNG_FOUND)
+	message("-- Building examples with libpng!")
+	add_executable(cubepng src/cubepng.cpp)
+	target_link_libraries(cubepng ncurses ${PNG_LIBRARY} ${LIBNAME})
+endif(PNG_FOUND)
 
 add_executable(aviz src/aviz.cpp)
 target_link_libraries(aviz ncurses ${LIBNAME})
