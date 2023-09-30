@@ -109,11 +109,14 @@ set(c_sources src/cursesGfx3d.cpp
                       src/cursesGfx.cpp
                       src/cursesGfxHandler.cpp
                       src/cursesClock.cpp
+                      src/cursesGfxPngLoader.cpp
                       ) 
 set(c_headers  include/curses-gfx-3d.h
 		include/curses-gfx.h
 		include/curses-gfx-handler.h
-		include/curses-clock.h )
+		include/curses-clock.h
+        include/curses-gfx-png-loader.h
+        )
 set(c_sources ${c_sources} ${c_headers} )
 
 # Libraries:
@@ -125,7 +128,7 @@ set_target_properties(${LIBNAME}-static PROPERTIES OUTPUT_NAME "${LIBNAME}")
 set_target_properties(${LIBNAME} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(${LIBNAME}-static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
-target_link_libraries(${LIBNAME} ncurses ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${LIBNAME} ncurses ${CMAKE_THREAD_LIBS_INIT} ${PNG_LIBRARY})
 
 
 new_install( ${LIBNAME} )

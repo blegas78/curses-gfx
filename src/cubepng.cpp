@@ -1,4 +1,4 @@
-#include <png.h>
+//#include <png.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -18,6 +18,7 @@
 #include "curses-clock.h"
 #include "curses-gfx-3d.h"
 #include "curses-gfx-handler.h"
+#include "curses-gfx-png-loader.h"
 
 /*
  Catch ctrl-c for cleaner exits
@@ -69,77 +70,77 @@ void cleanupConsole() {
     std::cout << "Console has been cleaned!" << std::endl;
 }
 
-typedef struct _PngLoader {
-    int width, height;
-    png_byte color_type;
-    png_byte bit_depth;
-    png_bytep *row_pointers = NULL;
-} PngLoader;
+//typedef struct _PngLoader {
+//    int width, height;
+//    png_byte color_type;
+//    png_byte bit_depth;
+//    png_bytep *row_pointers = NULL;
+//} PngLoader;
 
 
-// thanks to https://gist.github.com/niw/5963798
-void read_png_file(char *filename, PngLoader& mPngLoader) {
-  FILE *fp = fopen(filename, "rb");
-
-  png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if(!png) abort();
-
-  png_infop info = png_create_info_struct(png);
-  if(!info) abort();
-
-  if(setjmp(png_jmpbuf(png))) abort();
-
-  png_init_io(png, fp);
-
-  png_read_info(png, info);
-
-    mPngLoader.width      = png_get_image_width(png, info);
-    mPngLoader.height     = png_get_image_height(png, info);
-    mPngLoader.color_type = png_get_color_type(png, info);
-    mPngLoader.bit_depth  = png_get_bit_depth(png, info);
-
-  // Read any color_type into 8bit depth, RGBA format.
-  // See http://www.libpng.org/pub/png/libpng-manual.txt
-
-  if(mPngLoader.bit_depth == 16)
-    png_set_strip_16(png);
-
-  if(mPngLoader.color_type == PNG_COLOR_TYPE_PALETTE)
-    png_set_palette_to_rgb(png);
-
-  // PNG_COLOR_TYPE_GRAY_ALPHA is always 8 or 16bit depth.
-  if(mPngLoader.color_type == PNG_COLOR_TYPE_GRAY && mPngLoader.bit_depth < 8)
-    png_set_expand_gray_1_2_4_to_8(png);
-
-  if(png_get_valid(png, info, PNG_INFO_tRNS))
-    png_set_tRNS_to_alpha(png);
-
-  // These color_type don't have an alpha channel then fill it with 0xff.
-  if(mPngLoader.color_type == PNG_COLOR_TYPE_RGB ||
-     mPngLoader.color_type == PNG_COLOR_TYPE_GRAY ||
-     mPngLoader.color_type == PNG_COLOR_TYPE_PALETTE)
-    png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
-
-  if(mPngLoader.color_type == PNG_COLOR_TYPE_GRAY ||
-     mPngLoader.color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-    png_set_gray_to_rgb(png);
-
-  png_read_update_info(png, info);
-
-  if (mPngLoader.row_pointers)
-      delete [] mPngLoader.row_pointers;
-
-    mPngLoader.row_pointers = new png_bytep[mPngLoader.height];// (png_bytep*)malloc(sizeof(png_bytep) * );
-  for(int y = 0; y < mPngLoader.height; y++) {
-      mPngLoader.row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png,info));
-  }
-
-  png_read_image(png, mPngLoader.row_pointers);
-
-  fclose(fp);
-
-  png_destroy_read_struct(&png, &info, NULL);
-}
+//// thanks to https://gist.github.com/niw/5963798
+//void read_png_file(char *filename, PngLoader& mPngLoader) {
+//  FILE *fp = fopen(filename, "rb");
+//
+//  png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+//  if(!png) abort();
+//
+//  png_infop info = png_create_info_struct(png);
+//  if(!info) abort();
+//
+//  if(setjmp(png_jmpbuf(png))) abort();
+//
+//  png_init_io(png, fp);
+//
+//  png_read_info(png, info);
+//
+//    mPngLoader.width      = png_get_image_width(png, info);
+//    mPngLoader.height     = png_get_image_height(png, info);
+//    mPngLoader.color_type = png_get_color_type(png, info);
+//    mPngLoader.bit_depth  = png_get_bit_depth(png, info);
+//
+//  // Read any color_type into 8bit depth, RGBA format.
+//  // See http://www.libpng.org/pub/png/libpng-manual.txt
+//
+//  if(mPngLoader.bit_depth == 16)
+//    png_set_strip_16(png);
+//
+//  if(mPngLoader.color_type == PNG_COLOR_TYPE_PALETTE)
+//    png_set_palette_to_rgb(png);
+//
+//  // PNG_COLOR_TYPE_GRAY_ALPHA is always 8 or 16bit depth.
+//  if(mPngLoader.color_type == PNG_COLOR_TYPE_GRAY && mPngLoader.bit_depth < 8)
+//    png_set_expand_gray_1_2_4_to_8(png);
+//
+//  if(png_get_valid(png, info, PNG_INFO_tRNS))
+//    png_set_tRNS_to_alpha(png);
+//
+//  // These color_type don't have an alpha channel then fill it with 0xff.
+//  if(mPngLoader.color_type == PNG_COLOR_TYPE_RGB ||
+//     mPngLoader.color_type == PNG_COLOR_TYPE_GRAY ||
+//     mPngLoader.color_type == PNG_COLOR_TYPE_PALETTE)
+//    png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
+//
+//  if(mPngLoader.color_type == PNG_COLOR_TYPE_GRAY ||
+//     mPngLoader.color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+//    png_set_gray_to_rgb(png);
+//
+//  png_read_update_info(png, info);
+//
+//  if (mPngLoader.row_pointers)
+//      delete [] mPngLoader.row_pointers;
+//
+//    mPngLoader.row_pointers = new png_bytep[mPngLoader.height];// (png_bytep*)malloc(sizeof(png_bytep) * );
+//  for(int y = 0; y < mPngLoader.height; y++) {
+//      mPngLoader.row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png,info));
+//  }
+//
+//  png_read_image(png, mPngLoader.row_pointers);
+//
+//  fclose(fp);
+//
+//  png_destroy_read_struct(&png, &info, NULL);
+//}
 
 class Texture {
 public:
@@ -503,7 +504,7 @@ int main(int argc, char** argv) {
       Texture pngTexture(mPngLoader.width, mPngLoader.height);
     process_png_file(mPngLoader, pngTexture);
   //  write_png_file(argv[2]);
-//    pngTexture.monochromize();
+    pngTexture.monochromize();
     pngTexture.offsetAvergageToCenter(0.5);
     pngTexture.normalize(1.);
     
@@ -646,6 +647,11 @@ int main(int argc, char** argv) {
     squareVi[2].textureCoord = {1, 1};
     squareVi[3].textureCoord = {1, 0};
     
+    squareVi[0].textureCoord = {0.75, 0.5};
+    squareVi[1].textureCoord = {0.75, 1.};
+    squareVi[2].textureCoord = {1, 1.};
+    squareVi[3].textureCoord = {1, 0.5};
+    
     squareVi[0].color = {255, 0, 0, 0};
     squareVi[1].color = {0, 255, 0, 0};
     squareVi[2].color = {0, 0, 255, 0};
@@ -708,17 +714,18 @@ int main(int argc, char** argv) {
     auto now = std::chrono::high_resolution_clock::now();
     auto before = now;
     auto before2 = now;
-    auto before3 = now;
+    
+    RenderStats mRenderStats;
     
     int debugLine = 0;
     int numEdges;
     double lightAngle = 0;
     double angle = 0;
-    double cube2angle = 0;
     double tilt = M_PI/4;
     bool usePerspective = true;
     bool autoRotate = true;
     bool showDepth = false;
+    bool showGround = true;
     double delayTime = 0;//1.0/60;
     while (keepRunning == true) {
         debugLine = 0;
@@ -760,6 +767,7 @@ int main(int argc, char** argv) {
         cameraOrientation = transpose(cameraOrientation);
 
         viewMatrix = matrixMultiply( cameraOrientation, viewMatrix);
+        
         
         lightAngle+=dTime * 0.2;
         light[0].x = 6*cos(lightAngle);
@@ -818,14 +826,10 @@ int main(int argc, char** argv) {
         mLightParamsAndTexture.cameraLocation = {0,0,0};
 //        mLightParamsAndTexture.cameraLocation = matrixVectorMultiple(<#Mat3D &rotation#>, -1*mLightParamsAndTexture.cameraLocation);
         
-        // Cube 2
-        cube2angle += dTime*2;
-        Coordinates3D cube2roationAxis = {1+sin(0.9*cube2angle+1),1+sin(0.8*cube2angle), sin(0.7*cube2angle)};
-        cube2roationAxis = normalizeVector(cube2roationAxis);
-        Mat4D cube2rotation = rotationFromAngleAndUnitAxis(cube2angle*1.1, cube2roationAxis);
-        Mat4D cube2translation = translationMatrix(1, -1, 0.1);
-        Mat4D modelViewCube2 = matrixMultiply(cube2translation, cube2rotation);
-        modelViewCube2 = matrixMultiply(viewMatrix, modelViewCube2);
+        now = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> float_ms2 = (now - before);
+        double timeToPrepare = (double)float_ms2.count()/1000.0;
+        before2 = now;
         
 
         // triangle
@@ -840,7 +844,6 @@ int main(int argc, char** argv) {
         
         Mat4D modelBlackCube = matrixMultiply(solidRotation, solidCubeScale);
         modelBlackCube = matrixMultiply(solidTranslation, modelBlackCube);
-//        modelViewBlackCube = matrixMultiply( cube2translation, modelViewBlackCube);
         
         Mat4D modelViewBlackCube = matrixMultiply(viewMatrix, modelBlackCube);
         numEdges = sizeof(cubeQuadIndices)/sizeof(cubeQuadIndices[0]);
@@ -854,30 +857,33 @@ int main(int argc, char** argv) {
         mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
 //        mRenderPipeline.setFragmentShader(lightFs3);
 //        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParams, myVertexShader);
-//        mRenderPipeline.setFragmentShader(textureshader);
-//        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&pngTexture, myVertexShader);
-        mRenderPipeline.setFragmentShader(lightAndTextureShader);
-        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParamsAndTexture, myVertexShader);
+        mRenderPipeline.setFragmentShader(textureshader);
+        mRenderStats = mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&pngTexture, myVertexShader);
+//        mRenderPipeline.setFragmentShader(lightAndTextureShader);
+//        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParamsAndTexture, myVertexShader);
         
-        // Square floor:
-//        mRenderPipeline.trianglesFill(squareVi, squareViIndices, 2);
-        Mat4D modelTranslation = translationMatrix(0, 0, -1 );
-        Mat4D modelScale = scaleMatrix(8, 8, 8);
-        Mat4D modelSquare = matrixMultiply(modelTranslation, modelScale);
-        Mat4D modelViewSquare = matrixMultiply(viewMatrix, modelSquare);
-        mUniformInfo.modelView = modelViewSquare;
-//        mUniformInfo.modelView = modelSquare;
-        mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
-        
-        now = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> float_ms2 = (now - before);
-        double timeToPrepare = (double)float_ms2.count()/1000.0;
-        before2 = now;
-        RenderStats mRenderStats;
-//        mRenderPipeline.setFragmentShader(textureshader);
-//        mRenderStats = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&pngTexture, myVertexShader);
-        mRenderPipeline.setFragmentShader(lightAndTextureShader);
-        mRenderStats = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParamsAndTexture, myVertexShader);
+        if(showGround) {
+            // Square floor:
+            //        mRenderPipeline.trianglesFill(squareVi, squareViIndices, 2);
+            Mat4D modelTranslation = translationMatrix(0, 0, -3 );
+            Mat4D modelScale = scaleMatrix(6, 6, 6);
+            Mat4D modelSquare = matrixMultiply(modelTranslation, modelScale);
+            Mat4D modelViewSquare = matrixMultiply(viewMatrix, modelSquare);
+            mUniformInfo.modelView = modelViewSquare;
+            //        mUniformInfo.modelView = modelSquare;
+            mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+            
+            
+            
+            //        mRenderPipeline.setFragmentShader(textureshader);
+            //        mRenderStats = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&pngTexture, myVertexShader);
+            mRenderPipeline.setFragmentShader(lightAndTextureShader);
+            RenderStats mRenderStats2 = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParamsAndTexture, myVertexShader);
+            
+            mRenderStats.timeDrawing += mRenderStats2.timeDrawing;
+            mRenderStats.timeClipping += mRenderStats2.timeClipping;
+            mRenderStats.timeVertexShading += mRenderStats2.timeVertexShading;
+        }
         
         now = std::chrono::high_resolution_clock::now();
         float_ms2 = (now - before2);
@@ -890,26 +896,32 @@ int main(int argc, char** argv) {
             mRenderPipeline.renderBufferToTerminal();
         }
         
-        now = std::chrono::high_resolution_clock::now();
-        float_ms2 = (now - before2);
-        double timeToRender = (double)float_ms2.count()/1000.0;
-        
         
         if (autoRotate) {
             angle -= dTime*0.4;
         }
-
+        
+        now = std::chrono::high_resolution_clock::now();
+        float_ms2 = (now - before2);
+        double timeToRender = (double)float_ms2.count()/1000.0;
+        before2 = now;
+        
+        
+        // Compute some stats:
+        double totalTime = float_ms.count()/1000.0;
+        double timeForNcursesFill = totalTime - timeToRasterize - timeToPrepare;
+        
         // HUD
         mvprintw(debugLine++, 0, "FPS: %f", 1000.0/float_ms.count());
-        mvprintw(debugLine++, 0, "Delay time %f", delayTime);
-        mvprintw(debugLine++, 0, "Total Time %f", float_ms.count()/1000.0);
-        mvprintw(debugLine++, 0, "Prep       %f", timeToPrepare);
-        mvprintw(debugLine++, 0, "Rasterize  %f", timeToRasterize);
-        mvprintw(debugLine++, 0, " - Vertex  %f", mRenderStats.timeVertexShading);
-        mvprintw(debugLine++, 0, " - Clip    %f", mRenderStats.timeClipping);
-        mvprintw(debugLine++, 0, " - Draw    %f", mRenderStats.timeDrawing);
-        mvprintw(debugLine++, 0, "Render     %f", timeToRender);
-        
+//        mvprintw(debugLine++, 0, "Delay time %f", delayTime);
+        mvprintw(debugLine++, 0, "Total Time  %0.6f", totalTime);
+        mvprintw(debugLine++, 0, "Prep        %0.6f % 3.2f%%", timeToPrepare, timeToPrepare/totalTime*100);
+        mvprintw(debugLine++, 0, "Rasterize   %0.6f % 3.2f%%", timeToRasterize, timeToRasterize/totalTime*100);
+        mvprintw(debugLine++, 0, " - Vertex   %0.6f % 3.2f%%", mRenderStats.timeVertexShading, mRenderStats.timeVertexShading/totalTime*100);
+        mvprintw(debugLine++, 0, " - Clip     %0.6f % 3.2f%%", mRenderStats.timeClipping, mRenderStats.timeClipping/totalTime*100);
+        mvprintw(debugLine++, 0, " - Draw     %0.6f % 3.2f%%", mRenderStats.timeDrawing, mRenderStats.timeDrawing/totalTime*100);
+        mvprintw(debugLine++, 0, "Window Fill %0.6f % 3.2f%%", timeForNcursesFill, timeForNcursesFill/totalTime*100);
+//        refresh();
         int ch;
 //        refresh();
 //        continue;
@@ -946,6 +958,8 @@ int main(int argc, char** argv) {
             tilt += 0.05;
         } else if ( ch == KEY_DOWN) {
             tilt -= 0.05;
+        } else if ( ch == 'g' || ch == 'G' ) {
+            showGround = !showGround;
         } else if ( ch == ' ' ) {
             autoRotate = !autoRotate;
         } else if ( ch == 'd' || ch == 'D' ) {
