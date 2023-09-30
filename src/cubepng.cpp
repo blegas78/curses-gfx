@@ -537,8 +537,8 @@ int main(int argc, char** argv) {
     Mat4D viewMatrix = matrixMultiply( cameraOrientation, cameraTranslation );
     
     // Projection
-    double zFar = 30;
-    double zNear = 0.1;
+    double zFar = 100;
+    double zNear = .1;
     Mat4D projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
     
     // Viewport
@@ -554,6 +554,8 @@ int main(int argc, char** argv) {
     
     auto now = std::chrono::high_resolution_clock::now();
     auto before = now;
+    auto before2 = now;
+    auto before3 = now;
     
     int debugLine = 0;
     int numEdges;
@@ -651,7 +653,7 @@ int main(int argc, char** argv) {
 //            rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, windowFull, (void*)&mLightParams.color[i], &depthBuffer, lightModelFs, debugLine);
             mRenderPipeline.setFragmentShader(lightModelFs);
 
-            mRenderPipeline.rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, mRenderPipeline.viewport, (void*)&mLightParams.color[i], debugLine);
+//            mRenderPipeline.rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, mRenderPipeline.viewport, (void*)&mLightParams.color[i], debugLine);
         }
 
         
@@ -689,8 +691,8 @@ int main(int argc, char** argv) {
         mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
 //        mRenderPipeline.userData = (void*)&mLightParams;
         mRenderPipeline.setFragmentShader(lightFs3);
-        mRenderPipeline.trianglesFill(cubeVi, cubeViIndices, 12);
-        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParams, myVertexShader);
+//        mRenderPipeline.trianglesFill(cubeVi, cubeViIndices, 12);
+//        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParams, myVertexShader);
 //        mRenderPipeline.rasterizeShader(cubeVi, cubeViIndices, 12, modelViewBlackCube, projection, (void*)&mLightParams);
         
 //        mRenderPipeline.trianglesFill(squareVi, squareViIndices, 2);
@@ -704,12 +706,21 @@ int main(int argc, char** argv) {
 //        mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParams, myVertexShader);
         mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&pngTexture, myVertexShader);
         
+        now = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> float_ms2 = (now - before);
+        double timeToRasterize = (double)float_ms2.count()/1000.0;
+        before2 = now;
         
         if (showDepth) {
             mRenderPipeline.depthBufferToTerminal();
         } else {
             mRenderPipeline.renderBufferToTerminal();
         }
+        
+        now = std::chrono::high_resolution_clock::now();
+        float_ms2 = (now - before2);
+        double timeToRender = (double)float_ms2.count()/1000.0;
+        
         
         if (autoRotate) {
             angle -= float_ms.count()/1000.0*0.4;
@@ -718,6 +729,8 @@ int main(int argc, char** argv) {
         // HUD
         mvprintw(debugLine++, 0, "FPS: %f", 1000.0/float_ms.count());
         mvprintw(debugLine++, 0, "Delay time %f", delayTime);
+        mvprintw(debugLine++, 0, "Rasterize %f", timeToRasterize);
+        mvprintw(debugLine++, 0, "Render    %f", timeToRender);
         
         int ch;
 //        refresh();

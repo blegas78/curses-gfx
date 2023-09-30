@@ -146,7 +146,7 @@ template <class T, class U> void RenderPipeline::rasterizeShader(T* vertexInfo, 
     int scratchLayout[][3] = {
         {0, 1, 2}
     };
-    T scratchClipped[10];
+    T scratchClipped[20];
     int clippedVertexCount;
     
     this->userData = userData;
@@ -223,46 +223,46 @@ template <class T> void RenderPipeline::trianglesFill(T* vertexInfo, int edgeInd
 //template <class T> void RenderPipeline::triangleFill(T* fragments) {
 template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2, T* fragment3) {
     //https://web.archive.org/web/20050408192410/http://sw-shader.sourceforge.net/rasterizer.html
-       // 28.4 fixed-point coordinates
-       
-//       const int Y1 = round(16.0f * fragments[0].vertex.y);
-//           const int Y2 = round(16.0f * fragments[1].vertex.y);
-//           const int Y3 = round(16.0f * fragments[2].vertex.y);
-//
-//       const int X1 = round(16.0f * fragments[0].vertex.x);
-//       const int X2 = round(16.0f * fragments[1].vertex.x);
-//       const int X3 = round(16.0f * fragments[2].vertex.x);
-//
-//
-//       double invDepth1 = 1.0/fragments[0].vertex.z;
-//       double invDepth2 = 1.0/fragments[1].vertex.z;
-//       double invDepth3 = 1.0/fragments[2].vertex.z;
+    // 28.4 fixed-point coordinates
+    
+    //       const int Y1 = round(16.0f * fragments[0].vertex.y);
+    //           const int Y2 = round(16.0f * fragments[1].vertex.y);
+    //           const int Y3 = round(16.0f * fragments[2].vertex.y);
+    //
+    //       const int X1 = round(16.0f * fragments[0].vertex.x);
+    //       const int X2 = round(16.0f * fragments[1].vertex.x);
+    //       const int X3 = round(16.0f * fragments[2].vertex.x);
+    //
+    //
+    //       double invDepth1 = 1.0/fragments[0].vertex.z;
+    //       double invDepth2 = 1.0/fragments[1].vertex.z;
+    //       double invDepth3 = 1.0/fragments[2].vertex.z;
     
     double invW1 = 1.0/fragment1->vertex.w;
     double invW2 = 1.0/fragment2->vertex.w;
     double invW3 = 1.0/fragment3->vertex.w;
     
     const int Y1 = round(16.0f * fragment1->vertex.y*invW1);
-        const int Y2 = round(16.0f * fragment2->vertex.y*invW2);
-        const int Y3 = round(16.0f * fragment3->vertex.y*invW3);
-
+    const int Y2 = round(16.0f * fragment2->vertex.y*invW2);
+    const int Y3 = round(16.0f * fragment3->vertex.y*invW3);
+    
     const int X1 = round(16.0f * fragment1->vertex.x*invW1);
     const int X2 = round(16.0f * fragment2->vertex.x*invW2);
     const int X3 = round(16.0f * fragment3->vertex.x*invW3);
     
     
     
-
-           // Deltas
-           const int DX12 = X1 - X2;
-           const int DX23 = X2 - X3;
-           const int DX31 = X3 - X1;
-
-           const int DY12 = Y1 - Y2;
-           const int DY23 = Y2 - Y3;
-           const int DY31 = Y3 - Y1;
     
-    // Cross product check for CCW, otherwis return:
+    // Deltas
+    const int DX12 = X1 - X2;
+    const int DX23 = X2 - X3;
+    const int DX31 = X3 - X1;
+    
+    const int DY12 = Y1 - Y2;
+    const int DY23 = Y2 - Y3;
+    const int DY31 = Y3 - Y1;
+    
+    // Cross product check for CCW, otherwise return:
     if(DX12*DY23 - DX23*DY12 > 0)
         return;
     
@@ -270,132 +270,175 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
     double invDepth1 = fragment1->vertex.w/fragment1->vertex.z;
     double invDepth2 = fragment2->vertex.w/fragment2->vertex.z;
     double invDepth3 = fragment3->vertex.w/fragment3->vertex.z;
-           // Fixed-point deltas
-           const int FDX12 = DX12 << 4;
-           const int FDX23 = DX23 << 4;
-           const int FDX31 = DX31 << 4;
-
-           const int FDY12 = DY12 << 4;
-           const int FDY23 = DY23 << 4;
-           const int FDY31 = DY31 << 4;
-
-           // Bounding rectangle
-           int minx = (std::min(X1, std::min(X2, X3)) + 0xF) >> 4;
-           int maxx = (std::max(X1, std::max(X2, X3)) + 0xF) >> 4;
-           int miny = (std::min(Y1, std::min(Y2, Y3)) + 0xF) >> 4;
-           int maxy = (std::max(Y1, std::max(Y2, Y3)) + 0xF) >> 4;
-
-           //barycentric parameters:
-   //    int A = X1*Y2 + X2*Y3 + X3*Y1 - X1*Y3 - X2*Y1 - X3*Y2;
-       double A = 1.0/(double)(X1*(Y2-Y3) + X2*(Y3 - Y1) + X3*(Y1 - Y2));
-       int aX2Y3mX3Y2 = X2*Y3 - X3*Y2;
-       int bX3Y1mX1Y3 = X3*Y1 - X1*Y3;
-   //    int cX1Y2mX2Y1 = X1*Y2 - X2*Y1;
-       double alpha, beta, gamma;
-       
-   //        (char*&)colorBuffer += miny * stride;
-   //    ColorRGBA color = {255,255,0,'^'};
-   //    setFrameBufferRGBA(1, 1, fbo, color);
-           // Half-edge constants
-           int C1 = DY12 * X1 - DX12 * Y1;
-           int C2 = DY23 * X2 - DX23 * Y2;
-           int C3 = DY31 * X3 - DX31 * Y3;
-
-           // Correct for fill convention
-           if(DY12 < 0 || (DY12 == 0 && DX12 > 0)) C1++;
-           if(DY23 < 0 || (DY23 == 0 && DX23 > 0)) C2++;
-           if(DY31 < 0 || (DY31 == 0 && DX31 > 0)) C3++;
-
-           int CY1 = C1 + DX12 * (miny << 4) - DY12 * (minx << 4);
-           int CY2 = C2 + DX23 * (miny << 4) - DY23 * (minx << 4);
-           int CY3 = C3 + DX31 * (miny << 4) - DY31 * (minx << 4);
-       Coordinates2D pt;
+    // Fixed-point deltas
+    const int FDX12 = DX12 << 4;
+    const int FDX23 = DX23 << 4;
+    const int FDX31 = DX31 << 4;
+    
+    const int FDY12 = DY12 << 4;
+    const int FDY23 = DY23 << 4;
+    const int FDY31 = DY31 << 4;
+    
+    // Bounding rectangle
+    int minx = (std::min(X1, std::min(X2, X3)) + 0xF) >> 4;
+    int maxx = (std::max(X1, std::max(X2, X3)) + 0xF) >> 4;
+    int miny = (std::min(Y1, std::min(Y2, Y3)) + 0xF) >> 4;
+    int maxy = (std::max(Y1, std::max(Y2, Y3)) + 0xF) >> 4;
+    
+    // Block size, standard 8x8 (must be power of two)
+    const int q = 8;
+    
+    // Start in corner of 8x8 block
+    minx &= ~(q - 1);
+    miny &= ~(q - 1);
+    
+    //barycentric parameters:
+    //    int A = X1*Y2 + X2*Y3 + X3*Y1 - X1*Y3 - X2*Y1 - X3*Y2;
+    //       double A = 1.0/(double)(X1*(Y2-Y3) + X2*(Y3 - Y1) + X3*(Y1 - Y2));
+    double A = 1.0/(double)(X1*(DY23) + X2*(DY31) + X3*(DY12));
+    int aX2Y3mX3Y2 = X2*Y3 - X3*Y2;
+    int bX3Y1mX1Y3 = X3*Y1 - X1*Y3;
+    //    int cX1Y2mX2Y1 = X1*Y2 - X2*Y1;
+    double alpha, beta, gamma;
+    
+    //        (char*&)colorBuffer += miny * stride;
+    //    ColorRGBA color = {255,255,0,'^'};
+    //    setFrameBufferRGBA(1, 1, fbo, color);
+    // Half-edge constants
+    int C1 = DY12 * X1 - DX12 * Y1;
+    int C2 = DY23 * X2 - DX23 * Y2;
+    int C3 = DY31 * X3 - DX31 * Y3;
+    
+    // Correct for fill convention
+    if(DY12 < 0 || (DY12 == 0 && DX12 > 0)) C1++;
+    if(DY23 < 0 || (DY23 == 0 && DX23 > 0)) C2++;
+    if(DY31 < 0 || (DY31 == 0 && DX31 > 0)) C3++;
+    
+    //           int CY1 = C1 + DX12 * (miny << 4) - DY12 * (minx << 4);
+    //           int CY2 = C2 + DX23 * (miny << 4) - DY23 * (minx << 4);
+    //           int CY3 = C3 + DX31 * (miny << 4) - DY31 * (minx << 4);
+    Coordinates2D pt;
+    Coordinates2D ipt;
     T fragment;
     auto f1 = regist(*fragment1);
     auto f2 = regist(*fragment2);
     auto f3 = regist(*fragment3);
     auto output = regist(fragment);
-       
-           for(pt.y = miny; pt.y < maxy; pt.y++)
-           {
-               int CX1 = CY1;
-               int CX2 = CY2;
-               int CX3 = CY3;
-          
-               for(pt.x = minx; pt.x < maxx; pt.x++)
-               {
-                   if(CX1 > 0 && CX2 > 0 && CX3 > 0)
-                   {
-   //                    colorBuffer[x] = 0x00FFFFFF;
-                       int xp = pt.x << 4;
-                       int yp = pt.y << 4;
-                       alpha = (double)(xp*Y2 + aX2Y3mX3Y2 + X3*yp - xp*Y3 - X2*yp)*A;
-                       beta = (double)(X1*yp + xp*Y3 + bX3Y1mX1Y3 - xp*Y1 - X3*yp)*A;
-   //                    gamma = (double)(cX1Y2mX2Y1 + X2*yp + xp*Y1 - X1*yp - xp*Y2)*A;
-                       gamma = 1.0 - alpha - beta;
-                       
-//                       ColorRGBA color;
-   //                    color.a = alpha * fragments[0].color.a + beta * fragments[2].color.a + gamma * fragments[1].color.a;
-   //                    color.r = alpha * fragments[0].color.r + beta * fragments[2].color.r + gamma * fragments[1].color.r;
-   //                    color.g = alpha * fragments[0].color.g + beta * fragments[2].color.g + gamma * fragments[1].color.g;
-   //                    color.b = alpha * fragments[0].color.b + beta * fragments[2].color.b + gamma * fragments[1].color.b;
-                       
-                       double correctInvDepth = invDepth1 * alpha + invDepth2 * beta + invDepth3 * gamma;
-//                       double correctDepth = 1.0/correctInvDepth;
-////                       double correctDepth = 1.0/invDepth1 * alpha + 1.0/invDepth2 * beta + 1.0/invDepth3 * gamma;
-//   //                    perspectiveInterpolateInv(<#T &a#>, <#T &b#>, <#T &c#>, <#double &aInvDepth#>, <#double &bInvDepth#>, <#double &cInvDepth#>, <#double &correctDepth#>, <#double &alpha#>, <#double &beta#>, <#double &gamma#>)
-//   //                    (T& a, T& b, T& c, double& aInvDepth, double& bInvDepth, double& cInvDepth, double& correctDepth, double& alpha, double& beta, double& gamma)
-//   //                    color.a = perspectiveInterpolateBary<uint8_t>(fragments[0].color.a, fragments[2].color.a, fragments[1].color.a, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
-//   //                    color.r = perspectiveInterpolateBary<uint8_t>(fragments[0].color.r, fragments[2].color.r, fragments[1].color.r, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
-//   //                    color.g = perspectiveInterpolateBary<uint8_t>(fragments[0].color.g, fragments[2].color.g, fragments[1].color.g, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
-//   //                    color.b = perspectiveInterpolateBary<uint8_t>(fragments[0].color.b, fragments[2].color.b, fragments[1].color.b, invDepth1, invDepth2, invDepth3, correctDepth, alpha, beta, gamma);
-//
-//                       alpha *= invDepth1*correctDepth;
-//                       beta *= invDepth2*correctDepth;
-//                       gamma *= invDepth3*correctDepth;
-                       
-                       double pBaryDivisor = 1.0/(alpha*invW1 + beta*invW2 + gamma*invW3);
-                       alpha *= invW1 * pBaryDivisor;
-                       beta  *= invW2 * pBaryDivisor;
-                       gamma *= invW3 * pBaryDivisor;
-                       
-                       
-   //                    color.a = perspectiveIntBary<uint8_t>(fragments[0].color.a, fragments[2].color.a, fragments[1].color.a, alpha, beta, gamma, correctDepth);
-   //                    color.r = perspectiveIntBary<uint8_t>(fragments[0].color.r, fragments[2].color.r, fragments[1].color.r, alpha, beta, gamma, correctDepth);
-   //                    color.g = perspectiveIntBary<uint8_t>(fragments[0].color.g, fragments[2].color.g, fragments[1].color.g, alpha, beta, gamma, correctDepth);
-   //                    color.b = perspectiveIntBary<uint8_t>(fragments[0].color.b, fragments[2].color.b, fragments[1].color.b, alpha, beta, gamma, correctDepth);
-//                       perspectiveIntBary2<uint8_t,4>(&color, &fragments[0].color, &fragments[2].color, &fragments[1].color, alpha, beta, gamma, correctDepth);
-//                       Coordinates3D normal;
-//                       perspectiveIntBary2<double,3>(&normal, &fragments[0].normal, &fragments[2].normal, &fragments[1].normal, alpha, beta, gamma, correctDepth);
-//                       Coordinates4D point;
-//                       perspectiveIntBary2<double,4>(&normal, &fragments[0].location3D, &fragments[2].location3D, &fragments[1].location3D, alpha, beta, gamma, correctDepth);
-                       
-                       baryInterpolate(output, f1, f2, f3, alpha, beta, gamma);
-//                       color.r = 255;
-//                       color.g = 0;
-//                       color.b = 255;
-//                       color.a = 'V';
-                       
-//                       color = fragment.color;
-//                       setFrameBufferRGBA(pt.x, pt.y, fbo, color);
-   //                    setFragmentShader(defaultFragment);
-   //                    setWithShader(pt, correctInvDepth, point, normal, this->userData);
-                       
-                       
-                       setWithShader2( pt, correctInvDepth, userData, (void*) &fragment);
-                   }
+    
+    for(pt.y = miny; pt.y < maxy; pt.y += q)
+    {
+        //               int CX1 = CY1;
+        //               int CX2 = CY2;
+        //               int CX3 = CY3;
+        
+        for(pt.x = minx; pt.x < maxx; pt.x += q)
+        {
+            // Corners of block
+            int x0 = pt.x << 4;
+            int x1 = (pt.x + q - 1) << 4;
+            int y0 = pt.y << 4;
+            int y1 = (pt.y + q - 1) << 4;
+            
+            // Evaluate half-space functions
+            bool a00 = C1 + DX12 * y0 - DY12 * x0 > 0;
+            bool a10 = C1 + DX12 * y0 - DY12 * x1 > 0;
+            bool a01 = C1 + DX12 * y1 - DY12 * x0 > 0;
+            bool a11 = C1 + DX12 * y1 - DY12 * x1 > 0;
+            int a = (a00 << 0) | (a10 << 1) | (a01 << 2) | (a11 << 3);
+            
+            bool b00 = C2 + DX23 * y0 - DY23 * x0 > 0;
+            bool b10 = C2 + DX23 * y0 - DY23 * x1 > 0;
+            bool b01 = C2 + DX23 * y1 - DY23 * x0 > 0;
+            bool b11 = C2 + DX23 * y1 - DY23 * x1 > 0;
+            int b = (b00 << 0) | (b10 << 1) | (b01 << 2) | (b11 << 3);
+            
+            bool c00 = C3 + DX31 * y0 - DY31 * x0 > 0;
+            bool c10 = C3 + DX31 * y0 - DY31 * x1 > 0;
+            bool c01 = C3 + DX31 * y1 - DY31 * x0 > 0;
+            bool c11 = C3 + DX31 * y1 - DY31 * x1 > 0;
+            int c = (c00 << 0) | (c10 << 1) | (c01 << 2) | (c11 << 3);
+            
+            // Skip block when outside an edge
+            if(a == 0x0 || b == 0x0 || c == 0x0) continue;
+            
+            // Accept whole block when totally covered
+            if(a == 0xF && b == 0xF && c == 0xF)
+            {
+                
+                for(ipt.y = pt.y; ipt.y < q+pt.y; ipt.y++)
+                {
+                    for(ipt.x = pt.x; ipt.x < pt.x + q; ipt.x++)
+                    {
+                        //                               buffer[ix] = 0x00007F00;   // Green
+                        int xp = ipt.x << 4;
+                        int yp = ipt.y << 4;
+                        alpha = (double)(xp*Y2 + aX2Y3mX3Y2 + X3*yp - xp*Y3 - X2*yp)*A;
+                        beta = (double)(X1*yp + xp*Y3 + bX3Y1mX1Y3 - xp*Y1 - X3*yp)*A;
+                        gamma = 1.0 - alpha - beta;
+                        
+                        double correctInvDepth = invDepth1 * alpha + invDepth2 * beta + invDepth3 * gamma;
+                        double pBaryDivisor = 1.0/(alpha*invW1 + beta*invW2 + gamma*invW3);
+                        alpha *= invW1 * pBaryDivisor;
+                        beta  *= invW2 * pBaryDivisor;
+                        gamma *= invW3 * pBaryDivisor;
+                        
+                        baryInterpolate(output, f1, f2, f3, alpha, beta, gamma);
+                        setWithShader2( ipt, correctInvDepth, userData, (void*) &fragment);
+                    }
+                    
+                    //                           (char*&)buffer += stride;
+                }
+            }
+            else   // Partially covered block
+            {
+//                continue;
+                int CY1 = C1 + DX12 * y0 - DY12 * x0;
+                int CY2 = C2 + DX23 * y0 - DY23 * x0;
+                int CY3 = C3 + DX31 * y0 - DY31 * x0;
 
-                   CX1 -= FDY12;
-                   CX2 -= FDY23;
-                   CX3 -= FDY31;
-               }
+                for(ipt.y = pt.y; ipt.y < pt.y + q; ipt.y++)
+                {
+                    int CX1 = CY1;
+                    int CX2 = CY2;
+                    int CX3 = CY3;
 
-               CY1 += FDX12;
-               CY2 += FDX23;
-               CY3 += FDX31;
+                    for(ipt.x = pt.x; ipt.x < pt.x + q; ipt.x++)
+                    {
+                        if(CX1 > 0 && CX2 > 0 && CX3 > 0)
+                        {
+//                            buffer[ix] = 0x0000007F;   // Blue
+                            int xp = ipt.x << 4;
+                            int yp = ipt.y << 4;
+                            alpha = (double)(xp*Y2 + aX2Y3mX3Y2 + X3*yp - xp*Y3 - X2*yp)*A;
+                            beta = (double)(X1*yp + xp*Y3 + bX3Y1mX1Y3 - xp*Y1 - X3*yp)*A;
+                            gamma = 1.0 - alpha - beta;
+                            
+                            double correctInvDepth = invDepth1 * alpha + invDepth2 * beta + invDepth3 * gamma;
+                            double pBaryDivisor = 1.0/(alpha*invW1 + beta*invW2 + gamma*invW3);
+                            alpha *= invW1 * pBaryDivisor;
+                            beta  *= invW2 * pBaryDivisor;
+                            gamma *= invW3 * pBaryDivisor;
+                            
+                            baryInterpolate(output, f1, f2, f3, alpha, beta, gamma);
+                            setWithShader2( ipt, correctInvDepth, userData, (void*) &fragment);
+                        }
 
-   //            (char*&)colorBuffer += stride;
-           }
+                        CX1 -= FDY12;
+                        CX2 -= FDY23;
+                        CX3 -= FDY31;
+                    }
+
+                    CY1 += FDX12;
+                    CY2 += FDX23;
+                    CY3 += FDX31;
+
+//                    (char*&)buffer += stride;
+                }
+            }
+            
+            
+        }
+    }
 }
 
 #define CLIP_PLANE_W_2 (0.0001)
@@ -515,7 +558,7 @@ template <class T> void RenderPipeline::clipPlane(T* input, int inputCount, T* o
         if (previousDot != currentDot ) {
 //            mvprintw(line++, 0, " - - Clip against plane %d", axis);
 //            factor = (prior->w - ((double*)prior)[axis])/((prior->w - ((double*)prior)[axis]) - (current->w - ((double*)current)[axis])) ;
-            if(plane == 1) {
+            if(plane == 1 ) {
                 factor = (prior->vertex.w - ((double*)&prior->vertex)[axis])/((prior->vertex.w - ((double*)&prior->vertex)[axis]) - (current->vertex.w - ((double*)&current->vertex)[axis])) ;
             } else {
                 factor = (prior->vertex.w + ((double*)&prior->vertex)[axis])/((prior->vertex.w + ((double*)&prior->vertex)[axis]) - (current->vertex.w + ((double*)&current->vertex)[axis])) ;
@@ -526,6 +569,8 @@ template <class T> void RenderPipeline::clipPlane(T* input, int inputCount, T* o
             diff.y *= factor;
             diff.z *= factor;
             diff.w *= factor;
+//            if(axis == 2 && plane == -1)
+//                diff.w *= -1;
             diff = vectorAdd(prior->vertex, diff);
             
 //            output->vertices[output->numVertices] = diff;
@@ -596,10 +641,13 @@ template <class T> void RenderPipeline::clipPolygon(T* input, int inputCount, T*
         copy[i] = input[i];
     
     
-        clipW(copy, outputCountResult, output, outputCountResult);
+    
+    
+    
+    clipW(copy, outputCountResult, output, outputCountResult);
+    
     for(int i = 0; i < outputCountResult; i++)
         copy[i] = output[i];
-    
     clipPlane(copy, outputCountResult, output, outputCountResult, 0, 1);
     for(int i = 0; i < outputCountResult; i++)
         copy[i] = output[i];
@@ -615,10 +663,10 @@ template <class T> void RenderPipeline::clipPolygon(T* input, int inputCount, T*
     for(int i = 0; i < outputCountResult; i++)
         copy[i] = output[i];
     clipPlane(copy, outputCountResult, output, outputCountResult, 2, 1);
+    
 //    for(int i = 0; i < outputCountResult; i++)
 //        copy[i] = output[i];
 //    clipPlane(copy, outputCountResult, output, outputCountResult, 2, -1);
-    
     
    // return 1;
 

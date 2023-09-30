@@ -64,7 +64,7 @@ Mat4D makeWindowTransform(int screenSizeX, int screenSizeY, double characterAspe
 //	Mat4D windowScale = scaleMatrix((double)(screenSizeX-1)/2, (double)(screenSizeY-1)/2, 1);	// Full accurate
 	//	Mat4D translationScreen = translationMatrix((double)screenSizeX/2 - 0.5, (double)screenSizeY/2 - 0.5, 0);
 //	Mat4D windowScale = scaleMatrix((double)(screenSizeX+2)/2, -(double)(screenSizeY+2)/2, 1);	// note the negative in Y, since y is positive down in a terminal
-    Mat4D windowScale = scaleMatrix((double)(screenSizeX)/2, -(double)(screenSizeY)/2, 1);    // note the negative in Y, since y is positive down in a terminal
+    Mat4D windowScale = scaleMatrix((double)(screenSizeX-2)/2, -(double)(screenSizeY-2)/2, 1);    // note the negative in Y, since y is positive down in a terminal
 	Mat4D translationScreen = translationMatrix((double)screenSizeX/2, (double)screenSizeY/2, 0);
 	return matrixMultiply(translationScreen, windowScale);
 }
