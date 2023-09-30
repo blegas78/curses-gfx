@@ -18,7 +18,7 @@
 #include "curses-clock.h"
 #include "curses-gfx-3d.h"
 #include "curses-gfx-handler.h"
-#include "curses-gfx-png-loader.h"
+#include "curses-gfx-texture.h"
 
 /*
  Catch ctrl-c for cleaner exits
@@ -70,160 +70,89 @@ void cleanupConsole() {
     std::cout << "Console has been cleaned!" << std::endl;
 }
 
-//typedef struct _PngLoader {
+
+//class Texture {
+//public:
+//    ColorRGBA* data;
+//
 //    int width, height;
-//    png_byte color_type;
-//    png_byte bit_depth;
-//    png_bytep *row_pointers = NULL;
-//} PngLoader;
-
-
-//// thanks to https://gist.github.com/niw/5963798
-//void read_png_file(char *filename, PngLoader& mPngLoader) {
-//  FILE *fp = fopen(filename, "rb");
+//    int widthm1, heightm1;
+//    Texture(int width, int height)
+//    : width(width), height(height), widthm1(width-1), heightm1(height-1) {
 //
-//  png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-//  if(!png) abort();
+//        data = new ColorRGBA[width*height];
 //
-//  png_infop info = png_create_info_struct(png);
-//  if(!info) abort();
+//    }
+//    ~Texture() {
+//        delete [] data;
+//    }
 //
-//  if(setjmp(png_jmpbuf(png))) abort();
-//
-//  png_init_io(png, fp);
-//
-//  png_read_info(png, info);
-//
-//    mPngLoader.width      = png_get_image_width(png, info);
-//    mPngLoader.height     = png_get_image_height(png, info);
-//    mPngLoader.color_type = png_get_color_type(png, info);
-//    mPngLoader.bit_depth  = png_get_bit_depth(png, info);
-//
-//  // Read any color_type into 8bit depth, RGBA format.
-//  // See http://www.libpng.org/pub/png/libpng-manual.txt
-//
-//  if(mPngLoader.bit_depth == 16)
-//    png_set_strip_16(png);
-//
-//  if(mPngLoader.color_type == PNG_COLOR_TYPE_PALETTE)
-//    png_set_palette_to_rgb(png);
-//
-//  // PNG_COLOR_TYPE_GRAY_ALPHA is always 8 or 16bit depth.
-//  if(mPngLoader.color_type == PNG_COLOR_TYPE_GRAY && mPngLoader.bit_depth < 8)
-//    png_set_expand_gray_1_2_4_to_8(png);
-//
-//  if(png_get_valid(png, info, PNG_INFO_tRNS))
-//    png_set_tRNS_to_alpha(png);
-//
-//  // These color_type don't have an alpha channel then fill it with 0xff.
-//  if(mPngLoader.color_type == PNG_COLOR_TYPE_RGB ||
-//     mPngLoader.color_type == PNG_COLOR_TYPE_GRAY ||
-//     mPngLoader.color_type == PNG_COLOR_TYPE_PALETTE)
-//    png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
-//
-//  if(mPngLoader.color_type == PNG_COLOR_TYPE_GRAY ||
-//     mPngLoader.color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-//    png_set_gray_to_rgb(png);
-//
-//  png_read_update_info(png, info);
-//
-//  if (mPngLoader.row_pointers)
-//      delete [] mPngLoader.row_pointers;
-//
-//    mPngLoader.row_pointers = new png_bytep[mPngLoader.height];// (png_bytep*)malloc(sizeof(png_bytep) * );
-//  for(int y = 0; y < mPngLoader.height; y++) {
-//      mPngLoader.row_pointers[y] = (png_byte*)malloc(png_get_rowbytes(png,info));
-//  }
-//
-//  png_read_image(png, mPngLoader.row_pointers);
-//
-//  fclose(fp);
-//
-//  png_destroy_read_struct(&png, &info, NULL);
-//}
-
-class Texture {
-public:
-    ColorRGBA* data;
-    
-    int width, height;
-    int widthm1, heightm1;
-    Texture(int width, int height)
-    : width(width), height(height), widthm1(width-1), heightm1(height-1) {
-        
-        data = new ColorRGBA[width*height];
-        
-    }
-    ~Texture() {
-        delete [] data;
-    }
-    
-    void set(const double& x, const double& y, const ColorRGBA& value) {
-        int xPart = mod(x*(double)width,width);
-        int yPart = mod(y*(double)height,height);
-        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
-        data[ xPart + width*yPart] = value;
-    }
-    
-    void setPixel(const int& x, const int& y, const ColorRGBA& value) {
-        int xPart = mod(x,width);
-        int yPart = mod(y,height);
+//    void set(const double& x, const double& y, const ColorRGBA& value) {
+//        int xPart = mod(x*(double)width,width);
+//        int yPart = mod(y*(double)height,height);
 //        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
-        data[ xPart + width*yPart] = value;
-    }
-    
-    void monochromize() {
-        for(int i = 0;  i < width*height; i++) {
-            double avg = ((double)data[i].r + (double)data[i].g + (double)data[i].b)/3.0; // MONOCHROME
-            data[i].r = avg;
-            data[i].g = avg;
-            data[i].b = avg;
-        }
-    }
-    
-    int min(int a, int b) {
-        return a < b ? a : b;
-    }
-    int max(int a, int b) {
-        return a > b ? a : b;
-    }
-    
-    void normalize(double factor) {
-        int maxi = 0, mini = 255;
-        for(int i = 0;  i < width*height; i++) {
-            int L = max(max(data[i].r,data[i].g),data[i].b);
-            maxi = max(L,maxi);
-            mini = min(L,mini);// tricky one here
-        }
-        double scale = (255.0/(double)(maxi - mini)) * factor + (1.0-factor)*1.0;
-        mini = mini * (factor);
-        for(int i = 0;  i < width*height; i++) {
-            data[i].r = min(max(round(scale * (double)(data[i].r - mini)), 0), 255);
-            data[i].g = min(max(round(scale * (double)(data[i].g - mini)), 0), 255);
-            data[i].b = min(max(round(scale * (double)(data[i].b - mini)), 0), 255);
-            
-        }
-    }
-    
-    void offsetAvergageToCenter(double factor) {
-        int avg = 0;
-        for(int i = 0;  i < width*height; i++) {
-            avg += max(max(data[i].r,data[i].g),data[i].b);
-        }
-        avg = round((double)avg/(double)(width*height) * factor);
-        for(int i = 0;  i < width*height; i++) {
-            data[i].r = min(max((int)data[i].r - avg, 0), 255);
-            data[i].g = min(max((int)data[i].g - avg, 0), 255);
-            data[i].b = min(max((int)data[i].b - avg, 0), 255);
-        }
-    }
-    
-    ColorRGBA sample( const double& x, const double& y) {
-        int xPart = mod(x*(double)width,width);
-        int yPart = mod(y*(double)height,height);
-        return data[ xPart + width*yPart];
-    }
-};
+//        data[ xPart + width*yPart] = value;
+//    }
+//
+//    void setPixel(const int& x, const int& y, const ColorRGBA& value) {
+//        int xPart = mod(x,width);
+//        int yPart = mod(y,height);
+////        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
+//        data[ xPart + width*yPart] = value;
+//    }
+//
+//    void monochromize() {
+//        for(int i = 0;  i < width*height; i++) {
+//            double avg = ((double)data[i].r + (double)data[i].g + (double)data[i].b)/3.0; // MONOCHROME
+//            data[i].r = avg;
+//            data[i].g = avg;
+//            data[i].b = avg;
+//        }
+//    }
+//
+//    int min(int a, int b) {
+//        return a < b ? a : b;
+//    }
+//    int max(int a, int b) {
+//        return a > b ? a : b;
+//    }
+//
+//    void normalize(double factor) {
+//        int maxi = 0, mini = 255;
+//        for(int i = 0;  i < width*height; i++) {
+//            int L = max(max(data[i].r,data[i].g),data[i].b);
+//            maxi = max(L,maxi);
+//            mini = min(L,mini);// tricky one here (min of maxes)
+//        }
+//        double scale = (255.0/(double)(maxi - mini)) * factor + (1.0-factor)*1.0;
+//        mini = mini * (factor);
+//        for(int i = 0;  i < width*height; i++) {
+//            data[i].r = min(max(round(scale * (double)(data[i].r - mini)), 0), 255);
+//            data[i].g = min(max(round(scale * (double)(data[i].g - mini)), 0), 255);
+//            data[i].b = min(max(round(scale * (double)(data[i].b - mini)), 0), 255);
+//
+//        }
+//    }
+//
+//    void offsetAvergageToCenter(double factor) {
+//        int avg = 0;
+//        for(int i = 0;  i < width*height; i++) {
+//            avg += max(max(data[i].r,data[i].g),data[i].b);
+//        }
+//        avg = round((double)avg/(double)(width*height) * factor);
+//        for(int i = 0;  i < width*height; i++) {
+//            data[i].r = min(max((int)data[i].r - avg, 0), 255);
+//            data[i].g = min(max((int)data[i].g - avg, 0), 255);
+//            data[i].b = min(max((int)data[i].b - avg, 0), 255);
+//        }
+//    }
+//
+//    ColorRGBA sample( const double& x, const double& y) {
+//        int xPart = mod(x*(double)width,width);
+//        int yPart = mod(y*(double)height,height);
+//        return data[ xPart + width*yPart];
+//    }
+//};
 
 void process_png_file(const PngLoader& mPngLoader, Texture& texture) {
   for(int y = 0; y < mPngLoader.height; y++) {
@@ -969,46 +898,6 @@ int main(int argc, char** argv) {
     }
     
     cleanupConsole();
-    printf("\n\r");
-    
-    printf("Window (mRenderPipeline.viewport):\n\r");
-    for(int i = 0; i < 4; i++) {
-        printf("% 0.2f % 0.2f % 0.2f % 0.2f \n\r", mRenderPipeline.viewport.d[i][0], mRenderPipeline.viewport.d[i][1], mRenderPipeline.viewport.d[i][2], mRenderPipeline.viewport.d[i][3]);
-    }
-    
-    printf("Perspective:\n\r");
-    for(int i = 0; i < 4; i++) {
-        printf("% 0.2f % 0.2f % 0.2f % 0.2f \n\r", projection.d[i][0], projection.d[i][1], projection.d[i][2], projection.d[i][3]);
-    }
-    
-    printf("View:\n\r");
-    for(int i = 0; i < 4; i++) {
-        printf("% 0.2f % 0.2f % 0.2f % 0.2f \n\r", viewMatrix.d[i][0], viewMatrix.d[i][1], viewMatrix.d[i][2], viewMatrix.d[i][3]);
-    }
-    
-    
-    printf("viewProjection:\n\r");
-    Mat4D viewProjection = matrixMultiply(projection, viewMatrix);
-    
-    for(int i = 0; i < 4; i++) {
-        printf("% 0.2f % 0.2f % 0.2f % 0.2f \n\r", viewProjection.d[i][0], viewProjection.d[i][1], viewProjection.d[i][2], viewProjection.d[i][3]);
-    }
-    
-    printf("viewProjectionWindow:\n\r");
-    Mat4D viewProjectionWindow = matrixMultiply(mRenderPipeline.viewport, viewProjection);
-    
-    for(int i = 0; i < 4; i++) {
-        printf("% 0.2f % 0.2f % 0.2f % 0.2f \n\r", viewProjectionWindow.d[i][0], viewProjectionWindow.d[i][1], viewProjectionWindow.d[i][2], viewProjectionWindow.d[i][3]);
-    }
-    
-    
-    printf("vertexViewProjection:\n\r");
-    Coordinates4D vertexViewProjection =  matrixVectorMultiply(viewProjection, squareVi[0].vertex);
-    printf("% 0.2f \n\r% 0.2f \n\r% 0.2f \n\r% 0.2f \n\r", vertexViewProjection.x, vertexViewProjection.y, vertexViewProjection.z, vertexViewProjection.w);
-    
-    printf("vertexViewProjectionWindow:\n\r");
-    vertexViewProjection =  matrixVectorMultiply(viewProjectionWindow, squareVi[0].vertex);
-    printf("% 0.2f \n\r% 0.2f \n\r% 0.2f \n\r% 0.2f \n\r", vertexViewProjection.x, vertexViewProjection.y, vertexViewProjection.z, vertexViewProjection.w);
     
     return 0;
 };

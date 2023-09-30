@@ -16,6 +16,7 @@
 #include "curses-clock.h"
 #include "curses-gfx-3d.h"
 #include "curses-gfx-handler.h"
+#include "curses-gfx-texture.h"
 
 /*
  Catch ctrl-c for cleaner exits
@@ -65,42 +66,42 @@ void cleanupConsole() {
 	std::cout << "Console has been cleaned!" << std::endl;
 }
 
-class Texture {
-public:
-    ColorRGBA* data;
-    
-    int width, height;
-    int widthm1, heightm1;
-    Texture(int width, int height)
-    : width(width), height(height), widthm1(width-1), heightm1(height-1) {
-        
-        data = new ColorRGBA[width*height];
-        
-    }
-    ~Texture() {
-        delete [] data;
-    }
-    
-    void set(const double& x, const double& y, const ColorRGBA& value) {
-        int xPart = mod(x*(double)width,width);
-        int yPart = mod(y*(double)height,height);
-        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
-        data[ xPart + width*yPart] = value;
-    }
-    
-    void setPixel(const int& x, const int& y, const ColorRGBA& value) {
-        int xPart = mod(x,width);
-        int yPart = mod(y,height);
+//class Texture {
+//public:
+//    ColorRGBA* data;
+//
+//    int width, height;
+//    int widthm1, heightm1;
+//    Texture(int width, int height)
+//    : width(width), height(height), widthm1(width-1), heightm1(height-1) {
+//
+//        data = new ColorRGBA[width*height];
+//
+//    }
+//    ~Texture() {
+//        delete [] data;
+//    }
+//
+//    void set(const double& x, const double& y, const ColorRGBA& value) {
+//        int xPart = mod(x*(double)width,width);
+//        int yPart = mod(y*(double)height,height);
 //        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
-        data[ xPart + width*yPart] = value;
-    }
-    
-    ColorRGBA sample( const double& x, const double& y) {
-        int xPart = mod(x*(double)width,width);
-        int yPart = mod(y*(double)height,height);
-        return data[ xPart + width*yPart];
-    }
-};
+//        data[ xPart + width*yPart] = value;
+//    }
+//
+//    void setPixel(const int& x, const int& y, const ColorRGBA& value) {
+//        int xPart = mod(x,width);
+//        int yPart = mod(y,height);
+////        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
+//        data[ xPart + width*yPart] = value;
+//    }
+//
+//    ColorRGBA sample( const double& x, const double& y) {
+//        int xPart = mod(x*(double)width,width);
+//        int yPart = mod(y*(double)height,height);
+//        return data[ xPart + width*yPart];
+//    }
+//};
 
 
 
