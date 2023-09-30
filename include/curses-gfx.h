@@ -1,11 +1,11 @@
 #ifndef CURSES_GFX_H
 #define CURSES_GFX_H
 
-
 typedef struct _Coordinates2D {
-	int x;
-	int y;
+    int x;
+    int y;
 } Coordinates2D;
+
 
 void drawDotFloat(double x, double y);
 

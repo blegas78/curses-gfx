@@ -263,6 +263,11 @@ typedef struct _LightParams {
     int numLights;
 } LightParams;
 
+typedef struct _LightParamsAndTexture {
+    LightParams* lightParams;
+    Texture* texture;
+    Coordinates3D cameraLocation;
+} LightParamsAndTexture;
 
 void lightModelFs(const FragmentInfo& fInfo) {
     Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
@@ -294,7 +299,7 @@ typedef struct _CubeVertexInfo {
     Coordinates4D vertex;
     Coordinates4D location;
     Coordinates3D normal;
-    Coordinates3D textureCoord;
+    Coordinates2Df textureCoord;
     ColorRGBA color;
 } CubeVertexInfo;
 
@@ -386,6 +391,100 @@ void textureshader(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
 }
 
+void lightAndTextureShader(const FragmentInfo& fInfo) {
+    CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
+
+    LightParamsAndTexture* lpt = (LightParamsAndTexture*) fInfo.data;
+    LightParams* lights = lpt->lightParams;
+    Texture* texture = lpt->texture;
+    
+    Coordinates3D colorRGB = {0,0,0};
+    
+    Coordinates4D lightToFrag;
+    Coordinates3D lightDir;
+    double intensity2;
+//    double lightMagnitudeSquared;
+    double lightMagnitude;
+    Coordinates3D lightReflected;
+    double intensitySpecular;
+    double intensity;
+    
+//    *fInfo.colorOutput =
+    ColorRGBA textureSample = texture->sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y);
+    Coordinates3D textureSamplef;
+    textureSamplef.x = (double)textureSample.r /255.0;
+    textureSamplef.y = (double)textureSample.g /255.0;
+    textureSamplef.z = (double)textureSample.b /255.0;
+    Coordinates3D vNormal = normalizeVectorFast(vertexInfo->normal);
+    Coordinates3D viewDir ;
+    viewDir.x = vertexInfo->location.x;// - lpt->cameraLocation.x;   // already in view space
+    viewDir.y = vertexInfo->location.y;// - lpt->cameraLocation.y;
+    viewDir.z = vertexInfo->location.z;// - lpt->cameraLocation.z;
+    viewDir = normalizeVectorFast(viewDir);
+    
+    for (int i = 0; i < lights->numLights; i++) {
+//        lightToFrag = vectorSubtract(lights->modelView[i], fInfo.location3D);
+        lightToFrag = vectorSubtract(lights->modelView[i], vertexInfo->location);
+        if(dotProduct(lightToFrag, vNormal) < 0) {
+            continue;
+        }
+        lightDir = normalizeVectorFast(lightToFrag);
+        double diffuse = dotProduct(vNormal, lightDir);
+        
+//        lightMagnitude = Q_rsqrt( dotProduct(lightToFrag, lightToFrag) );
+//        lightMagnitude = dotProduct(lightToFrag, vNormal);
+        
+//        lightReflected = vectorScale(vNormal, 2*dotProduct(vNormal, lightDir));
+        lightReflected = vNormal * 2.0*dotProduct(vNormal, lightDir);
+        lightReflected = vectorSubtract(lightDir, lightReflected);
+        lightReflected = normalizeVectorFast(lightReflected);
+        
+        intensitySpecular = dotProduct(lightReflected, viewDir);
+//        intensitySpecular *= Q_rsqrt(dotProduct(vertexInfo->location, vertexInfo->location));
+        intensitySpecular = pow(intensitySpecular, 100);
+        double distance = 1.0/Q_rsqrt(dotProduct(lightToFrag,lightToFrag));
+        double attenuation = 1.0 / ( 0.0 + 0.025*distance + 0.5 *distance*distance);
+//        attenuation *= attenuation;
+//        intensity = (lightMagnitude*lightMagnitude * intensity2 +  intensitySpecular);
+        intensity = (diffuse*3*0  +  intensitySpecular*10 + 3*0) * attenuation;
+        
+        diffuse *= attenuation*8;
+        intensitySpecular *= attenuation*8;
+        double ambient = 8.0*attenuation*0;
+        colorRGB = colorRGB + (lights->color[i]*textureSamplef)*diffuse;
+        colorRGB = colorRGB + lights->color[i]*intensitySpecular;
+        colorRGB = colorRGB + (lights->color[i]*textureSamplef)*ambient;
+//        colorRGB = colorRGB + textureSamplef*diffuse;
+        
+//        colorRGB.x += intensity*lights->color[i].x;
+//        colorRGB.y += intensity*lights->color[i].y;
+//        colorRGB.z += intensity*lights->color[i].z;
+    }
+    
+    
+    
+    //setRGB(fInfo.pixel, colorRGB);
+    
+    //    ColorRGBA result;
+//    colorRGB.x *= 0.5;
+//    colorRGB.y *= 0.5;
+//    colorRGB.z *= 0.5;
+//    colorRGB.x += (double)vertexInfo->color.r * (1.0/255.0 * 0.5);
+//    colorRGB.y += (double)vertexInfo->color.g * (1.0/255.0 * 0.5);
+//    colorRGB.z += (double)vertexInfo->color.b * (1.0/255.0 * 0.5);
+    
+//    colorRGB.x = (colorRGB.x * (double)textureSample.r)*0.8/255 + (double)fInfo.colorOutput->r*0.2/255;
+//    colorRGB.y = (colorRGB.y * (double)textureSample.g)*0.8/255 + (double)fInfo.colorOutput->g*0.2/255;
+//    colorRGB.z = (colorRGB.z * (double)textureSample.b)*0.8/255 + (double)fInfo.colorOutput->b*0.2/255;
+    Coordinates3D clippedRGB = clipRGB(colorRGB);
+    fInfo.colorOutput->r = clippedRGB.x*255;
+    fInfo.colorOutput->g = clippedRGB.y*255;
+    fInfo.colorOutput->b = clippedRGB.z*255;
+    fInfo.colorOutput->a = 0;
+    
+    //    fInfo.colorOutput = result;
+}
+
 
 
 
@@ -404,7 +503,7 @@ int main(int argc, char** argv) {
       Texture pngTexture(mPngLoader.width, mPngLoader.height);
     process_png_file(mPngLoader, pngTexture);
   //  write_png_file(argv[2]);
-    pngTexture.monochromize();
+//    pngTexture.monochromize();
     pngTexture.offsetAvergageToCenter(0.5);
     pngTexture.normalize(1.);
     
@@ -479,7 +578,61 @@ int main(int argc, char** argv) {
         cubeVi[i+24].normal = { 0, 1, 0};     // front
         cubeVi[i+30].normal = { 0,-1, 0};     // back
     }
+    cubeVi[0].textureCoord = {0, 0};
+    cubeVi[1].textureCoord = {0, 1};
+    cubeVi[2].textureCoord = {1, 1};
+    cubeVi[3].textureCoord = {1, 1};
+    cubeVi[4].textureCoord = {1, 0};
+    cubeVi[5].textureCoord = {0, 0};
     
+    cubeVi[0+6].textureCoord = {0, 0};
+    cubeVi[1+6].textureCoord = {1, 1};
+    cubeVi[2+6].textureCoord = {1, 0};
+    cubeVi[3+6].textureCoord = {1, 1};
+    cubeVi[4+6].textureCoord = {0, 0};
+    cubeVi[5+6].textureCoord = {0, 1};
+    
+    cubeVi[0+12].textureCoord = {1, 0};
+    cubeVi[1+12].textureCoord = {0, 0};
+    cubeVi[2+12].textureCoord = {1, 1};
+    cubeVi[3+12].textureCoord = {0, 0};
+    cubeVi[4+12].textureCoord = {0, 1};
+    cubeVi[5+12].textureCoord = {1, 1};
+    
+    cubeVi[0+18].textureCoord = {0, 1};
+    cubeVi[1+18].textureCoord = {1, 1};
+    cubeVi[2+18].textureCoord = {0, 0};
+    cubeVi[3+18].textureCoord = {0, 0};
+    cubeVi[4+18].textureCoord = {1, 1};
+    cubeVi[5+18].textureCoord = {1, 0};
+    
+    cubeVi[0+24].textureCoord = {1, 0};
+    cubeVi[1+24].textureCoord = {0, 0};
+    cubeVi[2+24].textureCoord = {1, 1};
+    cubeVi[3+24].textureCoord = {0, 1};
+    cubeVi[4+24].textureCoord = {1, 1};
+    cubeVi[5+24].textureCoord = {0, 0};
+    
+    cubeVi[0+30].textureCoord = {0, 0};
+    cubeVi[1+30].textureCoord = {0, 1};
+    cubeVi[2+30].textureCoord = {1, 1};
+    cubeVi[3+30].textureCoord = {1, 1};
+    cubeVi[4+30].textureCoord = {1, 0};
+    cubeVi[5+30].textureCoord = {0, 0};
+    
+    // texture wrap:
+    for(int r = 0; r < 2; r++) {
+        for(int c = 0; c < 3; c++) {
+            for(int v = 0; v < 6; v++) {
+                Coordinates2Df offset ;
+                offset.x = 0.25*c;
+                offset.y = 0.5*r;
+                cubeVi[v + 6*(r + c*2)].textureCoord.x *= 0.25;
+                cubeVi[v + 6*(r + c*2)].textureCoord.y *= 0.5;
+                cubeVi[v + 6*(r + c*2)].textureCoord = cubeVi[v + 6*(r + c*2)].textureCoord + offset;
+            }
+        }
+    }
     
     CubeVertexInfo squareVi[4];
     int squareViIndices[2][3];
@@ -488,10 +641,10 @@ int main(int argc, char** argv) {
     squareVi[2].vertex = { 1,  1, 0, 1};
     squareVi[3].vertex = {-1,  1, 0, 1};
     
-    squareVi[0].textureCoord = {0, 0, 0};
-    squareVi[1].textureCoord = {0, 1, 0};
-    squareVi[2].textureCoord = {1, 1, 0};
-    squareVi[3].textureCoord = {1, 0, 0};
+    squareVi[0].textureCoord = {0, 0};
+    squareVi[1].textureCoord = {0, 1};
+    squareVi[2].textureCoord = {1, 1};
+    squareVi[3].textureCoord = {1, 0};
     
     squareVi[0].color = {255, 0, 0, 0};
     squareVi[1].color = {0, 255, 0, 0};
@@ -573,11 +726,11 @@ int main(int argc, char** argv) {
         now = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> float_ms = (now - before);
         before = now;
+        double dTime = float_ms.count()/1000.0;
         
-        
-        delayTime += 0.001*(1.0/60.0 - float_ms.count()/1000.0);
+        delayTime += 0.001*(1.0/60.0 - dTime);
         if (delayTime> 0 && delayTime < 0.1) {
-            usleep(1000000.0*delayTime);
+//            usleep(1000000.0*delayTime);
         }
 //        depthBuffer.reset();
         mRenderPipeline.reset();
@@ -608,7 +761,7 @@ int main(int argc, char** argv) {
 
         viewMatrix = matrixMultiply( cameraOrientation, viewMatrix);
         
-        lightAngle+=0.01;
+        lightAngle+=dTime * 0.2;
         light[0].x = 6*cos(lightAngle);
         light[0].y = 6*sin(lightAngle);
         light[0].z = 3 + 1.0*sin(lightAngle*5.0);
@@ -619,8 +772,8 @@ int main(int argc, char** argv) {
         LightParams mLightParams;
         mLightParams.numLights = 3;
         mLightParams.modelView[0] = lightModelView;
-        mLightParams.color[0].x = 0.0;//1.25/3.0;
-        mLightParams.color[0].y = 0.0;//0.9/3.0;
+        mLightParams.color[0].x = 0.40;//1.25/3.0;
+        mLightParams.color[0].y = 0.40;//0.9/3.0;
         mLightParams.color[0].z = 3.0/3.0;
         
         
@@ -630,17 +783,17 @@ int main(int argc, char** argv) {
         light[1].w = 1;
         mLightParams.modelView[1] = matrixVectorMultiply(viewMatrix, light[1]);
         mLightParams.color[1].x = 1.0;
-        mLightParams.color[1].y = 0.0;//0.1;
-        mLightParams.color[1].z = 0.0;
+        mLightParams.color[1].y = 0.40;//0.1;
+        mLightParams.color[1].z = 0.40;
         
         light[2].x = 6*cos(lightAngle*1.75);
         light[2].y = 6*sin(lightAngle*1.75);
         light[2].z = 3 + 1.0*sin(lightAngle*7.0);
         light[2].w = 1;
         mLightParams.modelView[2] = matrixVectorMultiply(viewMatrix, light[2]);
-        mLightParams.color[2].x = 0.0;
+        mLightParams.color[2].x = 0.40;
         mLightParams.color[2].y = 1.0;
-        mLightParams.color[2].z = 0.0;
+        mLightParams.color[2].z = 0.40;
         
         for (int i = 0; i < mLightParams.numLights; i++) {
             Mat4D lightScale = scaleMatrix(0.15, 0.15, 0.15);
@@ -653,14 +806,21 @@ int main(int argc, char** argv) {
 //            rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, windowFull, (void*)&mLightParams.color[i], &depthBuffer, lightModelFs, debugLine);
             mRenderPipeline.setFragmentShader(lightModelFs);
 
-//            mRenderPipeline.rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, mRenderPipeline.viewport, (void*)&mLightParams.color[i], debugLine);
+            mRenderPipeline.rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, mRenderPipeline.viewport, (void*)&mLightParams.color[i], debugLine);
         }
 
-        
+        LightParamsAndTexture mLightParamsAndTexture;
+        mLightParamsAndTexture.lightParams = &mLightParams;
+        mLightParamsAndTexture.texture = &pngTexture;
+        Coordinates4D zeroVector = {0,0,0,1};
+        Coordinates4D camLocation = matrixVectorMultiply(cameraTranslation, zeroVector);
+//        mLightParamsAndTexture.cameraLocation = {camLocation.x, camLocation.y, camLocation.z};
+        mLightParamsAndTexture.cameraLocation = {0,0,0};
+//        mLightParamsAndTexture.cameraLocation = matrixVectorMultiple(<#Mat3D &rotation#>, -1*mLightParamsAndTexture.cameraLocation);
         
         // Cube 2
-        cube2angle += 0.02;
-        Coordinates3D cube2roationAxis = {1+sin(0.9*cube2angle), sin(0.8*cube2angle), sin(0.7*cube2angle)};
+        cube2angle += dTime*2;
+        Coordinates3D cube2roationAxis = {1+sin(0.9*cube2angle+1),1+sin(0.8*cube2angle), sin(0.7*cube2angle)};
         cube2roationAxis = normalizeVector(cube2roationAxis);
         Mat4D cube2rotation = rotationFromAngleAndUnitAxis(cube2angle*1.1, cube2roationAxis);
         Mat4D cube2translation = translationMatrix(1, -1, 0.1);
@@ -670,17 +830,19 @@ int main(int argc, char** argv) {
 
         // triangle
 //        Coordinates4D cubeTriangle[sizeof(triangle)/sizeof(triangle[0])];
-        Mat4D solidCubeScale = scaleMatrix(1.05, 1.05, 1.05);
-        Coordinates3D solidAxis = {0,0,1};
-        Mat4D solidRotation = rotationFromAngleAndUnitAxis(M_PI_4, solidAxis);
-        Mat4D solidTranslation = translationMatrix(0, 6, 0);
+        Mat4D solidCubeScale = scaleMatrix(2.05, 2.05, 2.05);
+        Coordinates3D solidAxis = {sin(angle*.092440),sin(angle*.923840),sin(angle*1.123)};
+        solidAxis = normalizeVector(solidAxis);
+        Mat4D solidRotation = rotationFromAngleAndUnitAxis(M_PI_4+angle, solidAxis);
+        Mat4D solidTranslation = translationMatrix(0, 0, 0);
         
 //        viewMatrix = translationMatrix(0, 0, -2 + sin(angle*4));
         
-        Mat4D modelViewBlackCube = matrixMultiply(solidRotation, solidCubeScale);
-        modelViewBlackCube = matrixMultiply(solidTranslation, modelViewBlackCube);
+        Mat4D modelBlackCube = matrixMultiply(solidRotation, solidCubeScale);
+        modelBlackCube = matrixMultiply(solidTranslation, modelBlackCube);
 //        modelViewBlackCube = matrixMultiply( cube2translation, modelViewBlackCube);
-        modelViewBlackCube = matrixMultiply(viewMatrix, modelViewBlackCube);
+        
+        Mat4D modelViewBlackCube = matrixMultiply(viewMatrix, modelBlackCube);
         numEdges = sizeof(cubeQuadIndices)/sizeof(cubeQuadIndices[0]);
 //        rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewBlackCube, projection, windowFull, (void*)&lightModelView, &depthBuffer, lightFs, debugLine);
 //        rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewBlackCube, projection, windowFull, (void*)&mLightParams, &depthBuffer, lightFs2, debugLine);
@@ -688,26 +850,37 @@ int main(int argc, char** argv) {
 //        mRenderPipeline.rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewBlackCube, projection, windowFull, (void*)&mLightParams, debugLine);
         
         mUniformInfo.modelView = modelViewBlackCube;
+//        mUniformInfo.modelView = modelBlackCube;
         mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
-//        mRenderPipeline.userData = (void*)&mLightParams;
-        mRenderPipeline.setFragmentShader(lightFs3);
-//        mRenderPipeline.trianglesFill(cubeVi, cubeViIndices, 12);
+//        mRenderPipeline.setFragmentShader(lightFs3);
 //        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParams, myVertexShader);
-//        mRenderPipeline.rasterizeShader(cubeVi, cubeViIndices, 12, modelViewBlackCube, projection, (void*)&mLightParams);
+//        mRenderPipeline.setFragmentShader(textureshader);
+//        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&pngTexture, myVertexShader);
+        mRenderPipeline.setFragmentShader(lightAndTextureShader);
+        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParamsAndTexture, myVertexShader);
         
+        // Square floor:
 //        mRenderPipeline.trianglesFill(squareVi, squareViIndices, 2);
         Mat4D modelTranslation = translationMatrix(0, 0, -1 );
         Mat4D modelScale = scaleMatrix(8, 8, 8);
         Mat4D modelSquare = matrixMultiply(modelTranslation, modelScale);
         Mat4D modelViewSquare = matrixMultiply(viewMatrix, modelSquare);
         mUniformInfo.modelView = modelViewSquare;
+//        mUniformInfo.modelView = modelSquare;
         mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
-        mRenderPipeline.setFragmentShader(textureshader);
-//        mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParams, myVertexShader);
-        mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&pngTexture, myVertexShader);
         
         now = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> float_ms2 = (now - before);
+        double timeToPrepare = (double)float_ms2.count()/1000.0;
+        before2 = now;
+        RenderStats mRenderStats;
+//        mRenderPipeline.setFragmentShader(textureshader);
+//        mRenderStats = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&pngTexture, myVertexShader);
+        mRenderPipeline.setFragmentShader(lightAndTextureShader);
+        mRenderStats = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParamsAndTexture, myVertexShader);
+        
+        now = std::chrono::high_resolution_clock::now();
+        float_ms2 = (now - before2);
         double timeToRasterize = (double)float_ms2.count()/1000.0;
         before2 = now;
         
@@ -723,14 +896,19 @@ int main(int argc, char** argv) {
         
         
         if (autoRotate) {
-            angle -= float_ms.count()/1000.0*0.4;
+            angle -= dTime*0.4;
         }
 
         // HUD
         mvprintw(debugLine++, 0, "FPS: %f", 1000.0/float_ms.count());
         mvprintw(debugLine++, 0, "Delay time %f", delayTime);
-        mvprintw(debugLine++, 0, "Rasterize %f", timeToRasterize);
-        mvprintw(debugLine++, 0, "Render    %f", timeToRender);
+        mvprintw(debugLine++, 0, "Total Time %f", float_ms.count()/1000.0);
+        mvprintw(debugLine++, 0, "Prep       %f", timeToPrepare);
+        mvprintw(debugLine++, 0, "Rasterize  %f", timeToRasterize);
+        mvprintw(debugLine++, 0, " - Vertex  %f", mRenderStats.timeVertexShading);
+        mvprintw(debugLine++, 0, " - Clip    %f", mRenderStats.timeClipping);
+        mvprintw(debugLine++, 0, " - Draw    %f", mRenderStats.timeDrawing);
+        mvprintw(debugLine++, 0, "Render     %f", timeToRender);
         
         int ch;
 //        refresh();

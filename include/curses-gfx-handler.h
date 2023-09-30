@@ -4,12 +4,15 @@
 #include <pthread.h>
 #include <queue>
 #include <tuple>
+#include <chrono>
 #ifdef FB_SUPPORT
 #include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #endif
+
+#include <chrono>
 
 #include "curses-gfx.h"
 #include "curses-gfx-3d.h"
@@ -30,7 +33,11 @@ typedef struct _Renderable {
 } Renderable;
 
 
-
+typedef struct _RenderStats {
+    double timeVertexShading;
+    double timeClipping;
+    double timeDrawing;
+} RenderStats;
 
 
 
@@ -121,7 +128,7 @@ public:
 	void setFragmentShader(void (*fragmentShader)(const FragmentInfo&));
 	
 	void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
-    template <class T, class U> void rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&));
+    template <class T, class U> RenderStats rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&));
 	void rasterizePolygonsShader(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 	void rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 	
@@ -141,7 +148,12 @@ public:
 
 
 
-template <class T, class U> void RenderPipeline::rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&)) {
+template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&)) {
+    
+    auto now = std::chrono::high_resolution_clock::now();
+    auto before = now;
+    std::chrono::duration<double, std::milli> float_ms;
+    
     T scratch[3];
     int scratchLayout[][3] = {
         {0, 1, 2}
@@ -149,8 +161,9 @@ template <class T, class U> void RenderPipeline::rasterizeShader(T* vertexInfo, 
     T scratchClipped[20];
     int clippedVertexCount;
     
-    this->userData = userData;
+    RenderStats mRenderStats = {0,0,0};
     
+    this->userData = userData;
     for (int t = 0; t < numTriangles; t++) {
         scratch[0] = vertexInfo[triangleLayout[t][0]];
         scratch[1] = vertexInfo[triangleLayout[t][1]];
@@ -163,6 +176,7 @@ template <class T, class U> void RenderPipeline::rasterizeShader(T* vertexInfo, 
             //            scratch[i].vertex = matrixVectorMultiply(projection, scratch[i].vertex);
             //            vertexShader = (void*)myVertexShader;
             //            myVertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
+            
             vertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
             //            scratch[i].vertex.y = -scratch[i].vertex.y;
             
@@ -171,23 +185,41 @@ template <class T, class U> void RenderPipeline::rasterizeShader(T* vertexInfo, 
             // Give to a user-defined shader which produces user-defined struct of vertex attributes
         }
         
+        now = std::chrono::high_resolution_clock::now();
+        float_ms = (now - before);
+        before = now;
+        mRenderStats.timeVertexShading += float_ms.count()/1000.0;
+        
         // Then.. clip geometry?
         clipPolygon(scratch, 3, scratchClipped, clippedVertexCount);
+        now = std::chrono::high_resolution_clock::now();
+        float_ms = (now - before);
+        before = now;
+        mRenderStats.timeClipping += float_ms.count()/1000.0;
             
         for(int i = 0; i < clippedVertexCount; i++) {
             // Then.. apply a viewport and provide to triangle rasterizer
 //            scratch[i].vertex = matrixVectorMultiply(viewport, scratch[i].vertex);
             scratchClipped[i].vertex = matrixVectorMultiply(viewport, scratchClipped[i].vertex);
         }
+//        now = std::chrono::high_resolution_clock::now();
+//        float_ms = (now - before);
+//        before = now;
+//        mRenderStats.timeVertexShading += float_ms.count()/1000.0;
         
         
 //            triangleFill(&scratch[0], &scratch[1], &scratch[2]);
         for(int i = 2; i < clippedVertexCount; i++) {
             triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
         }
+        now = std::chrono::high_resolution_clock::now();
+        float_ms = (now - before);
+        before = now;
+        mRenderStats.timeDrawing += float_ms.count()/1000.0;
 //        fbo->data[20*4 + 3] = '0'+clippedVertexCount;
 
     }
+    return mRenderStats;
 }
 
 template<class T> void baryInterpolate2d(T& output, const T& input, const T& input2, const double& alpha, const double& beta, std::integral_constant<int, 0>)
@@ -364,8 +396,8 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
             // Accept whole block when totally covered
             if(a == 0xF && b == 0xF && c == 0xF)
             {
-                
-                for(ipt.y = pt.y; ipt.y < q+pt.y; ipt.y++)
+
+                for(ipt.y = pt.y; ipt.y < pt.y + q; ipt.y++)
                 {
                     for(ipt.x = pt.x; ipt.x < pt.x + q; ipt.x++)
                     {
@@ -391,22 +423,22 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
             }
             else   // Partially covered block
             {
-//                continue;
+                //                continue;
                 int CY1 = C1 + DX12 * y0 - DY12 * x0;
                 int CY2 = C2 + DX23 * y0 - DY23 * x0;
                 int CY3 = C3 + DX31 * y0 - DY31 * x0;
-
+                
                 for(ipt.y = pt.y; ipt.y < pt.y + q; ipt.y++)
                 {
                     int CX1 = CY1;
                     int CX2 = CY2;
                     int CX3 = CY3;
-
+                    
                     for(ipt.x = pt.x; ipt.x < pt.x + q; ipt.x++)
                     {
                         if(CX1 > 0 && CX2 > 0 && CX3 > 0)
                         {
-//                            buffer[ix] = 0x0000007F;   // Blue
+                            //                            buffer[ix] = 0x0000007F;   // Blue
                             int xp = ipt.x << 4;
                             int yp = ipt.y << 4;
                             alpha = (double)(xp*Y2 + aX2Y3mX3Y2 + X3*yp - xp*Y3 - X2*yp)*A;
@@ -422,17 +454,17 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
                             baryInterpolate(output, f1, f2, f3, alpha, beta, gamma);
                             setWithShader2( ipt, correctInvDepth, userData, (void*) &fragment);
                         }
-
+                        
                         CX1 -= FDY12;
                         CX2 -= FDY23;
                         CX3 -= FDY31;
                     }
-
+                    
                     CY1 += FDX12;
                     CY2 += FDX23;
                     CY3 += FDX31;
-
-//                    (char*&)buffer += stride;
+                    
+                    //                    (char*&)buffer += stride;
                 }
             }
             

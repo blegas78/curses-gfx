@@ -25,6 +25,18 @@ auto regist(Class& value) \
 
 // There's a great visual rendering pipeline visual here (helped me with depth buffer): https://fabiensanglard.net/polygon_codec/
 
+
+typedef struct _Coordinates2Df {
+    double x;
+    double y;
+    
+    _Coordinates2Df() {}
+    _Coordinates2Df( const double& x, const double& y) : x(x), y(y) {}
+    _Coordinates2Df( const _Coordinates2Df& p) : x(p.x), y(p.y) {}
+    _Coordinates2Df operator + (const _Coordinates2Df &p) const { return _Coordinates2Df(p.x+x, p.y+y); }
+    _Coordinates2Df operator * (const double &d) const { return _Coordinates2Df(d*x, d*y); }
+} Coordinates2Df;
+
 typedef struct _Coordinates3D {
     double x;
     double y;
@@ -33,8 +45,10 @@ typedef struct _Coordinates3D {
     _Coordinates3D() {}
     _Coordinates3D( const double& x, const double& y, const double& z) : x(x), y(y), z(z) {}
     _Coordinates3D( const _Coordinates3D& p) : x(p.x), y(p.y), z(p.z) {}
+    _Coordinates3D operator + (const double &d) const { return _Coordinates3D(d+x, d+y, d+z); }
     _Coordinates3D operator + (const _Coordinates3D &p) const { return _Coordinates3D(p.x+x, p.y+y, p.z+z); }
     _Coordinates3D operator * (const double &d) const { return _Coordinates3D(d*x, d*y, d*z); }
+    _Coordinates3D operator * (const _Coordinates3D &p) const { return _Coordinates3D(p.x*x, p.y*y, p.z*z); }
 } Coordinates3D;
 
 typedef struct _ColorRGB {

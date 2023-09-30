@@ -198,7 +198,7 @@ typedef struct _CubeVertexInfo {
     Coordinates4D vertex;
     Coordinates4D location;
     Coordinates3D normal;
-    Coordinates3D textureCoord;
+    Coordinates2Df textureCoord;
     ColorRGBA color;
 } CubeVertexInfo;
 
@@ -465,10 +465,10 @@ int main(int argc, char** argv) {
     squareVi[2].vertex = { 1,  1, 0, 1};
     squareVi[3].vertex = {-1,  1, 0, 1};
     
-    squareVi[0].textureCoord = {0, 0, 0};
-    squareVi[1].textureCoord = {0, 1, 0};
-    squareVi[2].textureCoord = {1, 1, 0};
-    squareVi[3].textureCoord = {1, 0, 0};
+    squareVi[0].textureCoord = {0, 0};
+    squareVi[1].textureCoord = {0, 1};
+    squareVi[2].textureCoord = {1, 1};
+    squareVi[3].textureCoord = {1, 0};
     
     squareVi[0].color = {255, 0, 0, 0};
     squareVi[1].color = {0, 255, 0, 0};
