@@ -3,12 +3,15 @@
 
 #include <png.h>
 
-typedef struct _PngLoader {
+class PngLoader {
+public:
+    PngLoader();
+    ~PngLoader();
     int width, height;
     png_byte color_type;
     png_byte bit_depth;
-    png_bytep *row_pointers = NULL;
-} PngLoader;
+    png_bytep *row_pointers;
+} ;
 
 int read_png_file(const char *filename, PngLoader& mPngLoader);
 

@@ -539,8 +539,8 @@ int main(int argc, char** argv) {
         for(int c = 0; c < 3; c++) {
             for(int v = 0; v < 6; v++) {
                 Coordinates2Df offset ;
-                offset.x = 0.25*c;
-                offset.y = 0.5*r;
+                offset.x = 0.25*(double)c;
+                offset.y = 0.5*(double)r;
                 cubeVi[v + 6*(r + c*2)].textureCoord.x *= 0.25;
                 cubeVi[v + 6*(r + c*2)].textureCoord.y *= 0.5;
                 cubeVi[v + 6*(r + c*2)].textureCoord = cubeVi[v + 6*(r + c*2)].textureCoord + offset;
@@ -556,14 +556,14 @@ int main(int argc, char** argv) {
     squareVi[3].vertex = {-1,  1, 0, 1};
     
     squareVi[0].textureCoord = {0, 0};
-    squareVi[1].textureCoord = {0, 1};
+    squareVi[1].textureCoord = {1, 0};
     squareVi[2].textureCoord = {1, 1};
-    squareVi[3].textureCoord = {1, 0};
+    squareVi[3].textureCoord = {0, 1};
     
     squareVi[0].textureCoord = {0.75, 0.5};
-    squareVi[1].textureCoord = {0.75, 1.};
-    squareVi[2].textureCoord = {1, 1.};
-    squareVi[3].textureCoord = {1, 0.5};
+    squareVi[1].textureCoord = {1, 0.5};
+    squareVi[2].textureCoord = {1, 1};
+    squareVi[3].textureCoord = {0.75, 1};
     
     squareVi[0].color = {255, 0, 0, 0};
     squareVi[1].color = {0, 255, 0, 0};

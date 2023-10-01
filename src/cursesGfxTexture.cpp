@@ -3,15 +3,13 @@
 //#include <png.h>
 
 
-Texture::Texture() {
-    data = new ColorRGBA[1];
-    width = 1;
-    height = 1;
+Texture::Texture()
+: data(NULL) {
+    resize(1, 1);
 }
 Texture::Texture(int width, int height)
-: width(width), height(height) {
-    data = new ColorRGBA[width*height];
-    
+: data(NULL) {
+    resize(width, height);
 }
 
 Texture::Texture(const char* pngFilename)
@@ -22,7 +20,8 @@ Texture::Texture(const char* pngFilename)
 Texture::~Texture() {
     width = 0;
     height = 0;
-    delete [] data;
+    if(data)
+        delete [] data;
 }
 
 void Texture::set(const double& x, const double& y, const ColorRGBA& value) {
@@ -129,33 +128,24 @@ void Texture::resize(int dimX, int dimY) {
 bool Texture::loadPng(const char* filename) {
     PngLoader mPngLoader;
     if(read_png_file(filename, mPngLoader)) {
-        if (data == NULL) {
-            data = new ColorRGBA[1];
-            width = 1;
-            height = 1;
-            data[0] = {127,127,127,0};  // for testing
-        }
+        resize(1, 1);
+        data[0] = {127,127,127,0};  // for testing
         return 1;
     }
     
     if(mPngLoader.height*mPngLoader.width != width*height) {
-        if (data) {
-            width = height = 0; // prevent race conditions
-            delete [] data;
-        }
-        data = new ColorRGBA[mPngLoader.height*mPngLoader.width];
-        width = mPngLoader.width;
-        height = mPngLoader.height;
+        resize(mPngLoader.width, mPngLoader.height);
     }
     for(int y = 0; y < mPngLoader.height; y++) {
-        png_bytep row = mPngLoader.row_pointers[mPngLoader.height - y - 1]; // HACK reverse y
+//        png_bytep row = mPngLoader.row_pointers[mPngLoader.height - y - 1]; // HACK reverse y
+        png_bytep row = mPngLoader.row_pointers[y];
         for(int x = 0; x < mPngLoader.width; x++) {
             png_bytep px = &(row[x * 4]);
-            setPixel(y, x, {px[0], px[1], px[2], px[3]});   // HACK swap x/y
+//            setPixel(y, x, {px[0], px[1], px[2], px[3]});   // HACK swap x/y
+            setPixel(x, y, {px[0], px[1], px[2], px[3]});   // HACK swap x/y
         }
     }
     
-    delete [] mPngLoader.row_pointers;
     
     return 0;
 }
