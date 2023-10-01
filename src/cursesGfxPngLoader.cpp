@@ -5,16 +5,29 @@
 #include <cstdlib>
 
 // thanks to https://gist.github.com/niw/5963798
-void read_png_file(char *filename, PngLoader& mPngLoader) {
+int read_png_file(const char *filename, PngLoader& mPngLoader) {
   FILE *fp = fopen(filename, "rb");
-
+    if(fp == 0) {
+        return 1;
+    }
   png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if(!png) abort();
+    if(!png) {
+        fclose(fp);
+        return 1;
+    }
 
   png_infop info = png_create_info_struct(png);
-  if(!info) abort();
+    if(!info) {
+        png_destroy_read_struct(&png, NULL, NULL);  // I'm guess on this call, may segfault
+        fclose(fp);
+        return 1;
+    }
 
-  if(setjmp(png_jmpbuf(png))) abort();
+    if(setjmp(png_jmpbuf(png))) {
+        png_destroy_read_struct(&png, &info, NULL);
+        fclose(fp);
+        return 1;
+    }
 
   png_init_io(png, fp);
 
@@ -66,5 +79,6 @@ void read_png_file(char *filename, PngLoader& mPngLoader) {
   fclose(fp);
 
   png_destroy_read_struct(&png, &info, NULL);
+    return 0;
 }
 

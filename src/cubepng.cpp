@@ -154,29 +154,7 @@ void cleanupConsole() {
 //    }
 //};
 
-void process_png_file(const PngLoader& mPngLoader, Texture& texture) {
-  for(int y = 0; y < mPngLoader.height; y++) {
-    png_bytep row = mPngLoader.row_pointers[y];
-    for(int x = 0; x < mPngLoader.width; x++) {
-      png_bytep px = &(row[x * 4]);
-      // Do something awesome for each pixel here...
-//      printf("%4d, %4d = RGBA(%3d, %3d, %3d, %3d)\n", x, y, px[0], px[1], px[2], px[3]);
-        texture.setPixel(x, y, {px[0], px[1], px[2], px[3]});
-        
-//        double avg = ((double)px[0] + (double)px[1] + (double)px[2])/3.0; // MONOCHROME
-////        avg = pow(avg/255.0,1.8)*255;
-////        avg = (avg - 205)*255/50;
-//        texture.setPixel(x, y, {avg,avg,avg, 0});
-        
-        
-//        double R = ((double)px[0] - 205)*255/50; // STREETMAPS range adjust
-//        double G = ((double)px[1] - 205)*255/50; // STREETMAPS range adjust
-//        double B = ((double)px[2] - 205)*255/50; // STREETMAPS range adjust
-//        texture.setPixel(x, y, {R, G, B, 0});
-        
-    }
-  }
-}
+
 
 
 
@@ -428,14 +406,20 @@ int main(int argc, char** argv) {
         printf("provide PNG filename as an argument: %s <image.png>\n", argv[0]);
         abort();
     }
-      PngLoader mPngLoader;
-    read_png_file(argv[1], mPngLoader);
-      Texture pngTexture(mPngLoader.width, mPngLoader.height);
-    process_png_file(mPngLoader, pngTexture);
+//      PngLoader mPngLoader;
+//    read_png_file(argv[1], mPngLoader);
+//      Texture pngTexture(mPngLoader.width, mPngLoader.height);
+//    process_png_file(mPngLoader, pngTexture);
+    
+    Texture pngTexture(argv[1]);
+//    pngTexture.loadPng("/Users/matt/Desktop/PIs/pis.png");
+//    return 0;
   //  write_png_file(argv[2]);
     pngTexture.monochromize();
     pngTexture.offsetAvergageToCenter(0.5);
     pngTexture.normalize(1.);
+    
+    
     
 //    testTexture.set(0.2, 0.2, {255,0,0,0});
 

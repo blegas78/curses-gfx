@@ -10,6 +10,6 @@ typedef struct _PngLoader {
     png_bytep *row_pointers = NULL;
 } PngLoader;
 
-void read_png_file(char *filename, PngLoader& mPngLoader);
+int read_png_file(const char *filename, PngLoader& mPngLoader);
 
 #endif
