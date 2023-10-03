@@ -151,6 +151,7 @@ void* RenderPipeline::renderThread(void* info) {
 	delete [] This->polygons;
 	delete This;
 	//return NULL;
+    pthread_exit(NULL);
 }
 
 void RenderPipeline::rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line) {
@@ -1313,10 +1314,10 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
 	}
 }
 
-void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void* userData, void* interpolatedData) {
-    if ( pixel.x < 0 || pixel.y < 0 || depthBuffer->cols <= pixel.x || depthBuffer->rows <= pixel.y) {
-        return;
-    }
+void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void* interpolatedData) {
+//    if ( pixel.x < 0 || pixel.y < 0 || depthBuffer->cols <= pixel.x || depthBuffer->rows <= pixel.y) {
+//        return;
+//    }
     int depthIndex = pixel.x + depthBuffer->cols*pixel.y;
     if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
         ((double*)depthBuffer->data)[depthIndex] = invDepth;

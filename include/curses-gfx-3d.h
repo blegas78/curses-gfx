@@ -9,7 +9,7 @@
 
 #include "curses-gfx.h"
 
-// Newat way to view template/macro expansions: https://cppinsights.io
+// Neat way to view template/macro expansions: https://cppinsights.io
 #define REGISTER_VERTEX_LAYOUT(Class) \
 auto regist(Class& value) \
 { \

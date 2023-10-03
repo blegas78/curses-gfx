@@ -31,8 +31,10 @@ public:
     void offset(int o);
     void scale(int s);
     void invert();
+    void gaussBlur();
     
     ColorRGBA sample( const double& x, const double& y);
+    ColorRGBA samplePixel( const int& x, const int& y);
     
     bool loadPng(const char* filename); // 0 success, 1 failure;
 };

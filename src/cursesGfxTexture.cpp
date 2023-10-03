@@ -109,9 +109,45 @@ void Texture::invert() {
     }
 }
 
+void Texture::gaussBlur() {
+    Texture copy(width, height);
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
+            copy.setPixel(i, j, samplePixel(i, j));
+        }
+    }
+    
+    double kernel[3][3] = {
+        {1.0/16.0, 2.0/16.0, 1.0/16.0},
+        {2.0/16.0, 4.0/16.0, 2.0/16.0},
+        {1.0/16.0, 2.0/16.0, 1.0/16.0}
+    };
+    
+    
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            ColorRGBA sum = {0,0,0,0};
+            
+            
+            for (int i = -1; i <= 1; i++) {
+                for (int j = -1; j <= 1; j++) {
+                    sum = sum + copy.samplePixel(x, y) * kernel[i][j];  // liekly rounding errors
+                }
+            }
+            
+            setPixel(x, y, sum);
+        }
+    }
+}
+
 ColorRGBA Texture::sample( const double& x, const double& y) {
     int xPart = mod(x*(double)width,width);
     int yPart = mod(y*(double)height,height);
+    return data[ xPart + width*yPart];
+}
+ColorRGBA Texture::samplePixel( const int& x, const int& y) {
+    int xPart = mod(x,width);
+    int yPart = mod(y,height);
     return data[ xPart + width*yPart];
 }
 
