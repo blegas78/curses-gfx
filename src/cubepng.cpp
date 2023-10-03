@@ -356,9 +356,9 @@ void lightAndTextureShader(const FragmentInfo& fInfo) {
 //        intensity = (lightMagnitude*lightMagnitude * intensity2 +  intensitySpecular);
         intensity = (diffuse*3*0  +  intensitySpecular*10 + 3*0) * attenuation;
         
-        diffuse *= attenuation*8;
+        diffuse *= attenuation*12;
         intensitySpecular *= attenuation*8;
-        double ambient = 8.0*attenuation*0;
+        double ambient = 12.0*attenuation;
         colorRGB = colorRGB + (lights->color[i]*textureSamplef)*diffuse;
         colorRGB = colorRGB + lights->color[i]*intensitySpecular;
         colorRGB = colorRGB + (lights->color[i]*textureSamplef)*ambient;
@@ -418,6 +418,12 @@ int main(int argc, char** argv) {
     pngTexture.monochromize();
     pngTexture.offsetAvergageToCenter(0.5);
     pngTexture.normalize(1.);
+//    pngTexture.gaussBlur();
+//    pngTexture.gaussBlur();
+//    pngTexture.gaussBlur();
+//    pngTexture.gaussBlur();
+//    pngTexture.gaussBlur();
+//    pngTexture.gaussBlur();
     
     
     
@@ -555,15 +561,10 @@ int main(int argc, char** argv) {
     squareVi[2].vertex = { 1,  1, 0, 1};
     squareVi[3].vertex = {-1,  1, 0, 1};
     
-    squareVi[0].textureCoord = {0, 0};
+    squareVi[0].textureCoord = {0.75, 0};
     squareVi[1].textureCoord = {1, 0};
-    squareVi[2].textureCoord = {1, 1};
-    squareVi[3].textureCoord = {0, 1};
-    
-    squareVi[0].textureCoord = {0.75, 0.5};
-    squareVi[1].textureCoord = {1, 0.5};
-    squareVi[2].textureCoord = {1, 1};
-    squareVi[3].textureCoord = {0.75, 1};
+    squareVi[2].textureCoord = {1, 0.5};
+    squareVi[3].textureCoord = {0.75, 0.5};
     
     squareVi[0].color = {255, 0, 0, 0};
     squareVi[1].color = {0, 255, 0, 0};
@@ -577,8 +578,20 @@ int main(int argc, char** argv) {
     squareViIndices[1][1] = 2;
     squareViIndices[1][2] = 3;
     
+    CubeVertexInfo squareWall[4];
+    squareWall[0].vertex = {-1, -1, 0, 1};
+    squareWall[1].vertex = { 1, -1, 0, 1};
+    squareWall[2].vertex = { 1,  1, 0, 1};
+    squareWall[3].vertex = {-1,  1, 0, 1};
+    
+    squareWall[0].textureCoord = {0.75, 0.5}; // this makes this square different
+    squareWall[1].textureCoord = {1, 0.5};
+    squareWall[2].textureCoord = {1, 1};
+    squareWall[3].textureCoord = {0.75, 1};
+    
     for(int i = 0; i < 4; i++) {
         squareVi[i].normal = {0,0,1};
+        squareWall[i].normal = {0,0,1};
     }
     
     double characterAspect = 28.0/12.0; // macOs terminal
@@ -634,6 +647,7 @@ int main(int argc, char** argv) {
     int numEdges;
     double lightAngle = 0;
     double angle = 0;
+    double cubeAngle = 0;
     double tilt = M_PI/4;
     bool usePerspective = true;
     bool autoRotate = true;
@@ -668,7 +682,7 @@ int main(int argc, char** argv) {
         cameraOrientation = rotationFromAngleAndUnitAxis(angle, cameraAxis);
         cameraOrientation = transpose(cameraOrientation);
         
-        double distance = 2*sin(angle/2);
+        double distance = 2*sin(angle/2)+1;
         cameraTranslation = translationMatrix(-(5+distance)*sin(angle), (5+distance) * cos(angle), -(2*cos(angle/5)+distance)-4);
 
         viewMatrix = matrixMultiply( cameraOrientation, cameraTranslation);
@@ -693,8 +707,8 @@ int main(int argc, char** argv) {
         LightParams mLightParams;
         mLightParams.numLights = 3;
         mLightParams.modelView[0] = lightModelView;
-        mLightParams.color[0].x = 0.40;//1.25/3.0;
-        mLightParams.color[0].y = 0.40;//0.9/3.0;
+        mLightParams.color[0].x = 0.20;//1.25/3.0;
+        mLightParams.color[0].y = 0.20;//0.9/3.0;
         mLightParams.color[0].z = 3.0/3.0;
         
         
@@ -704,20 +718,20 @@ int main(int argc, char** argv) {
         light[1].w = 1;
         mLightParams.modelView[1] = matrixVectorMultiply(viewMatrix, light[1]);
         mLightParams.color[1].x = 1.0;
-        mLightParams.color[1].y = 0.40;//0.1;
-        mLightParams.color[1].z = 0.40;
+        mLightParams.color[1].y = 0.20;//0.1;
+        mLightParams.color[1].z = 0.20;
         
         light[2].x = 6*cos(lightAngle*1.75);
         light[2].y = 6*sin(lightAngle*1.75);
         light[2].z = 3 + 1.0*sin(lightAngle*7.0);
         light[2].w = 1;
         mLightParams.modelView[2] = matrixVectorMultiply(viewMatrix, light[2]);
-        mLightParams.color[2].x = 0.40;
+        mLightParams.color[2].x = 0.20;
         mLightParams.color[2].y = 1.0;
-        mLightParams.color[2].z = 0.40;
+        mLightParams.color[2].z = 0.20;
         
         for (int i = 0; i < mLightParams.numLights; i++) {
-            Mat4D lightScale = scaleMatrix(0.15, 0.15, 0.15);
+            Mat4D lightScale = scaleMatrix(0.25, 0.25, 0.25);
             Mat4D lightTranslation = translationMatrix(light[i].x, light[i].y, light[i].z);
             Mat4D lightModel = matrixMultiply(lightTranslation, lightScale);
             Mat4D lightCubeModelView = matrixMultiply(viewMatrix, lightModel);
@@ -748,9 +762,9 @@ int main(int argc, char** argv) {
         // triangle
 //        Coordinates4D cubeTriangle[sizeof(triangle)/sizeof(triangle[0])];
         Mat4D solidCubeScale = scaleMatrix(2.05, 2.05, 2.05);
-        Coordinates3D solidAxis = {sin(angle*.092440),sin(angle*.923840),sin(angle*1.123)};
+        Coordinates3D solidAxis = {sin(cubeAngle*.092440),sin(cubeAngle*.923840),sin(cubeAngle*1.123)};
         solidAxis = normalizeVector(solidAxis);
-        Mat4D solidRotation = rotationFromAngleAndUnitAxis(M_PI_4+angle, solidAxis);
+        Mat4D solidRotation = rotationFromAngleAndUnitAxis(M_PI_4+cubeAngle, solidAxis);
         Mat4D solidTranslation = translationMatrix(0, 0, 0);
         
 //        viewMatrix = translationMatrix(0, 0, -2 + sin(angle*4));
@@ -776,26 +790,54 @@ int main(int argc, char** argv) {
 //        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParamsAndTexture, myVertexShader);
         
         if(showGround) {
-            // Square floor:
-            //        mRenderPipeline.trianglesFill(squareVi, squareViIndices, 2);
-            Mat4D modelTranslation = translationMatrix(0, 0, -3 );
-            Mat4D modelScale = scaleMatrix(6, 6, 6);
-            Mat4D modelSquare = matrixMultiply(modelTranslation, modelScale);
-            Mat4D modelViewSquare = matrixMultiply(viewMatrix, modelSquare);
-            mUniformInfo.modelView = modelViewSquare;
-            //        mUniformInfo.modelView = modelSquare;
-            mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
-            
-            
-            
-            //        mRenderPipeline.setFragmentShader(textureshader);
-            //        mRenderStats = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&pngTexture, myVertexShader);
-            mRenderPipeline.setFragmentShader(lightAndTextureShader);
+//            for (int i = 0; i < 4; i++) {
+                
+                // Square floor:
+                //        mRenderPipeline.trianglesFill(squareVi, squareViIndices, 2);
+                double s = 10;
+//                Mat4D modelTranslation = translationMatrix(s*cos((double)i/2.0*M_PI + M_PI_4)*sqrt(2), s*sin((double)i/2.0*M_PI + M_PI_4)*sqrt(2), -3 );
+            Mat4D modelTranslation = translationMatrix(0, 0, -s );
+                Mat4D modelScale = scaleMatrix(s, s, s);
+                Mat4D modelSquare = matrixMultiply(modelTranslation, modelScale);
+                Mat4D modelViewSquare = matrixMultiply(viewMatrix, modelSquare);
+                mUniformInfo.modelView = modelViewSquare;
+                //        mUniformInfo.modelView = modelSquare;
+                mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+                
+                
+                
+                //        mRenderPipeline.setFragmentShader(textureshader);
+                //        mRenderStats = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&pngTexture, myVertexShader);
+                mRenderPipeline.setFragmentShader(lightAndTextureShader);
             RenderStats mRenderStats2 = mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParamsAndTexture, myVertexShader);
+                
+                mRenderStats.timeDrawing += mRenderStats2.timeDrawing;
+                mRenderStats.timeClipping += mRenderStats2.timeClipping;
+                mRenderStats.timeVertexShading += mRenderStats2.timeVertexShading;
+//            }
             
-            mRenderStats.timeDrawing += mRenderStats2.timeDrawing;
-            mRenderStats.timeClipping += mRenderStats2.timeClipping;
-            mRenderStats.timeVertexShading += mRenderStats2.timeVertexShading;
+            
+            Coordinates3D wallAxis = {1, 0, 0};
+            Mat4D wallScale = scaleMatrix(s, s, s);
+            Mat4D wallRotation = rotationFromAngleAndUnitAxis(-M_PI_2, wallAxis);
+            Mat4D wallTranslation = translationMatrix(0, -s, 0 );
+            Mat4D firstWallModel = matrixMultiply(wallRotation, wallScale);
+            firstWallModel = matrixMultiply(wallTranslation, firstWallModel);
+            mRenderPipeline.setFragmentShader(lightAndTextureShader);
+            wallAxis = {0, 0, 1};
+            for(int i = 0; i < 4; i++) {
+                Mat4D thisWallRotation = rotationFromAngleAndUnitAxis(M_PI_2 *(double)i, wallAxis);
+                Mat4D thisWallModel = matrixMultiply(thisWallRotation, firstWallModel);
+                
+                Mat4D thisWallModelView = matrixMultiply(viewMatrix, thisWallModel);
+                mUniformInfo.modelView = thisWallModelView;
+                mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+                mRenderStats2 = mRenderPipeline.rasterizeShader(squareWall, &mUniformInfo, squareViIndices, 2, (void*)&mLightParamsAndTexture, myVertexShader);
+                mRenderStats.timeDrawing += mRenderStats2.timeDrawing;
+                mRenderStats.timeClipping += mRenderStats2.timeClipping;
+                mRenderStats.timeVertexShading += mRenderStats2.timeVertexShading;
+            }
+            
         }
         
         now = std::chrono::high_resolution_clock::now();
@@ -813,6 +855,7 @@ int main(int argc, char** argv) {
         if (autoRotate) {
             angle -= dTime*0.4;
         }
+        cubeAngle -= dTime*0.4;
         
         now = std::chrono::high_resolution_clock::now();
         float_ms2 = (now - before2);
