@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <math.h>
 #include <stdint.h>
+#include <mutex>
 
 #include "curses-gfx.h"
 
@@ -120,6 +121,8 @@ typedef struct _FrameBuffer {
 	int rows;
 	int cols;
 	uint8_t* data;
+    
+    std::mutex mutex;
 	
 	void clear(void* color) {
 		switch (type) {

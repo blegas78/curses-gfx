@@ -44,6 +44,40 @@ typedef struct _RenderStats {
     double timeDrawing;
 } RenderStats;
 
+class RasterizerThreadPool {
+public:
+    static int numberRenderThreads;
+    static std::list<std::future<void>> threadStatus;
+    
+    static void setRenderThreadCount(int numberOfThreads) {
+        numberRenderThreads = numberOfThreads;
+    };
+    
+    static void waitThreads(int threadCount) {
+
+        while(threadStatus.size() > threadCount) {
+            for(std::list<std::future<void>>::iterator it = threadStatus.begin(); it != threadStatus.end(); it++) {
+                if((*it).wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                {
+                    threadStatus.erase(it);
+                    break;
+                }
+            }
+            if(threadStatus.size() > threadCount) {
+                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+            }
+        }
+    }
+    
+    static void busyWait() {
+        waitThreads(numberRenderThreads - 1);
+    }
+    
+    ~RasterizerThreadPool() {
+        //waitThreads(0);
+    }
+};
+
 
 
 class CursesGfxHandler {
@@ -160,15 +194,16 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
     std::chrono::duration<double, std::milli> float_ms;
     
     T scratch[3];
-    int scratchLayout[][3] = {
-        {0, 1, 2}
-    };
+//    int scratchLayout[][3] = {
+//        {0, 1, 2}
+//    };
     T scratchClipped[20];
     int clippedVertexCount;
     
     RenderStats mRenderStats = {0,0,0};
     
     this->userData = userData;
+    BlockRenderer<T> br(this);
     for (int t = 0; t < numTriangles; t++) {
         scratch[0] = vertexInfo[triangleLayout[t][0]];
         scratch[1] = vertexInfo[triangleLayout[t][1]];
@@ -216,7 +251,6 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
 //            triangleFill(&scratch[0], &scratch[1], &scratch[2]);
         for(int i = 2; i < clippedVertexCount; i++) {
 //            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
-            BlockRenderer<T> br(this, userData);
 //            br.userData = userData;
             br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
         }
@@ -227,6 +261,7 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
 //        fbo->data[20*4 + 3] = '0'+clippedVertexCount;
 
     }
+//    RasterizerThreadPool::busyWait();   // finish rendering
     return mRenderStats;
 }
 
@@ -261,21 +296,50 @@ template <class T> void RenderPipeline::trianglesFill(T* vertexInfo, int edgeInd
 }
 
 
-template <class T> class BlockRenderer {
+
+
+//template <class T> std::list<std::future<void>> BlockRenderer<T>::threadStatus;
+//template <class T> int BlockRenderer<T>::numberRenderThreads;
+
+//std::list<std::future<void>> TriangleRasterizer::threadStatus;
+//int TriangleRasterizer::numberRenderThreads = 1;
+
+template <class T> class BlockRenderer : public RasterizerThreadPool {
 private:
+//    static int numberRenderThreads;
     struct RenderInfo {
-        BlockRenderer<T>* This;
+//        BlockRenderer<T>* This;
         Coordinates2D pt;
+        T fragment1, fragment2, fragment3;
         int CY1;
         int CY2;
         int CY3;
+        // Uniform for full triangle:
+        int q;
+        decltype(regist(std::declval<T&>())) f1;
+        decltype(regist(std::declval<T&>())) f2;
+        decltype(regist(std::declval<T&>())) f3;
+        int X1, X2, X3;
+        int Y1, Y2, Y3;
+        int aX2Y3mX3Y2, bX3Y1mX1Y3;
+        double A;
+        double invDepth1, invDepth2, invDepth3;
+        double invW1, invW2, invW3;
+        int FDX12;
+        int FDX23;
+        int FDX31;
+        
+        int FDY12;
+        int FDY23;
+        int FDY31;
+        RenderPipeline* p;
     };
     
     
     static void renderThread(RenderInfo rip) {
 //        RenderInfo* ri = ;
         Coordinates2D pt = rip.pt;
-        BlockRenderer<T>* This = (BlockRenderer<T>*) rip.This;
+        //BlockRenderer<T>* This = (BlockRenderer<T>*) rip.This;
         int xp;
         int yp;
         double alpha, beta, gamma;
@@ -284,25 +348,28 @@ private:
         Coordinates2D ipt;
         
         T fragment;
+        rip.f1 = regist(rip.fragment1);
+        rip.f2 = regist(rip.fragment2);
+        rip.f3 = regist(rip.fragment3);
         auto output = regist(fragment);
-        for(ipt.y = pt.y; ipt.y < pt.y + This->q; ipt.y++)
+        for(ipt.y = pt.y; ipt.y < pt.y + rip.q; ipt.y++)
         {
             yp = ipt.y << 4;
-            for(ipt.x = pt.x; ipt.x < pt.x + This->q; ipt.x++)
+            for(ipt.x = pt.x; ipt.x < pt.x + rip.q; ipt.x++)
             {
                 xp = ipt.x << 4;
-                alpha = (double)(xp*This->Y2 + This->aX2Y3mX3Y2 + This->X3*yp - xp*This->Y3 - This->X2*yp)*This->A;
-                beta = (double)(This->X1*yp + xp*This->Y3 + This->bX3Y1mX1Y3 - xp*This->Y1 - This->X3*yp)*This->A;
+                alpha = (double)(xp*rip.Y2 + rip.aX2Y3mX3Y2 + rip.X3*yp - xp*rip.Y3 - rip.X2*yp)*rip.A;
+                beta = (double)(rip.X1*yp + xp*rip.Y3 + rip.bX3Y1mX1Y3 - xp*rip.Y1 - rip.X3*yp)*rip.A;
                 gamma = 1.0 - alpha - beta;
                 
-                correctInvDepth = This->invDepth1 * alpha + This->invDepth2 * beta + This->invDepth3 * gamma;
-                pBaryDivisor = 1.0/(alpha*This->invW1 + beta*This->invW2 + gamma*This->invW3);
-                alpha *= This->invW1 * pBaryDivisor;
-                beta  *= This->invW2 * pBaryDivisor;
-                gamma *= This->invW3 * pBaryDivisor;
+                correctInvDepth = rip.invDepth1 * alpha + rip.invDepth2 * beta + rip.invDepth3 * gamma;
+                pBaryDivisor = 1.0/(alpha*rip.invW1 + beta*rip.invW2 + gamma*rip.invW3);
+                alpha *= rip.invW1 * pBaryDivisor;
+                beta  *= rip.invW2 * pBaryDivisor;
+                gamma *= rip.invW3 * pBaryDivisor;
                 
-                baryInterpolate(output, This->f1, This->f2, This->f3, alpha, beta, gamma);
-                This->p->setWithShader2( ipt, correctInvDepth, (void*)&fragment);
+                baryInterpolate(output, rip.f1, rip.f2, rip.f3, alpha, beta, gamma);
+                rip.p->setWithShader2( ipt, correctInvDepth, (void*)&fragment);
             }
         }
 //        pthread_exit(NULL);
@@ -311,7 +378,7 @@ private:
     static void renderThread2(RenderInfo rip) {
 //        RenderInfo* ri = ;
         Coordinates2D pt = rip.pt;
-        BlockRenderer<T>* This = (BlockRenderer<T>*) rip.This;
+//        BlockRenderer<T>* This = (BlockRenderer<T>*) rip.This;
         int xp;
         int yp;
         double alpha, beta, gamma;
@@ -320,47 +387,50 @@ private:
         Coordinates2D ipt;
         
         T fragment;
+        rip.f1 = regist(rip.fragment1);
+        rip.f2 = regist(rip.fragment2);
+        rip.f3 = regist(rip.fragment3);
         auto output = regist(fragment);
         //                continue;
         int CY1 = rip.CY1; //C1 + DX12 * y0 - DY12 * x0;
         int CY2 = rip.CY2; //C2 + DX23 * y0 - DY23 * x0;
         int CY3 = rip.CY3; //C3 + DX31 * y0 - DY31 * x0;
         
-        for(ipt.y = pt.y; ipt.y < pt.y + This->q; ipt.y++)
+        for(ipt.y = pt.y; ipt.y < pt.y + rip.q; ipt.y++)
         {
             int CX1 = CY1;
             int CX2 = CY2;
             int CX3 = CY3;
             
-            for(ipt.x = pt.x; ipt.x < pt.x + This->q; ipt.x++)
+            for(ipt.x = pt.x; ipt.x < pt.x + rip.q; ipt.x++)
             {
                 if(CX1 > 0 && CX2 > 0 && CX3 > 0)
                 {
                     //                            buffer[ix] = 0x0000007F;   // Blue
-                    int xp = ipt.x << 4;
-                    int yp = ipt.y << 4;
-                    alpha = (double)(xp*This->Y2 + This->aX2Y3mX3Y2 + This->X3*yp - xp*This->Y3 - This->X2*yp)*This->A;
-                    beta = (double)(This->X1*yp + xp*This->Y3 + This->bX3Y1mX1Y3 - xp*This->Y1 - This->X3*yp)*This->A;
+                    xp = ipt.x << 4;
+                    yp = ipt.y << 4;
+                    alpha = (double)(xp*rip.Y2 + rip.aX2Y3mX3Y2 + rip.X3*yp - xp*rip.Y3 - rip.X2*yp)*rip.A;
+                    beta = (double)(rip.X1*yp + xp*rip.Y3 + rip.bX3Y1mX1Y3 - xp*rip.Y1 - rip.X3*yp)*rip.A;
                     gamma = 1.0 - alpha - beta;
                     
-                    correctInvDepth = This->invDepth1 * alpha + This->invDepth2 * beta + This->invDepth3 * gamma;
-                    pBaryDivisor = 1.0/(alpha*This->invW1 + beta*This->invW2 + gamma*This->invW3);
-                    alpha *= This->invW1 * pBaryDivisor;
-                    beta  *= This->invW2 * pBaryDivisor;
-                    gamma *= This->invW3 * pBaryDivisor;
+                    correctInvDepth = rip.invDepth1 * alpha + rip.invDepth2 * beta + rip.invDepth3 * gamma;
+                    pBaryDivisor = 1.0/(alpha*rip.invW1 + beta*rip.invW2 + gamma*rip.invW3);
+                    alpha *= rip.invW1 * pBaryDivisor;
+                    beta  *= rip.invW2 * pBaryDivisor;
+                    gamma *= rip.invW3 * pBaryDivisor;
                     
-                    baryInterpolate(output, This->f1, This->f2, This->f3, alpha, beta, gamma);
-                    This->p->setWithShader2( ipt, correctInvDepth, (void*)&fragment);
+                    baryInterpolate(output, rip.f1, rip.f2, rip.f3, alpha, beta, gamma);
+                    rip.p->setWithShader2( ipt, correctInvDepth, (void*)&fragment);
                 }
                 
-                CX1 -= This->FDY12;
-                CX2 -= This->FDY23;
-                CX3 -= This->FDY31;
+                CX1 -= rip.FDY12;
+                CX2 -= rip.FDY23;
+                CX3 -= rip.FDY31;
             }
             
-            CY1 += This->FDX12;
-            CY2 += This->FDX23;
-            CY3 += This->FDX31;
+            CY1 += rip.FDX12;
+            CY2 += rip.FDX23;
+            CY3 += rip.FDX31;
             
             //                    (char*&)buffer += stride;
         }
@@ -368,56 +438,46 @@ private:
     }
   
 public:
-    Coordinates2D pt;
-    int q;
-    int X1, Y1, X2, Y2, X3, Y3;
-    int FDX12;
-    int FDX23;
-    int FDX31;
-    
-    int FDY12;
-    int FDY23;
-    int FDY31;
-    int aX2Y3mX3Y2, bX3Y1mX1Y3;
-    double A;
-    double invDepth1, invDepth2, invDepth3;
-    double invW1, invW2, invW3;
-    decltype(regist(std::declval<T&>())) f1;
-    decltype(regist(std::declval<T&>())) f2;
-    decltype(regist(std::declval<T&>())) f3;
+//    Coordinates2D pt;
+//    int q;
+//    int X1, Y1, X2, Y2, X3, Y3;
+//    int FDX12;
+//    int FDX23;
+//    int FDX31;
+//
+//    int FDY12;
+//    int FDY23;
+//    int FDY31;
+//    int aX2Y3mX3Y2, bX3Y1mX1Y3;
+//    double A;
+//    double invDepth1, invDepth2, invDepth3;
+//    double invW1, invW2, invW3;
+//    decltype(regist(std::declval<T&>())) f1;
+//    decltype(regist(std::declval<T&>())) f2;
+//    decltype(regist(std::declval<T&>())) f3;
     RenderPipeline* p;
     
 //    std::atomic<int> threadCount;
 //    std::queue<std::thread*> threads;
-    static std::list<std::future<void>> threadStatus;
+//    static std::list<std::future<void>> threadStatus;
     
-    BlockRenderer(RenderPipeline* p, void* userData)
+    BlockRenderer(RenderPipeline* p)
     :p(p) {
 //    :f1(f1), f2(f2), f3(f3) {
     }
     
-    static void waitThreads(int threadCount) {
-        T* dummy;
-        while(threadStatus.size() > threadCount) {
-            for(std::list<std::future<void>>::iterator it = threadStatus.begin(); it != threadStatus.end(); it++) {
-                if((*it).wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-                {
-                    threadStatus.erase(it);
-                    break;
-                }
-            }
-            if(threadStatus.size() > threadCount) {
-                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
-            }
-        }
-    }
     
-    void render(RenderInfo ri) {
-        waitThreads(3);
+    
+    
+    
+    void render(RenderInfo& ri) {
+//        waitThreads(3);
+        busyWait();
         threadStatus.push_back(std::async(std::launch::async, renderThread, ri));
     }
-    void render2(RenderInfo ri) {
-        waitThreads(3);
+    void render2(RenderInfo& ri) {
+//        waitThreads(3);
+        busyWait();
         threadStatus.push_back(std::async(std::launch::async, renderThread2, ri));
     }
     
@@ -426,76 +486,86 @@ public:
         //https://web.archive.org/web/20050408192410/http://sw-shader.sourceforge.net/rasterizer.html
         // 28.4 fixed-point coordinates
         
-        invW1 = 1.0/fragment1->vertex.w;
-        invW2 = 1.0/fragment2->vertex.w;
-        invW3 = 1.0/fragment3->vertex.w;
+        RenderInfo ri;
         
-        Y1 = round(16.0f * fragment1->vertex.y*invW1);
-        Y2 = round(16.0f * fragment2->vertex.y*invW2);
-        Y3 = round(16.0f * fragment3->vertex.y*invW3);
+        ri.invW1 = 1.0/fragment1->vertex.w;
+        ri.invW2 = 1.0/fragment2->vertex.w;
+        ri.invW3 = 1.0/fragment3->vertex.w;
         
-        X1 = round(16.0f * fragment1->vertex.x*invW1);
-        X2 = round(16.0f * fragment2->vertex.x*invW2);
-        X3 = round(16.0f * fragment3->vertex.x*invW3);
+        
+        ri.Y1 = round(16.0f * fragment1->vertex.y*ri.invW1);
+        ri.Y2 = round(16.0f * fragment2->vertex.y*ri.invW2);
+        ri.Y3 = round(16.0f * fragment3->vertex.y*ri.invW3);
+        
+        ri.X1 = round(16.0f * fragment1->vertex.x*ri.invW1);
+        ri.X2 = round(16.0f * fragment2->vertex.x*ri.invW2);
+        ri.X3 = round(16.0f * fragment3->vertex.x*ri.invW3);
         
         
         
         
         // Deltas
-        const int DX12 = X1 - X2;
-        const int DX23 = X2 - X3;
-        const int DX31 = X3 - X1;
+        const int DX12 = ri.X1 - ri.X2;
+        const int DX23 = ri.X2 - ri.X3;
+        const int DX31 = ri.X3 - ri.X1;
         
-        const int DY12 = Y1 - Y2;
-        const int DY23 = Y2 - Y3;
-        const int DY31 = Y3 - Y1;
+        const int DY12 = ri.Y1 - ri.Y2;
+        const int DY23 = ri.Y2 - ri.Y3;
+        const int DY31 = ri.Y3 - ri.Y1;
         
         // Cross product check for CCW, otherwise return:
         if(DX12*DY23 - DX23*DY12 > 0)
             return;
         
+        // now copy fragments:
+        ri.fragment1 = *fragment1;
+        ri.fragment2 = *fragment2;
+        ri.fragment3 = *fragment3;
         
-        invDepth1 = fragment1->vertex.w/fragment1->vertex.z;
-        invDepth2 = fragment2->vertex.w/fragment2->vertex.z;
-        invDepth3 = fragment3->vertex.w/fragment3->vertex.z;
+        ri.p = p;
+//        ri.This = this;
+        
+        ri.invDepth1 = ri.fragment1.vertex.w/ri.fragment1.vertex.z;
+        ri.invDepth2 = ri.fragment2.vertex.w/ri.fragment2.vertex.z;
+        ri.invDepth3 = ri.fragment3.vertex.w/ri.fragment3.vertex.z;
         // Fixed-point deltas
-        FDX12 = DX12 << 4;
-        FDX23 = DX23 << 4;
-        FDX31 = DX31 << 4;
+        ri.FDX12 = DX12 << 4;
+        ri.FDX23 = DX23 << 4;
+        ri.FDX31 = DX31 << 4;
         
-        FDY12 = DY12 << 4;
-        FDY23 = DY23 << 4;
-        FDY31 = DY31 << 4;
+        ri.FDY12 = DY12 << 4;
+        ri.FDY23 = DY23 << 4;
+        ri.FDY31 = DY31 << 4;
         
         // Bounding rectangle
-        int minx = (std::min(X1, std::min(X2, X3)) + 0xF) >> 4;
-        int maxx = (std::max(X1, std::max(X2, X3)) + 0xF) >> 4;
-        int miny = (std::min(Y1, std::min(Y2, Y3)) + 0xF) >> 4;
-        int maxy = (std::max(Y1, std::max(Y2, Y3)) + 0xF) >> 4;
+        int minx = (std::min(ri.X1, std::min(ri.X2, ri.X3)) + 0xF) >> 4;
+        int maxx = (std::max(ri.X1, std::max(ri.X2, ri.X3)) + 0xF) >> 4;
+        int miny = (std::min(ri.Y1, std::min(ri.Y2, ri.Y3)) + 0xF) >> 4;
+        int maxy = (std::max(ri.Y1, std::max(ri.Y2, ri.Y3)) + 0xF) >> 4;
         
         // Block size, standard 8x8 (must be power of two)
-        q = 8;
+        ri.q = 8;
         
         // Start in corner of 8x8 block
-        minx &= ~(q - 1);
-        miny &= ~(q - 1);
+        minx &= ~(ri.q - 1);
+        miny &= ~(ri.q - 1);
         
         //barycentric parameters:
         //    int A = X1*Y2 + X2*Y3 + X3*Y1 - X1*Y3 - X2*Y1 - X3*Y2;
         //       double A = 1.0/(double)(X1*(Y2-Y3) + X2*(Y3 - Y1) + X3*(Y1 - Y2));
-        A = 1.0/(double)(X1*(DY23) + X2*(DY31) + X3*(DY12));
-        aX2Y3mX3Y2 = X2*Y3 - X3*Y2;
-        bX3Y1mX1Y3 = X3*Y1 - X1*Y3;
+        ri.A = 1.0/(double)(ri.X1*(DY23) + ri.X2*(DY31) + ri.X3*(DY12));
+        ri.aX2Y3mX3Y2 = ri.X2*ri.Y3 - ri.X3*ri.Y2;
+        ri.bX3Y1mX1Y3 = ri.X3*ri.Y1 - ri.X1*ri.Y3;
         //    int cX1Y2mX2Y1 = X1*Y2 - X2*Y1;
-        double alpha, beta, gamma;
+//        double alpha, beta, gamma;
         
         //        (char*&)colorBuffer += miny * stride;
         //    ColorRGBA color = {255,255,0,'^'};
         //    setFrameBufferRGBA(1, 1, fbo, color);
         // Half-edge constants
-        int C1 = DY12 * X1 - DX12 * Y1;
-        int C2 = DY23 * X2 - DX23 * Y2;
-        int C3 = DY31 * X3 - DX31 * Y3;
+        int C1 = DY12 * ri.X1 - DX12 * ri.Y1;
+        int C2 = DY23 * ri.X2 - DX23 * ri.Y2;
+        int C3 = DY31 * ri.X3 - DX31 * ri.Y3;
         
         // Correct for fill convention
         if(DY12 < 0 || (DY12 == 0 && DX12 > 0)) C1++;
@@ -503,24 +573,23 @@ public:
         if(DY31 < 0 || (DY31 == 0 && DX31 > 0)) C3++;
         
 //        pt;
-        Coordinates2D ipt;
-        T fragment;
-        f1 = regist(*fragment1);
-        f2 = regist(*fragment2);
-        f3 = regist(*fragment3);
-        auto output = regist(fragment);
+        Coordinates2D pt;
+//        T fragment;
+//        ri.f1 = regist(ri.fragment1);
+//        ri.f2 = regist(ri.fragment2);
+//        ri.f3 = regist(ri.fragment3);
+//        auto output = regist(fragment);
         
-        int numThreads = 1;
-        RenderInfo ri[numThreads];
-        for(pt.y = miny; pt.y < maxy; pt.y += q)
+//        int numThreads = 1;
+        for(pt.y = miny; pt.y < maxy; pt.y += ri.q)
         {
-            for(pt.x = minx; pt.x < maxx; pt.x += q)
+            for(pt.x = minx; pt.x < maxx; pt.x += ri.q)
             {
                 // Corners of block
                 int x0 = pt.x << 4;
-                int x1 = (pt.x + q - 1) << 4;
+                int x1 = (pt.x + ri.q - 1) << 4;
                 int y0 = pt.y << 4;
-                int y1 = (pt.y + q - 1) << 4;
+                int y1 = (pt.y + ri.q - 1) << 4;
                 
                 // Evaluate half-space functions
                 bool a00 = C1 + DX12 * y0 - DY12 * x0 > 0;
@@ -547,35 +616,35 @@ public:
                 // Accept whole block when totally covered
                 if(a == 0xF && b == 0xF && c == 0xF)
                 {
-                    ri[0].This = this;
-                    ri[0].pt = pt;
+//                    ri.This = this;
+                    ri.pt = pt;
                     
                     
-                    render(ri[0]);
+                    render(ri);
                 }
                 else   // Partially covered block
                 {
                     //                continue;
-                    int CY1 = C1 + DX12 * y0 - DY12 * x0;
-                    int CY2 = C2 + DX23 * y0 - DY23 * x0;
-                    int CY3 = C3 + DX31 * y0 - DY31 * x0;
+                    ri.CY1 = C1 + DX12 * y0 - DY12 * x0;
+                    ri.CY2 = C2 + DX23 * y0 - DY23 * x0;
+                    ri.CY3 = C3 + DX31 * y0 - DY31 * x0;
                     
-                    ri[0].pt = pt;
-                    ri[0].This = this;
-                    ri[0].CY1 = CY1;
-                    ri[0].CY2 = CY2;
-                    ri[0].CY3 = CY3;
-                    render2(ri[0]);
+                    ri.pt = pt;
+//                    ri.This = this;
+//                    ri.CY1 = CY1;
+//                    ri.CY2 = CY2;
+//                    ri.CY3 = CY3;
+                    render2(ri);
                 }
                 
                 
             }
         }
-        waitThreads(0);
+//        waitThreads(0);
     }
 };
 
-template <class T> std::list<std::future<void>> BlockRenderer<T>::threadStatus;
+
 
 //template <class T> void RenderPipeline::triangleFill(T* fragments) {
 template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2, T* fragment3) {

@@ -130,6 +130,7 @@ void RenderPipeline::reset() {
 }
 
 void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo&)) {
+    RasterizerThreadPool::waitThreads(0);
 	this->fragmentShader = fragmentShader;
 };
 
@@ -1319,9 +1320,10 @@ void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void
 //        return;
 //    }
     int depthIndex = pixel.x + depthBuffer->cols*pixel.y;
+//    depthBuffer->mutex.lock();
     if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
         ((double*)depthBuffer->data)[depthIndex] = invDepth;
-        
+//        depthBuffer->mutex.unlock();
         
         ColorRGBA colorOutput;
         FragmentInfo fInfo;
@@ -1333,7 +1335,9 @@ void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void
         
 //        setRenderBuffer(pixel.x, pixel.y, colorOutput);
         setRenderBuffer(depthIndex, colorOutput);
+        return;
     }
+//    depthBuffer->mutex.unlock();
 }
 
 
@@ -1398,7 +1402,8 @@ void RenderPipeline::setRenderBuffer(const int& index, ColorRGBA& color) {
 
 
 void RenderPipeline::renderBufferToTerminal() {
-	waitForThreads();
+//	waitForThreads();
+    RasterizerThreadPool::waitThreads(0);
 	
 	Coordinates2D pixel;
 	Coordinates3D color;
@@ -1452,7 +1457,8 @@ void RenderPipeline::renderBufferToTerminal() {
 }
 
 void RenderPipeline::depthBufferToTerminal() {
-	waitForThreads();
+//	waitForThreads();
+    RasterizerThreadPool::waitThreads(0);
 	
 	Coordinates2D pixel;
 	Coordinates3D color;
