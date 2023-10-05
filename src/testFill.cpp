@@ -345,7 +345,10 @@ int main(void) {
             {2, 4, 5}
         };
         
-        mRenderPipeline.trianglesFill(mMyShaderAttributes, hexagonIndes, 4);
+//        mRenderPipeline.trianglesFill(mMyShaderAttributes, hexagonIndes, 4);
+        for(int i = 0; i < 4; i++) {
+            mRenderPipeline.triangleFill(&mMyShaderAttributes[hexagonIndes[i][0]], &mMyShaderAttributes[hexagonIndes[i][1]], &mMyShaderAttributes[hexagonIndes[i][2]], NULL);
+        }
 		
         mRenderPipeline.renderBufferToTerminal();
 		

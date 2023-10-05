@@ -429,7 +429,9 @@ int main(int argc, char** argv) {
 		
 		
 		delayTime += 0.001*(1.0/60.0 - float_ms.count()/1000.0);
-		usleep(1000000.0*delayTime);
+        if(delayTime > 0 && delayTime < 1.0/60.0){
+            usleep(1000000.0*delayTime);
+        }
 //		depthBuffer.reset();
 		mRenderPipeline.reset();
 		//erase();

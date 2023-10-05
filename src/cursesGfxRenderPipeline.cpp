@@ -135,67 +135,67 @@ void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo
 };
 
 
-void* RenderPipeline::renderThread(void* info) {
-	Renderable* This = (Renderable*)info;
-	
-	//This->rasterizePolygonsShader();
-	
-	This->pipeline->rasterizePolygonsShader(This->polygons,
-											This->count,
-											This->modelView,
-											This->projection,
-											This->viewPort,
-											This->userData,
-											This->line);
-	
-	
-	delete [] This->polygons;
-	delete This;
-	//return NULL;
-    pthread_exit(NULL);
-}
-
-void RenderPipeline::rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line) {
-	Renderable* thisRenderable = new Renderable;
-	
-	thisRenderable->pipeline = this;
-	thisRenderable->polygons = new Polygon4D[count];
-	for (int i = 0; i < count; i++) {
-		thisRenderable->polygons[i].numVertices = polygons[i].numVertices;
-		
-		for (int v = 0; v < polygons[i].numVertices; v++) {
-			thisRenderable->polygons[i].normals[v] = polygons[i].normals[v];
-			thisRenderable->polygons[i].vertices[v] = polygons[i].vertices[v];
-			
-		}
-	}
-//	memcpy(thisRenderable->polygons, polygons, sizeof(Polygon4D)*count);
-	
-	thisRenderable->count = count;
-	thisRenderable->modelView = modelView;
-	thisRenderable->projection = projection;
-	thisRenderable->viewPort = viewport;
-	thisRenderable->userData = userData;
-	thisRenderable->line = line;
-	
-	thisRenderable->fragmentShader = this->fragmentShader;	// hmmm
-	
-	pthread_t* thread = new pthread_t;
-	pthread_create(thread, NULL, renderThread, (void *)thisRenderable);
-	renderThreads.push(thread);
-	
-	waitForThreads();
-}
-
-void RenderPipeline::waitForThreads() {
-	while (!renderThreads.empty()) {
-		pthread_t* thread = renderThreads.front();
-		pthread_join(*thread, NULL);
-		renderThreads.pop();
-		delete thread;
-	}
-	
-}
+//void* RenderPipeline::renderThread(void* info) {
+//	Renderable* This = (Renderable*)info;
+//
+//	//This->rasterizePolygonsShader();
+//
+//	This->pipeline->rasterizePolygonsShader(This->polygons,
+//											This->count,
+//											This->modelView,
+//											This->projection,
+//											This->viewPort,
+//											This->userData,
+//											This->line);
+//
+//
+//	delete [] This->polygons;
+//	delete This;
+//	//return NULL;
+//    pthread_exit(NULL);
+//}
+//
+//void RenderPipeline::rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line) {
+//	Renderable* thisRenderable = new Renderable;
+//	
+//	thisRenderable->pipeline = this;
+//	thisRenderable->polygons = new Polygon4D[count];
+//	for (int i = 0; i < count; i++) {
+//		thisRenderable->polygons[i].numVertices = polygons[i].numVertices;
+//		
+//		for (int v = 0; v < polygons[i].numVertices; v++) {
+//			thisRenderable->polygons[i].normals[v] = polygons[i].normals[v];
+//			thisRenderable->polygons[i].vertices[v] = polygons[i].vertices[v];
+//			
+//		}
+//	}
+////	memcpy(thisRenderable->polygons, polygons, sizeof(Polygon4D)*count);
+//	
+//	thisRenderable->count = count;
+//	thisRenderable->modelView = modelView;
+//	thisRenderable->projection = projection;
+//	thisRenderable->viewPort = viewport;
+//	thisRenderable->userData = userData;
+//	thisRenderable->line = line;
+//	
+//	thisRenderable->fragmentShader = this->fragmentShader;	// hmmm
+//	
+//	pthread_t* thread = new pthread_t;
+//	pthread_create(thread, NULL, renderThread, (void *)thisRenderable);
+//	renderThreads.push(thread);
+//	
+//	waitForThreads();
+//}
+//
+//void RenderPipeline::waitForThreads() {
+//	while (!renderThreads.empty()) {
+//		pthread_t* thread = renderThreads.front();
+//		pthread_join(*thread, NULL);
+//		renderThreads.pop();
+//		delete thread;
+//	}
+//	
+//}
 
 void RenderPipeline::rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line) {
 	
@@ -344,7 +344,7 @@ void RenderPipeline::rasterizePolygonsShader(Polygon4D* polygons, int count, Mat
 }
 
 void RenderPipeline::drawPolygonWithTriangles( Polygon4D& poly, Polygon4D& restored, void* userData) {
-    this->userData = userData;
+//    this->userData = userData;
 //void drawPolygonWithTriangles( Polygon4D& poly, FrameBuffer* fbo) {
 	if (poly.numVertices < 3) {
 //		mvprintw(line++, 0, "Not enough Polygon vertices: %d", poly.numVertices);
@@ -1315,7 +1315,7 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
 	}
 }
 
-void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void* interpolatedData) {
+void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void* interpolatedData, void* userData) {
 //    if ( pixel.x < 0 || pixel.y < 0 || depthBuffer->cols <= pixel.x || depthBuffer->rows <= pixel.y) {
 //        return;
 //    }

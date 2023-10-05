@@ -1298,6 +1298,8 @@ Mat4D projectionMatrixOrtho(double width, double height, double zfar, double zne
 	result.d[1][1] = 1/height;
 	result.d[2][2] = -2/(zfar-znear);
 	result.d[2][3] = -(zfar+znear)/(zfar-znear);
+//    result.d[3][2] = -(zfar+znear)/(zfar-znear);
+
 	
 	result.d[3][3] = 1;
 	
@@ -1315,8 +1317,13 @@ Mat4D projectionMatrixPerspective(double fov, double aspect, double zfar, double
 	//	result.d[2][2] = -(zfar)/(zfar-znear);
 	result.d[2][3] = -2*(zfar*znear)/(zfar-znear);
 	// z' = -(zfar+znear)/(zfar-znear)*z + -2(zfar*znear)/(zfar-znear)
-	
+
 	result.d[3][2] = -1;
+    
+//    result.d[2][2] = -(zfar)/(zfar-znear);
+//    result.d[2][3] = -(zfar*znear)/(zfar-znear);
+//    result.d[3][2] =-1;
+    
 	result.d[3][3] = 0;
 	
 	// w' = -z

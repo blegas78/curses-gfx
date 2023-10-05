@@ -665,7 +665,7 @@ int main(int argc, char** argv) {
         mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
 //        mRenderPipeline.userData = (void*)&mLightParams;
         mRenderPipeline.setFragmentShader(lightFs3);
-        mRenderPipeline.trianglesFill(cubeVi, cubeViIndices, 12);
+//        mRenderPipeline.trianglesFill(cubeVi, cubeViIndices, 12);
         mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParams, myVertexShader);
 //        mRenderPipeline.rasterizeShader(cubeVi, cubeViIndices, 12, modelViewBlackCube, projection, (void*)&mLightParams);
         

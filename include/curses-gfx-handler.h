@@ -60,11 +60,12 @@ public:
                 if((*it).wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                 {
                     threadStatus.erase(it);
-                    break;
+                    it = threadStatus.begin();
+//                    break;
                 }
             }
             if(threadStatus.size() > threadCount) {
-                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+                std::this_thread::sleep_for(std::chrono::nanoseconds(10));
             }
         }
     }
@@ -111,7 +112,7 @@ public:
 	std::queue<pthread_t*> renderThreads;
 	
 //	DepthBuffer tempD;
-    void* userData;
+//    void* userData;
     
     Mat4D viewport;
     
@@ -123,8 +124,8 @@ public:
 	
 	void triangleFill(FragmentInfo* fragments);
 //    template <class T> void triangleFill(T* vertexInfo);
-    template <class T> void triangleFill(T* fragment1, T* fragment2, T* fragment3);
-    template <class T> void trianglesFill(T* vertexInfo, int edgeIndices[][3], int count);
+    template <class T> void triangleFill(T* fragment1, T* fragment2, T* fragment3, void* userData);
+//    template <class T> void trianglesFill(T* vertexInfo, int edgeIndices[][3], int count);
 	void drawHorizonalLineRGBA(double x1, double x2, int y, ColorRGBA& color1, ColorRGBA& color2);
 	
 	void setWithDepthBuffer( Coordinates2D pt, char c, double invDepth);
@@ -136,10 +137,10 @@ public:
 	void drawDotFloat(double x, double y);
 	
 	void setWithShader( Coordinates2D& pixel, double invDepth, Coordinates4D& pt3D, Coordinates3D& normal, void* userData);
-    void setWithShader2( Coordinates2D& pixel, double invDepth, void* interpolatedData);
+    void setWithShader2( Coordinates2D& pixel, double invDepth, void* interpolatedData, void* userData);
     
-	static void *renderThread(void* info);
-	void waitForThreads();
+//	static void *renderThread(void* info);
+//	void waitForThreads();
 	
 #ifdef FB_SUPPORT
 	int fbfd;
@@ -169,7 +170,7 @@ public:
 	void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
     template <class T, class U> RenderStats rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&));
 	void rasterizePolygonsShader(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
-	void rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
+//	void rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 	
 	void setRenderBuffer(const int& x, const int& y, ColorRGBA& color);
 	void setRenderBuffer(const int& index, ColorRGBA& color);
@@ -202,7 +203,7 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
     
     RenderStats mRenderStats = {0,0,0};
     
-    this->userData = userData;
+//    this->userData = userData;
     BlockRenderer<T> br(this);
     for (int t = 0; t < numTriangles; t++) {
         scratch[0] = vertexInfo[triangleLayout[t][0]];
@@ -252,7 +253,7 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
         for(int i = 2; i < clippedVertexCount; i++) {
 //            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
 //            br.userData = userData;
-            br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
+            br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
         }
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
@@ -288,12 +289,12 @@ void baryInterpolate(T& output, const T& input, const T& input2, const T& input3
 }
 
 
-template <class T> void RenderPipeline::trianglesFill(T* vertexInfo, int edgeIndices[][3], int count) {
-    
-    for (int i = 0; i < count; i++) {
-        this->triangleFill(&vertexInfo[edgeIndices[i][0]], &vertexInfo[edgeIndices[i][1]], &vertexInfo[edgeIndices[i][2]]);
-    }
-}
+//template <class T> void RenderPipeline::trianglesFill(T* vertexInfo, int edgeIndices[][3], int count) {
+//
+//    for (int i = 0; i < count; i++) {
+//        this->triangleFill(&vertexInfo[edgeIndices[i][0]], &vertexInfo[edgeIndices[i][1]], &vertexInfo[edgeIndices[i][2]]);
+//    }
+//}
 
 
 
@@ -333,6 +334,7 @@ private:
         int FDY23;
         int FDY31;
         RenderPipeline* p;
+        void* userData;
     };
     
     
@@ -369,7 +371,7 @@ private:
                 gamma *= rip.invW3 * pBaryDivisor;
                 
                 baryInterpolate(output, rip.f1, rip.f2, rip.f3, alpha, beta, gamma);
-                rip.p->setWithShader2( ipt, correctInvDepth, (void*)&fragment);
+                rip.p->setWithShader2( ipt, correctInvDepth, (void*)&fragment, rip.userData);
             }
         }
 //        pthread_exit(NULL);
@@ -420,7 +422,7 @@ private:
                     gamma *= rip.invW3 * pBaryDivisor;
                     
                     baryInterpolate(output, rip.f1, rip.f2, rip.f3, alpha, beta, gamma);
-                    rip.p->setWithShader2( ipt, correctInvDepth, (void*)&fragment);
+                    rip.p->setWithShader2( ipt, correctInvDepth, (void*)&fragment, rip.userData);
                 }
                 
                 CX1 -= rip.FDY12;
@@ -482,7 +484,7 @@ public:
     }
     
     
-    void triangleFill(T* fragment1, T* fragment2, T* fragment3) {
+    void triangleFill(T* fragment1, T* fragment2, T* fragment3, void* userData) {
         //https://web.archive.org/web/20050408192410/http://sw-shader.sourceforge.net/rasterizer.html
         // 28.4 fixed-point coordinates
         
@@ -523,6 +525,7 @@ public:
         ri.fragment3 = *fragment3;
         
         ri.p = p;
+        ri.userData = userData;
 //        ri.This = this;
         
         ri.invDepth1 = ri.fragment1.vertex.w/ri.fragment1.vertex.z;
@@ -647,7 +650,7 @@ public:
 
 
 //template <class T> void RenderPipeline::triangleFill(T* fragments) {
-template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2, T* fragment3) {
+template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2, T* fragment3, void* userData) {
     //https://web.archive.org/web/20050408192410/http://sw-shader.sourceforge.net/rasterizer.html
     // 28.4 fixed-point coordinates
     
@@ -831,7 +834,7 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
                         gamma *= invW3 * pBaryDivisor;
                         
                         baryInterpolate(output, f1, f2, f3, alpha, beta, gamma);
-                        setWithShader2( ipt, correctInvDepth, (void*) &fragment);
+                        setWithShader2( ipt, correctInvDepth, (void*) &fragment, userData);
                     }
                     
                     //                           (char*&)buffer += stride;
@@ -868,7 +871,7 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
                             gamma *= invW3 * pBaryDivisor;
                             
                             baryInterpolate(output, f1, f2, f3, alpha, beta, gamma);
-                            setWithShader2( ipt, correctInvDepth, (void*) &fragment);
+                            setWithShader2( ipt, correctInvDepth, (void*) &fragment, userData);
                         }
                         
                         CX1 -= FDY12;
@@ -1092,7 +1095,7 @@ template <class T> void RenderPipeline::clipPolygon(T* input, int inputCount, T*
     
     
     
-    
+//    return;
     
     clipW(copy, outputCountResult, output, outputCountResult);
     
@@ -1114,9 +1117,9 @@ template <class T> void RenderPipeline::clipPolygon(T* input, int inputCount, T*
         copy[i] = output[i];
     clipPlane(copy, outputCountResult, output, outputCountResult, 2, 1);
     
-//    for(int i = 0; i < outputCountResult; i++)
-//        copy[i] = output[i];
-//    clipPlane(copy, outputCountResult, output, outputCountResult, 2, -1);
+    for(int i = 0; i < outputCountResult; i++)
+        copy[i] = output[i];
+    clipPlane(copy, outputCountResult, output, outputCountResult, 2, -1);
     
    // return 1;
 
