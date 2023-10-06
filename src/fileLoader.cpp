@@ -80,6 +80,7 @@ typedef struct _CubeVertexInfo {
     Coordinates3D normal;
     Coordinates2Df textureCoord;
     ColorRGBA color;
+//    int materialIndex;  // Do not interpolate this
 } CubeVertexInfo;
 
 REGISTER_VERTEX_LAYOUT(CubeVertexInfo)
@@ -108,16 +109,41 @@ void lightModelFs(const FragmentInfo& fInfo) {
     //setRGB(fInfo.pixel, *colorRGB);
     
     
-    const Coordinates3D viewDir = {0,0,1};
     Coordinates3D normal = normalizeVectorFast(vertexInfo->normal);
-    
-
-    double magnitude = dotProduct(normal, viewDir);
+//    // So we could take the dot product:
+//    const Coordinates3D viewDir = {0,0,1};
+//    double magnitude = dotProduct(normal, viewDir);
+    // OR just simply use the z component of the normal given our coordinate space:
+    double magnitude = normal.z;
     magnitude *= magnitude;
     Coordinates3D clippedRGB = clipRGB(*colorRGB);
     fInfo.colorOutput->r = clippedRGB.x*255*magnitude ;
     fInfo.colorOutput->g = clippedRGB.y*255*magnitude ;
     fInfo.colorOutput->b = clippedRGB.z*255*magnitude ;
+    fInfo.colorOutput->a = 0;
+}
+
+void textureFs(const FragmentInfo& fInfo) {
+    LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
+    CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
+    //setRGB(fInfo.pixel, *colorRGB);
+    
+    
+    Coordinates3D normal = normalizeVectorFast(vertexInfo->normal);
+//    // So we could take the dot product:
+//    const Coordinates3D viewDir = {0,0,1};
+//    double magnitude = dotProduct(normal, viewDir);
+    // OR just simply use the z component of the normal given our coordinate space:
+    double magnitude = normal.z;
+    magnitude *= magnitude;
+    magnitude = fmin(1,magnitude);
+//    Coordinates3D clippedRGB = clipRGB(*colorRGB);
+    *fInfo.colorOutput = lpt->texture->sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y) * magnitude;
+    
+//    *fInfo.colorOutput = userTexture->sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y);
+//    fInfo.colorOutput->r = magnitude*255;
+//    fInfo.colorOutput->g = magnitude*255;
+//    fInfo.colorOutput->b = magnitude*255;
     fInfo.colorOutput->a = 0;
 }
 
@@ -133,6 +159,8 @@ template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const
     output.vertex = matrixVectorMultiply(uniformInfo->modelViewProjection, input.vertex);
     output.location = matrixVectorMultiply(uniformInfo->modelView, input.vertex);
     output.normal = matrixVectorMultiply(uniformInfo->modelView, input.normal);
+    output.textureCoord.x = input.textureCoord.x;
+    output.textureCoord.y = input.textureCoord.y;
 }
 
 
@@ -233,10 +261,19 @@ int main(int argc, char** argv) {
     }
     
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile( argv[1],
+    std::string objectFilePath = argv[1];
+    std::string objectFileDirectory;
+    const size_t last_slash_idx = objectFilePath.rfind('/');
+    if (std::string::npos != last_slash_idx)
+    {
+        objectFileDirectory = objectFilePath.substr(0, last_slash_idx);
+    }
+
+    const aiScene* scene = importer.ReadFile( objectFilePath,
 //        aiProcess_CalcTangentSpace       |
         aiProcess_Triangulate            |
        // aiProcess_JoinIdenticalVertices  |
+                                    aiProcess_FlipUVs |
         aiProcess_GenSmoothNormals  |
 //                                             aiProcess_MakeLeftHanded |
 //                                             aiProcess_OptimizeMeshes |
@@ -247,40 +284,119 @@ int main(int argc, char** argv) {
         std::cerr << "Error loading file: " << importer.GetErrorString() << std::endl;
         return -1;
       }
+    struct Mesh {
+        CubeVertexInfo* vi;
+        int numTriangles;
+        bool hasTexture;
+        int materialId;
+    };
     
     printf("File has %d meshes\n", scene->mNumMeshes);
-    CubeVertexInfo* fileVertices = NULL;
-    int numFileEdges = 0;
-    if(scene->mNumMeshes > 0) {
-        printf(" - mesh[0] has %d vertices = %d triangles\n", scene->mMeshes[0]->mNumVertices, scene->mMeshes[0]->mNumVertices/3);
-        numFileEdges = scene->mMeshes[0]->mNumVertices/3;
-        fileVertices = new CubeVertexInfo[scene->mMeshes[0]->mNumVertices];
+//    CubeVertexInfo* fileVertices = NULL;
+    //int numFileEdges = 0;
+    int numMeshes = scene->mNumMeshes;
+    Mesh meshes[numMeshes];
+    for(int m = 0; m < scene->mNumMeshes; m++) {
         
-            printf(" - mesh[0] has normals: %d\n", scene->mMeshes[0]->HasNormals());
+        printf(" - mesh[%d] has %d vertices = %d triangles\n", m, scene->mMeshes[m]->mNumVertices, scene->mMeshes[m]->mNumVertices/3);
+        meshes[m].numTriangles = scene->mMeshes[m]->mNumVertices/3;
+        meshes[m].vi = new CubeVertexInfo[scene->mMeshes[m]->mNumVertices];
+        
+        printf(" - mesh[%d] has normals:   %d\n", m, scene->mMeshes[m]->HasNormals());
+        printf(" - mesh[%d][0] has texcoords: %d\n", m, scene->mMeshes[m]->HasTextureCoords(0));
+        //        printf(" - texcooords[0][0] name: %s\n", scene->mMeshes[0]->mTextureCoordsNames[0][0].C_Str());
+        
         printf(" - - Allocated!\n");
-            for(int i = 0; i < scene->mMeshes[0]->mNumVertices; i++) {
-
-                fileVertices[i].vertex.x = scene->mMeshes[0]->mVertices[i].x;
-                fileVertices[i].vertex.y = scene->mMeshes[0]->mVertices[i].y;
-                fileVertices[i].vertex.z = scene->mMeshes[0]->mVertices[i].z;
-                fileVertices[i].vertex.w = 1;
-                
-                fileVertices[i].normal.x = scene->mMeshes[0]->mNormals[i].x;
-                fileVertices[i].normal.y = scene->mMeshes[0]->mNormals[i].y;
-                fileVertices[i].normal.z = scene->mMeshes[0]->mNormals[i].z;
-                
+        for(int i = 0; i < scene->mMeshes[m]->mNumVertices; i++) {
+            
+            meshes[m].vi[i].vertex.x = scene->mMeshes[m]->mVertices[i].x;
+            meshes[m].vi[i].vertex.y = scene->mMeshes[m]->mVertices[i].y;
+            meshes[m].vi[i].vertex.z = scene->mMeshes[m]->mVertices[i].z;
+            meshes[m].vi[i].vertex.w = 1;
+            
+            meshes[m].vi[i].normal.x = scene->mMeshes[m]->mNormals[i].x;
+            meshes[m].vi[i].normal.y = scene->mMeshes[m]->mNormals[i].y;
+            meshes[m].vi[i].normal.z = scene->mMeshes[m]->mNormals[i].z;
+            
+            if(scene->mMeshes[m]->HasTextureCoords(0)) {
+                meshes[m].vi[i].textureCoord.x = scene->mMeshes[m]->mTextureCoords[0][i].x;
+                meshes[m].vi[i].textureCoord.y = scene->mMeshes[m]->mTextureCoords[0][i].y;
             }
+//            else if(scene->mMeshes[m]->HasTextureCoords(1)) {
+//                meshes[m].vi[i].textureCoord.x = scene->mMeshes[m]->mTextureCoords[1][i].x;
+//                meshes[m].vi[i].textureCoord.y = scene->mMeshes[m]->mTextureCoords[1][i].y;
+//
+//            }
+//            meshes[m].vi[i].materialIndex = scene->mMeshes[m]->mMaterialIndex;
+//            printf("%f %f\n", meshes[m].vi[i].textureCoord.x, meshes[m].vi[i].textureCoord.y);
+        }
         
+        
+        meshes[m].materialId = scene->mMeshes[m]->mMaterialIndex;
+        printf("meshes[%d].materialId = %d\n", m, meshes[m].materialId);
         
     }
-    printf("Loaded!\n");
+    struct Material {
+        Texture* texture;
+        int numTextures;
+    };
+    int numMaterials = scene->mNumMaterials;
+    Material mMaterials[numMaterials];
+//    Texture *mTextureDiffuse = new Texture[scene->mNumMaterials];   // Likely incorrect
+    printf("Scene has textures: %d\n", scene->HasTextures());
+    for(int i = 0; i < scene->mNumMaterials; i++) {
+        aiMaterial* material = scene->mMaterials[i];
+//        printf(" - Name : %s\n", scene->mMaterials[i]->GetName().C_Str());
+        printf(" - Material : %d num props:%d\n", i, material->mNumProperties);
+
+        for(int p = 0; p < material->mNumProperties; p++) {
+//            printf(" - - Type: %d\n", scene->mMaterials[i]->mProperties[p]->mType);
+//            printf(" - - Name: %s\n", scene->mMaterials[i]->mProperties[p]->mKey.C_Str());
+//            printf(" - - Semantic: %d\n", scene->mMaterials[i]->mProperties[p]->mSemantic);
+//            printf(" - - Data Length: %d\n", scene->mMaterials[i]->mProperties[p]->mDataLength);
+//            printf(" - - mIndex %d\n", scene->mMaterials[i]->mProperties[p]->mIndex);
+        }
+        printf(" - Texture count : %d\n", material->GetTextureCount(aiTextureType_DIFFUSE));
+//        for(int t = 0; t < scene->mMaterials[i]->GetTextureCount(aiTextureType_DIFFUSE); t++) {
+//            scene->mMaterials[i]->
+//        }
+        mMaterials[i].numTextures = material->GetTextureCount(aiTextureType_DIFFUSE);
+        if(mMaterials[i].numTextures > 0) {
+            mMaterials[i].texture = new Texture[mMaterials[i].numTextures];
+            //        if(material->GetTextureCount(aiTextureType_DIFFUSE)) {
+            for(int t = 0; t < mMaterials[i].numTextures; t++) {
+                aiString textureName;
+                material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, t), textureName);
+                std::string textureFullPath = objectFileDirectory + "/" + textureName.C_Str();
+                printf(" = Texture name: %s\n", textureFullPath.c_str());
+                if(mMaterials[i].texture[t].loadPng(textureFullPath.c_str()))
+                {
+                    printf(" ---- Error loading texture\n");
+                }
+                
+                printf(" Texture size: (%d,%d)\n", mMaterials[i].texture[t].width, mMaterials[i].texture[t].height);
+                
+            }
+        } else {
+            mMaterials[i].texture = NULL;
+        }
+        
+    }
     
+    printf("Loaded!\n");
+//        return 0;
+    
+//    for(int t = 0; t < meshes[0].numTriangles; t++) {
+//        printf("%f %f\n", meshes[0].vi[t].textureCoord.x, meshes[0].vi[t].textureCoord.y);
+//    }
     
     double minVertex = 1e100;
     double maxVertex = 0;
-    for(int i = 0; i < numFileEdges*3; i++) {
-        minVertex = fmin(fabs(fileVertices[i].vertex.x), fmin(fabs(fileVertices[i].vertex.y), fmin(fabs(fileVertices[i].vertex.z), minVertex)));
-        maxVertex = fmax(fabs(fileVertices[i].vertex.x), fmax(fabs(fileVertices[i].vertex.y), fmax(fabs(fileVertices[i].vertex.z), maxVertex)));
+    for(int m = 0; m < numMeshes; m++) {
+        for(int i = 0; i < meshes[m].numTriangles*3; i++) {
+            minVertex = fmin(fabs(meshes[m].vi[i].vertex.x), fmin(fabs(meshes[m].vi[i].vertex.y), fmin(fabs(meshes[m].vi[i].vertex.z), minVertex)));
+            maxVertex = fmax(fabs(meshes[m].vi[i].vertex.x), fmax(fabs(meshes[m].vi[i].vertex.y), fmax(fabs(meshes[m].vi[i].vertex.z), maxVertex)));
+        }
     }
 //    return 0;
    
@@ -315,7 +431,9 @@ int main(int argc, char** argv) {
     // Projection
     double zFar = 100;
     double zNear = .1;
-    Mat4D projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
+    double viewAngle = M_PI*0.5;
+    double orthoScale = 5*5;
+    Mat4D projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
     
     // Viewport
     mRenderPipeline.viewport = makeWindowTransform(screenSizeX, screenSizeY, characterAspect);
@@ -328,7 +446,6 @@ int main(int argc, char** argv) {
     auto before = now;
     auto before2 = now;
     
-    RenderStats mRenderStats;
     
     int debugLine = 0;
     int numEdges;
@@ -438,14 +555,24 @@ int main(int argc, char** argv) {
         before2 = now;
         
         
-        Coordinates3D modelColor = {1.0,1.0,1.0};
-        Mat4D model = scaleMatrix(6.0/maxVertex, 6.0/maxVertex, 6.0/maxVertex);
-        UniformInfo mUniformData;
-        mUniformData.modelView = matrixMultiply(viewMatrix, model);
-        mUniformData.modelViewProjection = matrixMultiply(projection, mUniformData.modelView);
-        mRenderPipeline.setFragmentShader(lightModelFs);
-//        mRenderPipeline.rasterizeShader(fileVertices, &mUniformData, fileIndices, numFileEdges, &modelColor, myVertexShader);
-        mRenderStats = mRenderPipeline.rasterizeShader(fileVertices, &mUniformData, numFileEdges, &modelColor, myVertexShader);
+        RenderStats mRenderStats = {0,0,0};
+//        mRenderPipeline.setFragmentShader(lightModelFs);
+        for(int m = 0; m < numMeshes; m++) {
+            Coordinates3D modelColor = {1.0,1.0,1.0};
+            Mat4D model = scaleMatrix(6.0/maxVertex, 6.0/maxVertex, 6.0/maxVertex);
+            UniformInfo mUniformData;
+            mUniformData.modelView = matrixMultiply(viewMatrix, model);
+            mUniformData.modelViewProjection = matrixMultiply(projection, mUniformData.modelView);
+            //        mRenderPipeline.rasterizeShader(fileVertices, &mUniformData, fileIndices, numFileEdges, &modelColor, myVertexShader);
+//            RenderStats mRenderStats2 = mRenderPipeline.rasterizeShader(meshes[m].vi, &mUniformData, meshes[m].numTriangles, &modelColor, myVertexShader);
+            mLightParamsAndTexture.texture = &mMaterials[meshes[m].materialId].texture[0];
+            mRenderPipeline.setFragmentShader(textureFs);
+            RenderStats mRenderStats2 = mRenderPipeline.rasterizeShader(meshes[m].vi, &mUniformData, meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
+            
+            mRenderStats.timeDrawing += mRenderStats2.timeDrawing;
+            mRenderStats.timeClipping += mRenderStats2.timeClipping;
+            mRenderStats.timeVertexShading += mRenderStats2.timeVertexShading;
+        }
   
         
         now = std::chrono::high_resolution_clock::now();
@@ -502,17 +629,17 @@ int main(int argc, char** argv) {
             mRenderPipeline.viewport = makeWindowTransform(screenSizeX, screenSizeY, characterAspect);
             
             if (usePerspective) {
-                projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
+                projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
             } else {
-                projection = projectionMatrixOrtho(5*screenAspect, 5, zFar, zNear);
+                projection = projectionMatrixOrtho(orthoScale*screenAspect, orthoScale, zFar, zNear);
             }
 //            depthBuffer.setSize(screenSizeX, screenSizeY);
         } else if (ch == 'o' || ch == 'O') {
             usePerspective    = !usePerspective;
             if (usePerspective) {
-                projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
+                projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
             } else {
-                projection = projectionMatrixOrtho(5*screenAspect, 5, zFar, zNear);
+                projection = projectionMatrixOrtho(orthoScale*screenAspect, orthoScale, zFar, zNear);
             }
         } else if ( ch == KEY_LEFT) {
             angle -= 0.05;
@@ -530,14 +657,39 @@ int main(int argc, char** argv) {
             showDepth = !showDepth;
         } else if ( ch >= '1' && ch <= '9' ) {
             RasterizerThreadPool::setRenderThreadCount(ch-'0');
+        } else if ( ch == 'r' || ch == 'R') {
+            if (usePerspective) {
+                viewAngle += M_PI * 0.0125;
+                if(viewAngle >= M_PI) {
+                    viewAngle = M_PI - 0.0001;
+                }
+                projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
+            } else {
+                orthoScale += 0.5;  // this can grow as large as we want
+                projection = projectionMatrixOrtho(orthoScale*screenAspect, orthoScale, zFar, zNear);
+            }
+        } else if ( ch == 't' || ch == 'T') {
+            if (usePerspective) {
+                viewAngle -= M_PI * 0.0125;
+                if(viewAngle < 0.0001) {
+                    viewAngle = 0.0001;
+                }
+                projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
+            } else {
+                orthoScale -= 0.5;
+                if(orthoScale  < 0.0100) {
+                    orthoScale = 0.01;
+                }
+                projection = projectionMatrixOrtho(orthoScale*screenAspect, orthoScale, zFar, zNear);
+            }
         }
 
     }
     
     cleanupConsole();
     
-    if(fileVertices) {
-        delete [] fileVertices;
+    if(meshes[0].vi) {
+        delete [] meshes[0].vi;
     }
     return 0;
 };

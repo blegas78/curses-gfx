@@ -411,8 +411,9 @@ int main(int argc, char** argv) {
 //      Texture pngTexture(mPngLoader.width, mPngLoader.height);
 //    process_png_file(mPngLoader, pngTexture);
     
-    Texture pngTexture(argv[1]);
-//    pngTexture.loadPng("/Users/matt/Desktop/PIs/pis.png");
+//    Texture pngTexture(argv[1]);
+    Texture pngTexture;
+    pngTexture.loadPng(argv[1]);
 //    return 0;
   //  write_png_file(argv[2]);
     pngTexture.monochromize();
@@ -624,7 +625,9 @@ int main(int argc, char** argv) {
     // Projection
     double zFar = 100;
     double zNear = .1;
-    Mat4D projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
+    double viewAngle = M_PI*0.5;
+    double orthoScale = 5*5;
+    Mat4D projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
     
     // Viewport
 //    Mat4D windowScale = scaleMatrix((double)screenSizeX/2, (double)screenSizeY/2, 1);
@@ -895,17 +898,17 @@ int main(int argc, char** argv) {
             mRenderPipeline.viewport = makeWindowTransform(screenSizeX, screenSizeY, characterAspect);
             
             if (usePerspective) {
-                projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
+                projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
             } else {
-                projection = projectionMatrixOrtho(5*screenAspect, 5, zFar, zNear);
+                projection = projectionMatrixOrtho(orthoScale*screenAspect, orthoScale, zFar, zNear);
             }
 //            depthBuffer.setSize(screenSizeX, screenSizeY);
         } else if (ch == 'o' || ch == 'O') {
             usePerspective    = !usePerspective;
             if (usePerspective) {
-                projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
+                projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
             } else {
-                projection = projectionMatrixOrtho(5*screenAspect, 5, zFar, zNear);
+                projection = projectionMatrixOrtho(orthoScale*screenAspect, orthoScale, zFar, zNear);
             }
         } else if ( ch == KEY_LEFT) {
             angle -= 0.05;
@@ -923,6 +926,31 @@ int main(int argc, char** argv) {
             showDepth = !showDepth;
         } else if ( ch >= '1' && ch <= '9' ) {
             RasterizerThreadPool::setRenderThreadCount(ch-'0');
+        } else if ( ch == 'r' || ch == 'R') {
+            if (usePerspective) {
+                viewAngle += M_PI * 0.0125;
+                if(viewAngle >= M_PI) {
+                    viewAngle = M_PI - 0.0001;
+                }
+                projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
+            } else {
+                orthoScale += 0.5;  // this can grow as large as we want
+                projection = projectionMatrixOrtho(orthoScale*screenAspect, orthoScale, zFar, zNear);
+            }
+        } else if ( ch == 't' || ch == 'T') {
+            if (usePerspective) {
+                viewAngle -= M_PI * 0.0125;
+                if(viewAngle < 0.0001) {
+                    viewAngle = 0.0001;
+                }
+                projection = projectionMatrixPerspective(viewAngle, screenAspect, zFar, zNear);
+            } else {
+                orthoScale -= 0.5;
+                if(orthoScale  < 0.0100) {
+                    orthoScale = 0.01;
+                }
+                projection = projectionMatrixOrtho(orthoScale*screenAspect, orthoScale, zFar, zNear);
+            }
         }
 
     }

@@ -169,7 +169,8 @@ bool Texture::loadPng(const char* filename) {
         return 1;
     }
     
-    if(mPngLoader.height*mPngLoader.width != width*height) {
+    if(mPngLoader.height != height ||
+       mPngLoader.width != width) {
         resize(mPngLoader.width, mPngLoader.height);
     }
     for(int y = 0; y < mPngLoader.height; y++) {
@@ -178,7 +179,7 @@ bool Texture::loadPng(const char* filename) {
         for(int x = 0; x < mPngLoader.width; x++) {
             png_bytep px = &(row[x * 4]);
 //            setPixel(y, x, {px[0], px[1], px[2], px[3]});   // HACK swap x/y
-            setPixel(x, y, {px[0], px[1], px[2], px[3]});   // HACK swap x/y
+            setPixel(x, y, {px[0], px[1], px[2], px[3]});
         }
     }
     

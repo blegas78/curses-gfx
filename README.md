@@ -32,3 +32,4 @@ Rasterization using different shaders and three moving light sources
 Uses libassimp to load 3D models
 ![fileLoader](https://github.com/blegas78/curses-gfx/blob/main/docs/images/fileLoader.png?raw=true)
 
+![fileLoader2](https://github.com/blegas78/curses-gfx/blob/main/docs/images/mario.png?raw=true)
