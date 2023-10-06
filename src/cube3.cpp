@@ -189,7 +189,7 @@ typedef struct _UniformInfo {
 
 
 
-template <class T, class U> void myVertexShader(U* uniformInfo, T& output, T& input) {
+template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const T& input) {
     output.vertex = matrixVectorMultiply(uniformInfo->modelViewProjection, input.vertex);
     output.location = matrixVectorMultiply(uniformInfo->modelView, input.vertex);
     output.normal = matrixVectorMultiply(uniformInfo->modelView, input.normal);

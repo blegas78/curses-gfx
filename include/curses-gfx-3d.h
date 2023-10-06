@@ -223,7 +223,7 @@ Coordinates2D onlyXY(Coordinates4D& input);
 
 // Manipulation:
 Mat4D transpose( Mat4D& input );
-Coordinates3D normalizeVector(Coordinates3D& input);
+Coordinates3D normalizeVector(const Coordinates3D& input);
 Coordinates3D normalizeVector(Coordinates4D& input);	// only in 3D
 Coordinates3D normalizeVectorFast(Coordinates3D& input);
 Coordinates3D normalizeVectorFast(Coordinates4D& input);	// only in 3D
@@ -232,9 +232,9 @@ Coordinates3D normalizeVectorFast(Coordinates4D& input);	// only in 3D
 int mod(int a, int b);
 Mat3D matrixMultiply(Mat3D& a, Mat3D& b);
 Mat4D matrixMultiply(Mat4D& a, Mat4D& b);
-Coordinates3D matrixVectorMultiple(Mat3D& rotation, Coordinates3D& vec);
-Coordinates4D matrixVectorMultiply(Mat4D& rotation, Coordinates4D& vec);
-Coordinates3D matrixVectorMultiply(Mat4D& rotation, Coordinates3D& vec); // operated in 3d
+Coordinates3D matrixVectorMultiple(Mat3D& rotation, const Coordinates3D& vec);
+Coordinates4D matrixVectorMultiply(Mat4D& rotation, const Coordinates4D& vec);
+Coordinates3D matrixVectorMultiply(Mat4D& rotation, const Coordinates3D& vec); // operated in 3d
 Coordinates3D crossProduct(Coordinates3D a, Coordinates3D b);
 Coordinates4D crossProduct(Coordinates4D a, Coordinates4D b);
 double dotProduct(const Coordinates4D& a, const Coordinates4D& b); // operates in 3d

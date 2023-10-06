@@ -999,7 +999,7 @@ Mat4D matrixMultiply(Mat4D& a, Mat4D& b) {
 	return result;
 }
 
-Coordinates3D matrixVectorMultiple(Mat3D& rotation, Coordinates3D& vec) {
+Coordinates3D matrixVectorMultiple(Mat3D& rotation, const Coordinates3D& vec) {
 	Coordinates3D result = {0, 0 , 0};
 	
 	result.x  = rotation.d[0][0] * vec.x;
@@ -1017,7 +1017,7 @@ Coordinates3D matrixVectorMultiple(Mat3D& rotation, Coordinates3D& vec) {
 	return result;
 }
 
-Coordinates4D matrixVectorMultiply(Mat4D& rotation, Coordinates4D& vec) {
+Coordinates4D matrixVectorMultiply(Mat4D& rotation, const Coordinates4D& vec) {
 	Coordinates4D result;
 	
 	result.x  = rotation.d[0][0] * vec.x;
@@ -1043,7 +1043,7 @@ Coordinates4D matrixVectorMultiply(Mat4D& rotation, Coordinates4D& vec) {
 	return result;
 }
 
-Coordinates3D matrixVectorMultiply(Mat4D& rotation, Coordinates3D& vec) {
+Coordinates3D matrixVectorMultiply(Mat4D& rotation, const Coordinates3D& vec) {
 	Coordinates3D result;
 	
 	result.x  = rotation.d[0][0] * vec.x;
@@ -1243,7 +1243,7 @@ Coordinates3D perspectiveInterpolateInv(Coordinates3D& a, Coordinates3D& b, doub
 	return result;
 }
 
-Coordinates3D normalizeVector(Coordinates3D& input) {
+Coordinates3D normalizeVector(const Coordinates3D& input) {
 	Coordinates3D result;
 	double invMag = 1.0/sqrt(input.x*input.x + input.y*input.y + input.z*input.z);
 

@@ -27,12 +27,8 @@ Rasterization using different shaders and three moving light sources
 
 ![Stopwatch](https://github.com/blegas78/curses-gfx/blob/main/docs/images/stopwatch.png?raw=true)
 
-#### chaos_clocks
 
-![Clocks](https://github.com/blegas78/curses-gfx/blob/main/docs/images/clocks.png?raw=true)
-
-
-#### aviz
-
-![aviz](https://github.com/blegas78/curses-gfx/blob/main/docs/images/aviz.png?raw=true)
+#### fileLoader
+Uses libassimp to load 3D models
+![fileLoader](https://github.com/blegas78/curses-gfx/blob/main/docs/images/fileLoader.png?raw=true)
 

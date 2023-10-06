@@ -1301,7 +1301,7 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
 		((double*)depthBuffer->data)[depthIndex] = invDepth;
 		
 		
-		ColorRGBA colorOutput;
+        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
 		FragmentInfo fInfo;
 		fInfo.pixel = pixel;
 		fInfo.location3D = pt3D;
@@ -1325,7 +1325,7 @@ void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void
         ((double*)depthBuffer->data)[depthIndex] = invDepth;
 //        depthBuffer->mutex.unlock();
         
-        ColorRGBA colorOutput;
+        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
         FragmentInfo fInfo;
         fInfo.pixel = pixel;
         fInfo.data = userData;
@@ -1333,6 +1333,7 @@ void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void
         fInfo.colorOutput = &colorOutput;
         fragmentShader(fInfo);
         
+//        ((ColorRGBA*)(fbo[0].data))[depthIndex] = *fInfo.colorOutput;
 //        setRenderBuffer(pixel.x, pixel.y, colorOutput);
         setRenderBuffer(depthIndex, colorOutput);
         return;

@@ -58,8 +58,8 @@ endif()
 project(curses-gfx)
 set(LIBNAME cursesgfx)
 
-find_package(LibPng)
-
+find_package(LibPng REQUIRED)
+find_package(LibAssimp)
 
 
 
@@ -86,6 +86,11 @@ if(PNG_FOUND)
 	include_directories(${PNG_INCLUDE_DIR})
 	message(" ----- ${PNG_INCLUDE_DIR}")
 endif(PNG_FOUND)
+#if(ASSIMP_FOUND)
+#	include_directories(${ASSIMP_INCLUDE_DIR})
+	message(" ----- ${ASSIMP_INCLUDE_DIR}")
+	message(" ----- ${ASSIMP_LIBRARY}")
+#endif(ASSIMP_FOUND)
 
 include(CheckIncludeFileCXX)
 CHECK_INCLUDE_FILE_CXX("linux/fb.h" FB_EXISTS)
@@ -167,6 +172,12 @@ if(PNG_FOUND)
 	add_executable(cubepng src/cubepng.cpp)
 	target_link_libraries(cubepng ncurses ${PNG_LIBRARY} ${LIBNAME})
 endif(PNG_FOUND)
+
+if(ASSIMP_FOUND)
+    message("-- Building examples with libassimp!")
+    add_executable(fileLoader src/fileLoader.cpp)
+    target_link_libraries(fileLoader ncurses ${LIBNAME} ${ASSIMP_LIBRARY})
+endif(ASSIMP_FOUND)
 
 add_executable(aviz src/aviz.cpp)
 target_link_libraries(aviz ncurses ${LIBNAME})

@@ -168,7 +168,8 @@ public:
 	void setFragmentShader(void (*fragmentShader)(const FragmentInfo&));
 	
 	void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
-    template <class T, class U> RenderStats rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&));
+    template <class T, class U> RenderStats rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, const T&));
+    template <class T, class U> RenderStats rasterizeShader(T* vertexInfo, U* uniformInfo, int numTriangles, void* userData, void (*vertexShader)(U*, T&, const T&));
 	void rasterizePolygonsShader(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 //	void rasterizeThreaded(Polygon4D* polygons, int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
 	
@@ -188,7 +189,8 @@ public:
 
 
 
-template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, T&)) {
+
+template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, const T&)) {
     
     auto now = std::chrono::high_resolution_clock::now();
     auto before = now;
@@ -225,6 +227,88 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
             // Should be able to take inputs from a set of custom VertexInformation like model, projection, view matrics
             // Give to a user-defined shader which produces user-defined struct of vertex attributes
         }
+        
+        now = std::chrono::high_resolution_clock::now();
+        float_ms = (now - before);
+        before = now;
+        mRenderStats.timeVertexShading += float_ms.count()/1000.0;
+        
+        // Then.. clip geometry?
+        clipPolygon(scratch, 3, scratchClipped, clippedVertexCount);
+        now = std::chrono::high_resolution_clock::now();
+        float_ms = (now - before);
+        before = now;
+        mRenderStats.timeClipping += float_ms.count()/1000.0;
+            
+        for(int i = 0; i < clippedVertexCount; i++) {
+            // Then.. apply a viewport and provide to triangle rasterizer
+//            scratch[i].vertex = matrixVectorMultiply(viewport, scratch[i].vertex);
+            scratchClipped[i].vertex = matrixVectorMultiply(viewport, scratchClipped[i].vertex);
+        }
+//        now = std::chrono::high_resolution_clock::now();
+//        float_ms = (now - before);
+//        before = now;
+//        mRenderStats.timeVertexShading += float_ms.count()/1000.0;
+        
+        
+//            triangleFill(&scratch[0], &scratch[1], &scratch[2]);
+        for(int i = 2; i < clippedVertexCount; i++) {
+//            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
+//            br.userData = userData;
+            br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
+        }
+        now = std::chrono::high_resolution_clock::now();
+        float_ms = (now - before);
+        before = now;
+        mRenderStats.timeDrawing += float_ms.count()/1000.0;
+//        fbo->data[20*4 + 3] = '0'+clippedVertexCount;
+
+    }
+//    RasterizerThreadPool::busyWait();   // finish rendering
+    return mRenderStats;
+}
+
+template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* vertexInfo, U* uniformInfo, int numTriangles, void* userData, void (*vertexShader)(U*, T&, const T&)) {
+    
+    auto now = std::chrono::high_resolution_clock::now();
+    auto before = now;
+    std::chrono::duration<double, std::milli> float_ms;
+    
+    T scratch[3];
+//    int scratchLayout[][3] = {
+//        {0, 1, 2}
+//    };
+    T scratchClipped[20];
+    int clippedVertexCount;
+    
+    RenderStats mRenderStats = {0,0,0};
+    
+//    this->userData = userData;
+    BlockRenderer<T> br(this);
+    for (int t = 0; t < numTriangles; t++) {
+//        scratch[0] = vertexInfo[triangleLayout[t][0]];
+//        scratch[1] = vertexInfo[triangleLayout[t][1]];
+//        scratch[2] = vertexInfo[triangleLayout[t][2]];
+//
+//        for(int i = 0; i < 3; i++) {
+//            //            scratch[i].vertex = matrixVectorMultiply(modelView, scratch[i].vertex);
+//            //            scratch[i].location = scratch[i].vertex;
+//            //            scratch[i].normal = matrixVectorMultiply(modelView, scratch[i].normal);
+//            //            scratch[i].vertex = matrixVectorMultiply(projection, scratch[i].vertex);
+//            //            vertexShader = (void*)myVertexShader;
+//            //            myVertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
+//
+//            vertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
+//            //            scratch[i].vertex.y = -scratch[i].vertex.y;
+//
+//            // For every vertex, perform a vertex shading:
+//            // Should be able to take inputs from a set of custom VertexInformation like model, projection, view matrics
+//            // Give to a user-defined shader which produces user-defined struct of vertex attributes
+//        }
+        
+        vertexShader(uniformInfo, scratch[0],  *vertexInfo++);
+        vertexShader(uniformInfo, scratch[1],  *vertexInfo++);
+        vertexShader(uniformInfo, scratch[2],  *vertexInfo++);
         
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
