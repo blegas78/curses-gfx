@@ -24,98 +24,11 @@ void killPanda(int killSignal) {
 	keepRunning = false;
 }
 
-void cleanupConsole();
-void setupTerminal()
-{
-	setlocale(LC_ALL, "");
-	
-    
-//
-	// Start up Curses window
-	initscr();
-	cbreak();
-	noecho();
-//	nodelay(stdscr, 1);	// Don't wait at the getch() function if the user hasn't hit a key
-	keypad(stdscr, 1); // Allow Function key input and arrow key input
-
-    start_color();
-    use_default_colors();
-//
-//	init_pair(1, COLOR_RED, COLOR_BLACK);
-//	init_pair(2, COLOR_GREEN, COLOR_BLACK);
-//	init_pair(3, COLOR_CYAN, COLOR_BLACK);
-//	init_pair(4, COLOR_BLUE, COLOR_WHITE);
-//
-//	init_pair(5, COLOR_BLACK, COLOR_RED );
-//	init_pair(6, COLOR_BLACK, COLOR_GREEN );
-//	init_pair(7, COLOR_BLACK, COLOR_CYAN );
-//	init_pair(8, COLOR_WHITE, COLOR_BLUE );
-    int line = 0;
-    mvprintw(line++, 0, "ncurses COLORS: %d\n", COLORS);
-    mvprintw(line++, 0, "ncurses COLOR_PAIRS: %d\n", COLOR_PAIRS  );
-    mvprintw(line++, 0, "ncurses has_colors: %d\n", has_colors());
-    mvprintw(line++, 0, "ncurses can_change_color: %d\n", can_change_color());
-    
-    short restoreR[COLORS];
-    short restoreG[COLORS];
-    short restoreB[COLORS];
-    for(short i = 0; i < COLORS; i++) {
-        color_content(i, &restoreR[i], &restoreG[i], &restoreB[i]);
-    }
-    
-    init_pair(0, 0, -1);    // White
-    
-    int numSatLevels = 8;
-    for(int i = 0; i < COLORS; i++) {
-//        int hueIndex = mod((i-1)*numSatLevels,COLORS);
-//        int satIndex = ceil((double)(i-1)/((double)COLORS/(double)(numSatLevels)));
-        int hueIndex = mod(i*numSatLevels,COLORS);
-        int satIndex = ceil((double)i/((double)COLORS/(double)(numSatLevels)));
-        double hue = (double)(hueIndex)/(double)(COLORS) *360.0;
-        double sat = ((double)satIndex)/((double)numSatLevels);
-        Coordinates3D rgb = hsvToRgb({hue, sat, 1});
-        init_color(i, (int)(rgb.x/255.0*1000.0), (int)(rgb.y/255.0*1000.0), (int)(rgb.z/255.0*1000.0));
-        init_pair(i, i, -1);
-    }
-    
-    for(int i = 0; i < COLORS; i++) {
-        
-        attron(COLOR_PAIR(i));
-//        attron(A_DIM);
-        mvaddch(line, i, 'W');
-//        attroff(COLOR_PAIR(i));
-    }
-	curs_set(0);	// no cursor
-
-    getch();
-    
-    for(int i = 1; i < COLORS; i++) {
-        init_color(i, restoreR[i], restoreG[i], restoreB[i]);
-    }
-//    cleanupConsole();
-//    exit(EXIT_SUCCESS);
-//	atexit(destroy);
-}
-
-void cleanupConsole() {
-//    for(int i = 1; i < COLORS; i++) {
-//        Coordinates3D rgb =  hslToRgb({(double)(i-1)/(double)(COLORS-1) *360.0, 1, 0.5});
-//        init_color(i, (int)(rgb.x/255.0*1000.0), (int)(rgb.y/255.0*1000.0), (int)(rgb.z/255.0*1000.0));
-//        init_pair(i, i, -1);
-//    }
-    use_default_colors();
-	clear();
-	endwin();
-
-	std::cout << "Console has been cleaned!" << std::endl;
-}
-
-
-
 
 int main(void) {
 
-	setupTerminal();
+    CursesGfxTerminal mCursesGfxTerminal;
+    mCursesGfxTerminal.setupTerminal();
 //	Coordinates4D vertices[] = {
 //		{8, 2, 0, 1},
 //		{-4, 0.0, 0, 1},
@@ -316,7 +229,7 @@ int main(void) {
 
 	}
 	
-	cleanupConsole();
+    mCursesGfxTerminal.cleanupTerminal();
 	
 	printf("angle = %f\n", angle);
 	printf("distance = %f\n", distance);

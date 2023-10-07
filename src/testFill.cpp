@@ -20,6 +20,7 @@
 
 //#include "curses-gfx-3d.h"
 #include "curses-gfx-handler.h"
+#include "curses-gfx-texture.h"
 
 /*
  Catch ctrl-c for cleaner exits
@@ -70,131 +71,6 @@ void setupLinuxFb() {
 #endif
 
 
-void setupTerminal()
-{
-	
-	setlocale(LC_ALL, "");
-	
-    // Start up Curses window
-    initscr();
-    cbreak();
-    noecho();
-    nodelay(stdscr, 1);    // Don't wait at the getch() function if the user hasn't hit a key
-    keypad(stdscr, 1); // Allow Function key input and arrow key input
-
-    start_color();
-    use_default_colors();
-//
-//    init_pair(1, COLOR_RED, COLOR_BLACK);
-//    init_pair(2, COLOR_GREEN, COLOR_BLACK);
-//    init_pair(3, COLOR_CYAN, COLOR_BLACK);
-//    init_pair(4, COLOR_BLUE, COLOR_WHITE);
-//
-//    init_pair(5, COLOR_BLACK, COLOR_RED );
-//    init_pair(6, COLOR_BLACK, COLOR_GREEN );
-//    init_pair(7, COLOR_BLACK, COLOR_CYAN );
-//    init_pair(8, COLOR_WHITE, COLOR_BLUE );
-    int line = 0;
-    mvprintw(line++, 0, "ncurses COLORS: %d\n", COLORS);
-    mvprintw(line++, 0, "ncurses COLOR_PAIRS: %d\n", COLOR_PAIRS  );
-    mvprintw(line++, 0, "ncurses has_colors: %d\n", has_colors());
-    mvprintw(line++, 0, "ncurses can_change_color: %d\n", can_change_color());
-    
-    short restoreR[COLORS];
-    short restoreG[COLORS];
-    short restoreB[COLORS];
-    for(short i = 0; i < COLORS; i++) {
-        color_content(i, &restoreR[i], &restoreG[i], &restoreB[i]);
-    }
-    
-    init_pair(0, 0, -1);    // White
-    
-    int numSatLevels = 8;
-    for(int i = 0; i < COLORS; i++) {
-//        int hueIndex = mod((i-1)*numSatLevels,COLORS);
-//        int satIndex = ceil((double)(i-1)/((double)COLORS/(double)(numSatLevels)));
-        int hueIndex = mod(i*numSatLevels,COLORS);
-        int satIndex = ceil((double)i/((double)COLORS/(double)(numSatLevels)));
-        double hue = (double)(hueIndex)/(double)(COLORS) *360.0;
-        double sat = ((double)satIndex)/((double)numSatLevels);
-        Coordinates3D rgb = hsvToRgb({hue, sat, 1});
-        init_color(i, (int)(rgb.x/255.0*1000.0), (int)(rgb.y/255.0*1000.0), (int)(rgb.z/255.0*1000.0));
-        init_pair(i, i, -1);
-    }
-    
-    for(int i = 0; i < COLORS; i++) {
-        
-        attron(COLOR_PAIR(i));
-//        attron(A_DIM);
-        mvaddch(line, i, 'W');
-//        attroff(COLOR_PAIR(i));
-    }
-    curs_set(0);    // no cursor
-}
-
-void cleanupConsole() {
-	clear();
-	endwin();
-
-	std::cout << "Console has been cleaned!" << std::endl;
-}
-
-
-
-
-void renderBufferToTerminal(FrameBuffer* fbo) {
-	
-	Coordinates2D pixel;
-	Coordinates3D color;
-	int offset, index;
-	
-	for (int y = 0; y < fbo[0].rows; y++) {
-		offset = y * fbo[0].cols;
-		for (int x = 0; x < fbo[0].cols; x++) {
-			index = x + offset;
-			
-			pixel.x = x;
-			pixel.y = y;
-			
-			color.x = (double)((ColorRGBA*)fbo[0].data)[index].r / 255.0;
-			color.y = (double)((ColorRGBA*)fbo[0].data)[index].g / 255.0;
-			color.z = (double)((ColorRGBA*)fbo[0].data)[index].b / 255.0;
-//#ifndef FB_SUPPORT
-			if (((ColorRGBA*)fbo[0].data)[index].a == 0) {
-				setRGB(pixel, color);
-			} else {
-				Coordinates3D clippedRGB = clipRGB(color);
-				Coordinates3D hsl = rgbToHsv(clippedRGB);
-				
-				int hueIndex = floor(hsl.x + 1);
-				
-				if (hsl.y < 0.33) {
-					hueIndex = 7;
-				}
-				
-				attron(COLOR_PAIR(hueIndex));
-				set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
-				attroff(COLOR_PAIR(hueIndex));
-			}
-#ifdef FB_SUPPORT
-			int offsetfb = (y * (fb_bytes_per_length) + x)*fb_bytes;
-//			uint16_t finalcolor = 0;
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].r & 0xF8) << (11-3);
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].g & 0xFC) << (5-2);
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].b & 0xF8) >> (3);
-//			*(uint16_t*)&fbdata[0 + offsetfb] = finalcolor;
-			
-			fbdata[2 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].r;
-			fbdata[1 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].g;
-			fbdata[0 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].b;
-			
-#endif
-		}
-	}
-}
-
-
-
 typedef struct _MyShaderAttributes {
     Coordinates4D vertex;
     ColorRGBA color;
@@ -207,38 +83,6 @@ REGISTER_VERTEX_LAYOUT(MyShaderAttributes)
     MEMBER(color),
     MEMBER(textureCoord)
 END_VERTEX_LAYOUT(MyShaderAttributes)
-
-
-class Texture {
-public:
-    ColorRGBA* data;
-    
-    int width, height;
-    int widthm1, heightm1;
-    Texture(int width, int height)
-    : width(width), height(height), widthm1(width-1), heightm1(height-1) {
-        
-        data = new ColorRGBA[width*height];
-        
-    }
-    ~Texture() {
-        delete [] data;
-    }
-    
-    void set(const double& x, const double& y, const ColorRGBA& value) {
-        int xPart = mod(x*(double)width,width);
-        int yPart = mod(y*(double)height,height);
-        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
-        data[ xPart + width*yPart] = value;
-    }
-    
-    ColorRGBA sample( const double& x, const double& y) {
-        int xPart = mod(x*(double)width,width);
-        int yPart = mod(y*(double)height,height);
-        return data[ xPart + width*yPart];
-    }
-};
-
 
 
 Texture testTexture(4,4);
@@ -288,8 +132,8 @@ int main(void) {
         skip = !skip;
     }
 
-    
-    setupTerminal();
+    CursesGfxTerminal mCursesGfxTerminal;
+    mCursesGfxTerminal.setupTerminal();
 	
 
 	Coordinates4D points[6];
@@ -401,13 +245,6 @@ int main(void) {
 		}
 
 	}
-	
-	
-	
-	cleanupConsole();
-
-	
-	
 	
 	
 	return 0;

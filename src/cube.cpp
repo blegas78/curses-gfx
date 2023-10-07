@@ -90,7 +90,7 @@ void defaultFragmentLegacy(const FragmentInfo& fInfo) {
 
 void lightModelFs(const FragmentInfo& fInfo) {
 	Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
-	setRGB(fInfo.pixel, *colorRGB);
+    CursesGfxTerminal::setRGB(fInfo.pixel, *colorRGB);
 }
 
 
@@ -130,7 +130,7 @@ void lightFs2(const FragmentInfo& fInfo) {
 	
 	
 	
-	setRGB(fInfo.pixel, colorRGB);
+    CursesGfxTerminal::setRGB(fInfo.pixel, colorRGB);
 }
 
 void lightFs(const FragmentInfo& fInfo) {
@@ -162,7 +162,7 @@ void lightFs(const FragmentInfo& fInfo) {
 	colorRGB.y = intensity*0.9;
 	colorRGB.z = intensity*3;
 	
-	setRGB(fInfo.pixel, colorRGB);
+    CursesGfxTerminal::setRGB(fInfo.pixel, colorRGB);
 	
 	return;
 	attron(COLOR_PAIR(4));

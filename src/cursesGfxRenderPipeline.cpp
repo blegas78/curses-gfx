@@ -1423,7 +1423,7 @@ void RenderPipeline::renderBufferToTerminal() {
 			color.z = (double)((ColorRGBA*)fbo[0].data)[index].b / 255.0;
 #ifndef FB_SUPPORT
 			if (((ColorRGBA*)fbo[0].data)[index].a == 0) {
-				setRGB(pixel, color);
+				CursesGfxTerminal::setRGB(pixel, color);
 //                set(pixel, 'k');
 			} else {
 				Coordinates3D clippedRGB = clipRGB(color);
@@ -1509,7 +1509,7 @@ void RenderPipeline::depthBufferToTerminal() {
 			color.z = (double)luminosity / 255.0;
 #ifndef FB_SUPPORT
 //			if (((ColorRGBA*)fbo[0].data)[index].a == 0) {
-				setRGB(pixel, clipRGB(color));
+            CursesGfxTerminal::setRGB(pixel, clipRGB(color));
 //			} else {
 //				Coordinates3D clippedRGB = clipRGB(color);
 //				Coordinates3D hsl = rgbToHsv(clippedRGB);

@@ -116,6 +116,7 @@ set(c_sources src/cursesGfx3d.cpp
                       src/cursesClock.cpp
                       src/cursesGfxTexture.cpp
                       src/cursesGfxPngLoader.cpp
+                      src/cursesGfxTerminal.cpp
                       ) 
 set(c_headers  include/curses-gfx-3d.h
 		include/curses-gfx.h
@@ -123,6 +124,7 @@ set(c_headers  include/curses-gfx-3d.h
 		include/curses-clock.h
         include/curses-gfx-texture.h
         include/curses-gfx-png-loader.h
+        include/curses-gfx-types.h
         )
 set(c_sources ${c_sources} ${c_headers} )
 

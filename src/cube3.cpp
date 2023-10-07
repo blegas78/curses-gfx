@@ -26,115 +26,6 @@ void killPanda(int killSignal) {
 	keepRunning = false;
 }
 
-
-void setupTerminal()
-{
-    
-    setlocale(LC_ALL, "");
-    
-    // Start up Curses window
-    initscr();
-    cbreak();
-    noecho();
-    nodelay(stdscr, 1);    // Don't wait at the getch() function if the user hasn't hit a key
-    keypad(stdscr, 1); // Allow Function key input and arrow key input
-
-    start_color();
-    use_default_colors();
-//
-//    init_pair(1, COLOR_RED, COLOR_BLACK);
-//    init_pair(2, COLOR_GREEN, COLOR_BLACK);
-//    init_pair(3, COLOR_CYAN, COLOR_BLACK);
-//    init_pair(4, COLOR_BLUE, COLOR_WHITE);
-//
-//    init_pair(5, COLOR_BLACK, COLOR_RED );
-//    init_pair(6, COLOR_BLACK, COLOR_GREEN );
-//    init_pair(7, COLOR_BLACK, COLOR_CYAN );
-//    init_pair(8, COLOR_WHITE, COLOR_BLUE );
-    int line = 0;
-    mvprintw(line++, 0, "ncurses COLORS: %d\n", COLORS);
-    mvprintw(line++, 0, "ncurses COLOR_PAIRS: %d\n", COLOR_PAIRS  );
-    mvprintw(line++, 0, "ncurses has_colors: %d\n", has_colors());
-    mvprintw(line++, 0, "ncurses can_change_color: %d\n", can_change_color());
-    
-    short restoreR[COLORS];
-    short restoreG[COLORS];
-    short restoreB[COLORS];
-    for(short i = 0; i < COLORS; i++) {
-        color_content(i, &restoreR[i], &restoreG[i], &restoreB[i]);
-    }
-    
-    init_pair(0, 0, -1);    // White
-    
-    int numSatLevels = 8;
-    for(int i = 0; i < COLORS; i++) {
-//        int hueIndex = mod((i-1)*numSatLevels,COLORS);
-//        int satIndex = ceil((double)(i-1)/((double)COLORS/(double)(numSatLevels)));
-        int hueIndex = mod(i*numSatLevels,COLORS);
-        int satIndex = ceil((double)i/((double)COLORS/(double)(numSatLevels)));
-        double hue = (double)(hueIndex)/(double)(COLORS) *360.0;
-        double sat = ((double)satIndex)/((double)numSatLevels);
-        Coordinates3D rgb = hsvToRgb({hue, sat, 1});
-        init_color(i, (int)(rgb.x/255.0*1000.0), (int)(rgb.y/255.0*1000.0), (int)(rgb.z/255.0*1000.0));
-        init_pair(i, i, -1);
-    }
-    
-    for(int i = 0; i < COLORS; i++) {
-        
-        attron(COLOR_PAIR(i));
-//        attron(A_DIM);
-        mvaddch(line, i, 'W');
-//        attroff(COLOR_PAIR(i));
-    }
-    curs_set(0);    // no cursor
-}
-
-void cleanupConsole() {
-	clear();
-	endwin();
-
-	std::cout << "Console has been cleaned!" << std::endl;
-}
-
-//class Texture {
-//public:
-//    ColorRGBA* data;
-//
-//    int width, height;
-//    int widthm1, heightm1;
-//    Texture(int width, int height)
-//    : width(width), height(height), widthm1(width-1), heightm1(height-1) {
-//
-//        data = new ColorRGBA[width*height];
-//
-//    }
-//    ~Texture() {
-//        delete [] data;
-//    }
-//
-//    void set(const double& x, const double& y, const ColorRGBA& value) {
-//        int xPart = mod(x*(double)width,width);
-//        int yPart = mod(y*(double)height,height);
-//        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
-//        data[ xPart + width*yPart] = value;
-//    }
-//
-//    void setPixel(const int& x, const int& y, const ColorRGBA& value) {
-//        int xPart = mod(x,width);
-//        int yPart = mod(y,height);
-////        printf("Index xPart %d yPart %d result%d\n", xPart, yPart, xPart + width*yPart);
-//        data[ xPart + width*yPart] = value;
-//    }
-//
-//    ColorRGBA sample( const double& x, const double& y) {
-//        int xPart = mod(x*(double)width,width);
-//        int yPart = mod(y*(double)height,height);
-//        return data[ xPart + width*yPart];
-//    }
-//};
-
-
-
 Texture testTexture(10,10);
 
 typedef struct _LightParams {
@@ -418,7 +309,8 @@ int main(int argc, char** argv) {
     
     testTexture.set(0.2, 0.2, {255,0,0,0});
 
-	setupTerminal();
+    CursesGfxTerminal mCursesGfxTerminal;
+    mCursesGfxTerminal.setupTerminal();
     
     UniformInfo mUniformInfo;
 
@@ -767,7 +659,7 @@ int main(int argc, char** argv) {
 
 	}
 	
-    cleanupConsole();
+    mCursesGfxTerminal.cleanupTerminal();
     printf("\n\r");
     
     printf("Window (mRenderPipeline.viewport):\n\r");

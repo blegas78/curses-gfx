@@ -74,7 +74,7 @@ typedef struct _LightParams {
 
 void lightModelFs(const FragmentInfo& fInfo) {
 	Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
-	setRGB(fInfo.pixel, *colorRGB);
+    CursesGfxTerminal::setRGB(fInfo.pixel, *colorRGB);
 	
 //	Coordinates3D clippedRGB = clipRGB(*colorRGB);
 //	fInfo.colorOutput->r = clippedRGB.x*255;
@@ -127,7 +127,7 @@ void lightFs2(const FragmentInfo& fInfo) {
 	
 	
 	
-	setRGB(fInfo.pixel, colorRGB);
+    CursesGfxTerminal::setRGB(fInfo.pixel, colorRGB);
     
     
 //	//	ColorRGBA result;
