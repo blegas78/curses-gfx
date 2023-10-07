@@ -615,10 +615,10 @@ int main(int argc, char** argv) {
     squareWall[2].vertex = { 1,  1, 0, 1};
     squareWall[3].vertex = {-1,  1, 0, 1};
     
-    squareWall[0].textureCoord = {0.75, 0.5}; // this makes this square different
-    squareWall[1].textureCoord = {1, 0.5};
-    squareWall[2].textureCoord = {1, 1};
-    squareWall[3].textureCoord = {0.75, 1};
+    squareWall[0].textureCoord = {1, 0.5}; // this makes this square different
+    squareWall[1].textureCoord = {0.75, 0.5};
+    squareWall[2].textureCoord = {0.75, 1};
+    squareWall[3].textureCoord = {1, 1};
     
     for(int i = 0; i < 4; i++) {
         squareVi[i].normal = {0,0,1};

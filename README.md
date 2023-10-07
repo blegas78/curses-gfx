@@ -23,9 +23,9 @@ Rasterization using different shaders and three moving light sources
 
 ![cube2](https://github.com/blegas78/curses-gfx/blob/main/docs/images/cube2.png?raw=true)
 
-#### stopwatch
-
-![Stopwatch](https://github.com/blegas78/curses-gfx/blob/main/docs/images/stopwatch.png?raw=true)
+#### cubepng
+Loads a PNG file to be used as a model texture
+![fileLoader](https://github.com/blegas78/curses-gfx/blob/main/docs/images/cubepng.png?raw=true)
 
 
 #### fileLoader
@@ -33,3 +33,7 @@ Uses libassimp to load 3D models
 ![fileLoader](https://github.com/blegas78/curses-gfx/blob/main/docs/images/fileLoader.png?raw=true)
 
 ![fileLoader2](https://github.com/blegas78/curses-gfx/blob/main/docs/images/mario.png?raw=true)
+
+#### stopwatch
+
+![Stopwatch](https://github.com/blegas78/curses-gfx/blob/main/docs/images/stopwatch.png?raw=true)

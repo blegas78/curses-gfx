@@ -586,7 +586,7 @@ int main(int argc, char** argv) {
         
         
         RenderStats mRenderStats = {0,0,0};
-//        mRenderPipeline.setFragmentShader(lightModelFs);
+        mRenderPipeline.setFragmentShader(textureFs);
         for(int m = 0; m < numMeshes; m++) {
             Coordinates3D modelColor = {1.0,1.0,1.0};
             Mat4D model = scaleMatrix(6.0/maxVertex, 6.0/maxVertex, 6.0/maxVertex);
@@ -596,7 +596,7 @@ int main(int argc, char** argv) {
             //        mRenderPipeline.rasterizeShader(fileVertices, &mUniformData, fileIndices, numFileEdges, &modelColor, myVertexShader);
 //            RenderStats mRenderStats2 = mRenderPipeline.rasterizeShader(meshes[m].vi, &mUniformData, meshes[m].numTriangles, &modelColor, myVertexShader);
             mLightParamsAndTexture.texture = &mMaterials[meshes[m].materialId].texture[0];
-            mRenderPipeline.setFragmentShader(textureFs);
+//            mRenderPipeline.setFragmentShader(textureFs);
             RenderStats mRenderStats2 = mRenderPipeline.rasterizeShader(meshes[m].vi, &mUniformData, meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
             
             mRenderStats.timeDrawing += mRenderStats2.timeDrawing;
