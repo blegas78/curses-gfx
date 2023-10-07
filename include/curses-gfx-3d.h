@@ -261,6 +261,7 @@ Coordinates3D perspectiveInterpolateInv(Coordinates3D& a, Coordinates3D& b, doub
 // Rendering
 Coordinates3D clipRGB(Coordinates3D rgb);
 Coordinates3D rgbToHsv( const Coordinates3D& rgb);
+Coordinates3D hsvToRgb(const Coordinates3D& hsvIn);
 Coordinates3D hslToRgb(Coordinates3D hsl);
 void setRGB( const Coordinates2D& pt, const Coordinates3D& rgb);
 void setFrameBufferRGBA(int x, int y, FrameBuffer* fbo, const ColorRGBA& value);

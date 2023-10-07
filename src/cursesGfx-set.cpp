@@ -59,6 +59,82 @@ Coordinates3D rgbToHsv( const Coordinates3D& rgb) {
 	return result;
 }
 
+Coordinates3D hsvToRgb(const Coordinates3D& hsvIn) {
+    double r = 0, g = 0, b = 0;
+    Coordinates3D hsv = hsvIn;
+    if (hsv.y == 0)
+    {
+        r = hsv.z;
+        g = hsv.z;
+        b = hsv.z;
+    }
+    else
+    {
+        int i;
+        double f, p, q, t;
+
+        hsv.x = fmod(hsv.x, 360);
+//        if (hsv.x == 360)
+//            hsv.x = 0;
+//        else
+        hsv.x = hsv.x / 60;
+
+        i = floor(hsv.x);// (int)trunc(hsv.x);
+        f = hsv.x - i;
+
+        p = hsv.z * (1.0 - hsv.y);
+        q = hsv.z * (1.0 - (hsv.y * f));
+        t = hsv.z * (1.0 - (hsv.y * (1.0 - f)));
+
+        switch (i)
+        {
+        case 0:
+            r = hsv.z;
+            g = t;
+            b = p;
+            break;
+
+        case 1:
+            r = q;
+            g = hsv.z;
+            b = p;
+            break;
+
+        case 2:
+            r = p;
+            g = hsv.z;
+            b = t;
+            break;
+
+        case 3:
+            r = p;
+            g = q;
+            b = hsv.z;
+            break;
+
+        case 4:
+            r = t;
+            g = p;
+            b = hsv.z;
+            break;
+
+        default:
+            r = hsv.z;
+            g = p;
+            b = q;
+            break;
+        }
+
+    }
+
+    Coordinates3D rgb;
+    rgb.x = r * 255;
+    rgb.y = g * 255;
+    rgb.z = b * 255;
+
+    return rgb;
+}
+
 // from https://www.programmingalgorithms.com/algorithm/hsl-to-rgb/c/
 float hueToRgb(float v1, float v2, float vH)
 {
@@ -189,16 +265,19 @@ void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
 	Coordinates3D clippedRGB = clipRGB(rgb);
 	Coordinates3D hsl = rgbToHsv(clippedRGB);
 	
-	int hueIndex = floor(hsl.x + 1.5);
-    if(hueIndex > 6) {
-        hueIndex = 1;
-    }
-	
-	if (hsl.y < 0.33) {
-		hueIndex = 7;
-	}
+//	int hueIndex = floor(hsl.x + 1.5);
+//    if(hueIndex > 6) {
+//        hueIndex = 1;
+//    }
+//
+//	if (hsl.y < 0.33) {
+//		hueIndex = 7;
+//	}
+    int colorIndex = floor(hsl.x/6.0*31.0);
+    colorIndex |= (((uint8_t)(hsl.y*7)) << 5) & 0xE0;
+//    colorIndex |= (((uint8_t)(hsl.y*8)) << 5) & 0xE0;
     
-    attron(COLOR_PAIR(hueIndex));
+    attron(COLOR_PAIR(colorIndex));
     struct AsciiLutInfo aLut = asciiLUT[(int)(hsl.z*255)];
     if (aLut.type == 1) {
         attron(WA_DIM);
@@ -214,8 +293,9 @@ void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
         set(pixel, aLut.c);
     }
     
-    attroff(COLOR_PAIR(hueIndex));
+    attroff(COLOR_PAIR(colorIndex));
     return;
+    /*
 	attron(COLOR_PAIR(hueIndex));
 //    attron(COLOR_PAIR(1));
 	
@@ -304,6 +384,7 @@ void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
 	
 	attroff(COLOR_PAIR(hueIndex));
 //    attroff(COLOR_PAIR(1));
+     */
 }
 
 

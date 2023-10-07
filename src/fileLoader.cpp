@@ -46,23 +46,53 @@ void setupTerminal()
     keypad(stdscr, 1); // Allow Function key input and arrow key input
 
     start_color();
-    init_pair(1, COLOR_RED, COLOR_BLACK);
-    init_pair(2, COLOR_YELLOW, COLOR_BLACK);
-    init_pair(3, COLOR_GREEN, COLOR_BLACK);
-    init_pair(4, COLOR_CYAN, COLOR_BLACK);
-    init_pair(5, COLOR_BLUE, COLOR_BLACK);
-    init_pair(6, COLOR_MAGENTA, COLOR_BLACK);
-    init_pair(7, COLOR_WHITE, COLOR_BLACK);
-
-
+    use_default_colors();
+//
+//    init_pair(1, COLOR_RED, COLOR_BLACK);
+//    init_pair(2, COLOR_GREEN, COLOR_BLACK);
+//    init_pair(3, COLOR_CYAN, COLOR_BLACK);
+//    init_pair(4, COLOR_BLUE, COLOR_WHITE);
+//
 //    init_pair(5, COLOR_BLACK, COLOR_RED );
 //    init_pair(6, COLOR_BLACK, COLOR_GREEN );
 //    init_pair(7, COLOR_BLACK, COLOR_CYAN );
 //    init_pair(8, COLOR_WHITE, COLOR_BLUE );
-
+    int line = 0;
+    mvprintw(line++, 0, "ncurses COLORS: %d\n", COLORS);
+    mvprintw(line++, 0, "ncurses COLOR_PAIRS: %d\n", COLOR_PAIRS  );
+    mvprintw(line++, 0, "ncurses has_colors: %d\n", has_colors());
+    mvprintw(line++, 0, "ncurses can_change_color: %d\n", can_change_color());
+    
+    short restoreR[COLORS];
+    short restoreG[COLORS];
+    short restoreB[COLORS];
+    for(short i = 0; i < COLORS; i++) {
+        color_content(i, &restoreR[i], &restoreG[i], &restoreB[i]);
+    }
+    
+    init_pair(0, 0, -1);    // White
+    
+    int numSatLevels = 8;
+    for(int i = 0; i < COLORS; i++) {
+//        int hueIndex = mod((i-1)*numSatLevels,COLORS);
+//        int satIndex = ceil((double)(i-1)/((double)COLORS/(double)(numSatLevels)));
+        int hueIndex = mod(i*numSatLevels,COLORS);
+        int satIndex = ceil((double)i/((double)COLORS/(double)(numSatLevels)));
+        double hue = (double)(hueIndex)/(double)(COLORS) *360.0;
+        double sat = ((double)satIndex)/((double)numSatLevels);
+        Coordinates3D rgb = hsvToRgb({hue, sat, 1});
+        init_color(i, (int)(rgb.x/255.0*1000.0), (int)(rgb.y/255.0*1000.0), (int)(rgb.z/255.0*1000.0));
+        init_pair(i, i, -1);
+    }
+    
+    for(int i = 0; i < COLORS; i++) {
+        
+        attron(COLOR_PAIR(i));
+//        attron(A_DIM);
+        mvaddch(line, i, 'W');
+//        attroff(COLOR_PAIR(i));
+    }
     curs_set(0);    // no cursor
-
-//    atexit(destroy);
 }
 
 void cleanupConsole() {
