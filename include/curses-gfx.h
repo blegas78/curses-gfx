@@ -3,10 +3,7 @@
 
 #include "curses-gfx-types.h"
 
-typedef struct _Coordinates2D {
-    int x;
-    int y;
-} Coordinates2D;
+
 
 
 void drawDotFloat(double x, double y);
@@ -21,6 +18,11 @@ class CursesGfxTerminal {
 private:
     bool configured;
     static int numColors;
+    static int numSatLevels;
+    static int numHueLevels;
+    static int satShift;
+    static int satMask;
+    static int hueMask;
     short* restoreR;
     short* restoreG;
     short* restoreB;

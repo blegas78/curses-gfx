@@ -53,7 +53,7 @@ Coordinates3D rgbToHsv( const Coordinates3D& rgb) {
 		result.y = delta/result.z;
 	}
 	
-	
+    result.x *= 60.0;
 //	result.z = cMax;
 	
 	return result;

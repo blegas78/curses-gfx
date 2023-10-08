@@ -193,6 +193,35 @@ int main(void) {
 		attroff(COLOR_PAIR(2));
 		
         
+        for(int i = 0; i < COLORS; i++) {
+            
+            attron(COLOR_PAIR(i));
+            //        attron(A_DIM);
+            mvaddch(10, i, 'W');
+            //        attroff(COLOR_PAIR(i));
+            
+            attroff(COLOR_PAIR(i));
+        }
+        
+        
+        int y = 0;
+//        for(int j = 0; j < 32; j++) {
+//            CursesGfxTerminal::setRGB({y++, 11}, {255, 255, 255});
+//        }
+        for(int i = 0; i < 8; i++) {
+            for(int j = 0; j < 32; j++)
+            {
+                double hue = ((double)(j)/(double)32)*360.0;
+                double saturation = (double)(i+1)/8;
+                Coordinates3D rgb;
+                rgb = hsvToRgb({ hue, saturation, 1});
+                rgb.x /= 255;
+                rgb.y /= 255;
+                rgb.z /= 255;
+                CursesGfxTerminal::setRGB({y++, 11}, rgb);
+            }
+        }
+        
         
 		int ch;
 		if ((ch = getch()) == 0x1B) {	// Escape

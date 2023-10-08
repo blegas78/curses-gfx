@@ -114,6 +114,8 @@ template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const
     output.vertex = matrixVectorMultiply(uniformInfo->modelViewProjection, input.vertex);
     output.location = matrixVectorMultiply(uniformInfo->modelView, input.vertex);
     output.normal = matrixVectorMultiply(uniformInfo->modelView, input.normal);
+    output.color = input.color;
+    output.textureCoord = input.textureCoord;
 }
 
 typedef struct _CubeVertexInfo {

@@ -1429,7 +1429,7 @@ void RenderPipeline::renderBufferToTerminal() {
 				Coordinates3D clippedRGB = clipRGB(color);
 				Coordinates3D hsl = rgbToHsv(clippedRGB);
 				
-				int hueIndex = floor(hsl.x + 1);
+				int hueIndex = floor(hsl.x/60.0 + 1);
 				
 				if (hsl.y < 0.33) {
 					hueIndex = 7;

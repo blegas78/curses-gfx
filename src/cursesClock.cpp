@@ -10,7 +10,7 @@
 void drawclock(double width, double height, Coordinates2D center, bool miniticks, struct timeval time) {
 	
 	Coordinates2D point1 = center;
-	Coordinates2D point2 = {.x = 25, .y=0};
+	Coordinates2D point2 = {25, 0};
 	
 	
 	time_t rawtime;
@@ -98,7 +98,7 @@ void drawclock(double width, double height, Coordinates2D center, bool miniticks
 
 void drawSecondsDial(double width, double height, Coordinates2D center, bool miniticks, struct timeval time) {
 	Coordinates2D point1 = center;
-	Coordinates2D point2 = {.x = 25, .y=0};
+	Coordinates2D point2 = {25, 0};
 	
 	
 	// grid

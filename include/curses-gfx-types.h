@@ -11,6 +11,17 @@
 #include "curses-gfx.h"
 
 
+typedef struct _Coordinates2D {
+    int x;
+    int y;
+    
+    _Coordinates2D() {}
+    _Coordinates2D( const int& x, const int& y) : x(x), y(y) {}
+    _Coordinates2D( const _Coordinates2D& p) : x(p.x), y(p.y) {}
+    _Coordinates2D operator + (const _Coordinates2D &p) const { return _Coordinates2D(p.x+x, p.y+y); }
+    _Coordinates2D operator * (const double &d) const { return _Coordinates2D(d*(double)x, d*(double)y); }
+} Coordinates2D;
+
 typedef struct _Coordinates2Df {
     double x;
     double y;

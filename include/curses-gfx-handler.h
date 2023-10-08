@@ -208,9 +208,9 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
 //    this->userData = userData;
     BlockRenderer<T> br(this);
     for (int t = 0; t < numTriangles; t++) {
-        scratch[0] = vertexInfo[triangleLayout[t][0]];
-        scratch[1] = vertexInfo[triangleLayout[t][1]];
-        scratch[2] = vertexInfo[triangleLayout[t][2]];
+//        scratch[0] = vertexInfo[triangleLayout[t][0]];
+//        scratch[1] = vertexInfo[triangleLayout[t][1]];
+//        scratch[2] = vertexInfo[triangleLayout[t][2]];
         
         for(int i = 0; i < 3; i++) {
             //            scratch[i].vertex = matrixVectorMultiply(modelView, scratch[i].vertex);
