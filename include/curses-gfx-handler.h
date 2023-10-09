@@ -107,6 +107,7 @@ public:
 	FrameBuffer* fbo;
 	FrameBuffer* depthBuffer;
 	
+    bool backfaceCulling;
 	double depthClearColor;
 	
 	std::queue<pthread_t*> renderThreads;
@@ -255,7 +256,11 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
         for(int i = 2; i < clippedVertexCount; i++) {
 //            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
 //            br.userData = userData;
-            br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
+//            br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
+            if(backfaceCulling)
+                br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
+            else
+                br.triangleFill(&scratchClipped[0], &scratchClipped[i], &scratchClipped[i-1], userData);
         }
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
@@ -337,7 +342,10 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
         for(int i = 2; i < clippedVertexCount; i++) {
 //            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
 //            br.userData = userData;
-            br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
+            if(backfaceCulling)
+                br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
+            else
+                br.triangleFill(&scratchClipped[0], &scratchClipped[i], &scratchClipped[i-1], userData);
         }
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);

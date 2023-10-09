@@ -213,6 +213,8 @@ Mat4D makeWindowTransform(int screenSizeX, int screenSizeY, double characterAspe
 Mat4D rotationFromAngleAndUnitAxis( double radians, Coordinates3D axis);
 Mat4D translationMatrix( double x, double y, double z);
 Mat4D scaleMatrix( double x, double y, double z );
+Mat4D invert3x3Slow( const Mat4D& mat );
+Mat4D transpose( const Mat4D& mat );
 Mat4D projectionMatrixOrtho(double width, double height, double zfar, double znear);
 Mat4D projectionMatrixPerspective(double fov, double aspect, double zfar, double znear);
 void fillPolygonNormals(Polygon4D* polygons, int count);	// 

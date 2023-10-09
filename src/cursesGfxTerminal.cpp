@@ -67,7 +67,7 @@ void CursesGfxTerminal::setupTerminal() {
     init_pair(0, 0, -1);    // White
     
 //    int numSatLevels = 8;
-    int numSatBits = log2(numColors)/2;
+    int numSatBits = log2(numColors)*3/8;
     int numHueBits = log2(numColors) - numSatBits;
     satShift = numHueBits;
     hueMask = ((1 << numHueBits) - 1) & 0xFF;

@@ -10,6 +10,7 @@ RenderPipeline::RenderPipeline() {
 	asTexImage2d(fbo, FBT_RGBA, 1, 1);
 	asTexImage2d(depthBuffer, FBT_DEPTH, 1, 1);
 	depthClearColor = 00;
+    backfaceCulling = true;
 #ifdef FB_SUPPORT
 	setupLinuxFb();
 #endif

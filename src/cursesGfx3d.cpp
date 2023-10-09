@@ -965,6 +965,38 @@ Mat4D scaleMatrix( double x, double y, double z ) {
 	return result;
 }
 
+Mat4D invert3x3Slow( const Mat4D& mat ) {
+    Mat4D result;
+    double det11 = mat.d[1][1]*mat.d[2][2] - mat.d[1][2]*mat.d[2][1];
+    double det12 = mat.d[1][2]*mat.d[2][0] - mat.d[1][0]*mat.d[2][2];
+    double det13 = mat.d[1][0]*mat.d[2][1] - mat.d[1][1]*mat.d[2][0];
+    double det = mat.d[0][0] * det11 + mat.d[0][1] * det12 + mat.d[0][2] * det13;
+    if(det == 0) {
+        return result;  // failure
+    }
+    double invDet = 1.0/det;
+    result.d[0][0] = det11 * invDet;
+    result.d[0][1] = (mat.d[0][2]*mat.d[2][1] - mat.d[0][1]*mat.d[2][2]) * invDet;
+    result.d[0][2] = (mat.d[0][1]*mat.d[1][2] - mat.d[0][2]*mat.d[1][1]) * invDet;
+    result.d[1][0] = det12 * invDet;
+    result.d[1][1] = (mat.d[0][0]*mat.d[2][2] - mat.d[0][2]*mat.d[2][0]) * invDet;
+    result.d[1][2] = (mat.d[1][0]*mat.d[0][2] - mat.d[0][0]*mat.d[1][2]) * invDet;
+    result.d[2][0] = det13 * invDet;
+    result.d[2][1] = (mat.d[2][0]*mat.d[0][1] - mat.d[0][0]*mat.d[2][1]) * invDet;
+    result.d[2][2] = (mat.d[0][0]*mat.d[1][1] - mat.d[1][0]*mat.d[0][1]) * invDet;
+    
+    return result;  // failure
+}
+Mat4D transpose( const Mat4D& mat ) {
+    Mat4D result;
+    for(int i = 0; i < 4; i++) {
+        for(int j = 0; j < 4; j++) {
+            result.d[i][j] = mat.d[j][i];
+        }
+    }
+    return result;
+}
+
 Mat3D matrixMultiply(Mat3D& a, Mat3D& b) {
 	Mat3D result;
 	memset(&result, 0, sizeof(result));
