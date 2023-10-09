@@ -23,6 +23,7 @@
 #include "curses-gfx-3d.h"
 #include "curses-gfx-handler.h"
 #include "curses-gfx-texture.h"
+#include "curses-gfx-loader.h"
 
 /*
  Catch ctrl-c for cleaner exits
@@ -32,21 +33,21 @@ void killPanda(int killSignal) {
     keepRunning = false;
 }
 
-typedef struct _CubeVertexInfo {
-    Coordinates4D vertex;
-    Coordinates4D location;
-    Coordinates3D normal;
-    Coordinates2Df textureCoord;
-    ColorRGBA color;
-//    int materialIndex;  // Do not interpolate this
-} CubeVertexInfo;
+//typedef struct _MeshVertexInfo {
+//    Coordinates4D vertex;
+//    Coordinates4D location;
+//    Coordinates3D normal;
+//    Coordinates2Df textureCoord;
+//    ColorRGBA color;
+////    int materialIndex;  // Do not interpolate this
+//} MeshVertexInfo;
 
-REGISTER_VERTEX_LAYOUT(CubeVertexInfo)
+REGISTER_VERTEX_LAYOUT(MeshVertexInfo)
     MEMBER(location),
     MEMBER(normal),
     MEMBER(textureCoord),
     MEMBER(color)
-END_VERTEX_LAYOUT(CubeVertexInfo)
+END_VERTEX_LAYOUT(MeshVertexInfo)
 
 
 typedef struct _LightParams {
@@ -64,7 +65,7 @@ typedef struct _LightParamsAndTexture {
 
 void lightModelFs(const FragmentInfo& fInfo) {
     Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
-    CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
+    MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     //setRGB(fInfo.pixel, *colorRGB);
     
     
@@ -84,7 +85,7 @@ void lightModelFs(const FragmentInfo& fInfo) {
 
 void textureFs(const FragmentInfo& fInfo) {
     LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
-    CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
+    MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     //setRGB(fInfo.pixel, *colorRGB);
     
     
@@ -108,7 +109,7 @@ void textureFs(const FragmentInfo& fInfo) {
 
 void materialFs(const FragmentInfo& fInfo) {
     LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
-    CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
+    MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     
     Coordinates3D normal = normalizeVectorFast(vertexInfo->normal);
     
@@ -142,7 +143,7 @@ template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const
 
 
 void lightAndTextureShader(const FragmentInfo& fInfo) {
-    CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
+    MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
 
     LightParamsAndTexture* lpt = (LightParamsAndTexture*) fInfo.data;
     LightParams* lights = lpt->lightParams;
@@ -233,164 +234,165 @@ int main(int argc, char** argv) {
         printf("provide input filename as an argument: %s <model.[obj,stl,...]>\n", argv[0]);
         abort();
     }
-    
-    Assimp::Importer importer;
-    std::string objectFilePath = argv[1];
-    std::string objectFileDirectory;
-    const size_t last_slash_idx = objectFilePath.rfind('/');
-    if (std::string::npos != last_slash_idx)
-    {
-        objectFileDirectory = objectFilePath.substr(0, last_slash_idx);
-    }
-
-    const aiScene* scene = importer.ReadFile( objectFilePath,
-//        aiProcess_CalcTangentSpace       |
-        aiProcess_Triangulate            |
-//        aiProcess_JoinIdenticalVertices  |
-                                    aiProcess_FlipUVs |
-        aiProcess_GenSmoothNormals  |
-//                                             aiProcess_MakeLeftHanded |
-//                                             aiProcess_OptimizeMeshes |
-//                                             aiProcess_FlipWindingOrder |
-        aiProcess_SortByPType);
-    
-    if (nullptr == scene) {
-        std::cerr << "Error loading file: " << importer.GetErrorString() << std::endl;
-        return -1;
-      }
-    struct Mesh {
-        CubeVertexInfo* vi;
-        int numTriangles;
-        bool hasTexture;
-        int materialId;
-    };
-    
-    printf("File has %d meshes\n", scene->mNumMeshes);
-//    CubeVertexInfo* fileVertices = NULL;
-    //int numFileEdges = 0;
-    int numMeshes = scene->mNumMeshes;
-    Mesh meshes[numMeshes];
-    for(int m = 0; m < scene->mNumMeshes; m++) {
-        
-        printf(" - mesh[%d] has %d vertices\n", m, scene->mMeshes[m]->mNumVertices);
-//        meshes[m].numTriangles = scene->mMeshes[m]->mNumVertices/3;
-//        meshes[m].vi = new CubeVertexInfo[scene->mMeshes[m]->mNumVertices];
-        
-        printf(" - mesh[%d] has normals:   %d\n", m, scene->mMeshes[m]->HasNormals());
-        printf(" - mesh[%d] has faces  :   %d\n", m, scene->mMeshes[m]->mNumFaces);
-        printf(" - mesh[%d] has texcoords(0): %d\n", m, scene->mMeshes[m]->HasTextureCoords(0));
-        printf(" - mesh[%d] has colors(0): %d\n", m, scene->mMeshes[m]->HasVertexColors(0));
-        //        printf(" - texcooords[0][0] name: %s\n", scene->mMeshes[0]->mTextureCoordsNames[0][0].C_Str());
-        
-        printf(" - - Allocated!\n");
-        int numTriangles = 0;
-        for(int f = 0; f < scene->mMeshes[m]->mNumFaces; f++) {
-            if(scene->mMeshes[m]->mFaces[f].mNumIndices == 3) {
-                numTriangles++;
-            }
-        }
-        printf(" - mesh[%d] has triangles  :   %d\n", m, numTriangles);
-        meshes[m].numTriangles = numTriangles;
-        meshes[m].vi = new CubeVertexInfo[numTriangles*3];
-        
-        int i = 0;
-        for(int f = 0; f < scene->mMeshes[m]->mNumFaces; f++) {
-            aiFace face = scene->mMeshes[m]->mFaces[f];
-            if(face.mNumIndices == 3) {
-                for(int fi = 0; fi < face.mNumIndices; fi++) {
-                    meshes[m].vi[i].vertex.x = scene->mMeshes[m]->mVertices[face.mIndices[fi]].x;
-                    meshes[m].vi[i].vertex.y = scene->mMeshes[m]->mVertices[face.mIndices[fi]].y;
-                    meshes[m].vi[i].vertex.z = scene->mMeshes[m]->mVertices[face.mIndices[fi]].z;
-                    meshes[m].vi[i].vertex.w = 1;
-                    
-                    meshes[m].vi[i].normal.x = scene->mMeshes[m]->mNormals[face.mIndices[fi]].x;
-                    meshes[m].vi[i].normal.y = scene->mMeshes[m]->mNormals[face.mIndices[fi]].y;
-                    meshes[m].vi[i].normal.z = scene->mMeshes[m]->mNormals[face.mIndices[fi]].z;
-                    
-                    if(scene->mMeshes[m]->HasTextureCoords(0)) {
-                        meshes[m].vi[i].textureCoord.x = scene->mMeshes[m]->mTextureCoords[0][face.mIndices[fi]].x;
-                        meshes[m].vi[i].textureCoord.y = scene->mMeshes[m]->mTextureCoords[0][face.mIndices[fi]].y;
-                    }
-                    i++;
-                }
-            }
-        }
-        
-        
-        meshes[m].materialId = scene->mMeshes[m]->mMaterialIndex;
-        printf("meshes[%d].materialId = %d\n", m, meshes[m].materialId);
-        
-    }
-    struct Material {
-        Texture* texture;
-        int numTextures;
-        bool hasDiffuseColor;
-        Coordinates3D colorDiffuse;
-    };
-    int numMaterials = scene->mNumMaterials;
-    Material mMaterials[numMaterials];
-//    Texture *mTextureDiffuse = new Texture[scene->mNumMaterials];   // Likely incorrect
-    printf("Scene has textures: %d\n", scene->HasTextures());
-    for(int i = 0; i < scene->mNumMaterials; i++) {
-        aiMaterial* material = scene->mMaterials[i];
-//        printf(" - Name : %s\n", scene->mMaterials[i]->GetName().C_Str());
-        printf(" - Material : %d num props:%d\n", i, material->mNumProperties);
-
-        aiPropertyTypeInfo pdas;
-        for(int p = 0; p < material->mNumProperties; p++) {
-//            printf(" - - Type: %d\n", material->mProperties[p]->mType);
-//            printf(" - - Name: %s\n", material->mProperties[p]->mKey.C_Str());
-//            printf(" - - Semantic: %d\n", material->mProperties[p]->mSemantic);
-//            printf(" - - Data Length: %d\n", material->mProperties[p]->mDataLength);
-//            printf(" - - mIndex %d\n", material->mProperties[p]->mIndex);
-            
-//            ai_real fArray[
-//            switch (material->mProperties[p]->mType) {
-//                case aiPropertyTypeInfo::aiPTI_Float:
-//                    aiGetMaterialFloatArray(material, AI_MATKEY_COLOR_DIFFUSE, material->mProperties[p]->mType, )
-//                    break;
+    Scene mScene;
+    mScene.load(argv[1]);
+//    Assimp::Importer importer;
+//    std::string objectFilePath = argv[1];
+//    std::string objectFileDirectory;
+//    const size_t last_slash_idx = objectFilePath.rfind('/');
+//    if (std::string::npos != last_slash_idx)
+//    {
+//        objectFileDirectory = objectFilePath.substr(0, last_slash_idx);
+//    }
 //
-//                default:
-//                    break;
+//    const aiScene* scene = importer.ReadFile( objectFilePath,
+////        aiProcess_CalcTangentSpace       |
+//        aiProcess_Triangulate            |
+////        aiProcess_JoinIdenticalVertices  |
+//                                    aiProcess_FlipUVs |
+//        aiProcess_GenSmoothNormals  |
+////                                             aiProcess_MakeLeftHanded |
+////                                             aiProcess_OptimizeMeshes |
+////                                             aiProcess_FlipWindingOrder |
+//        aiProcess_SortByPType);
+//
+//    if (nullptr == scene) {
+//        std::cerr << "Error loading file: " << importer.GetErrorString() << std::endl;
+//        return -1;
+//      }
+////    struct Mesh {
+////        MeshVertexInfo* vi;
+////        int numTriangles;
+////        bool hasTexture;
+////        int materialId;
+////    };
+//
+//    printf("File has %d meshes\n", scene->mNumMeshes);
+////    MeshVertexInfo* fileVertices = NULL;
+//    //int numFileEdges = 0;
+//    int numMeshes = scene->mNumMeshes;
+//    Mesh meshes[numMeshes];
+//    for(int m = 0; m < scene->mNumMeshes; m++) {
+//
+//        printf(" - mesh[%d] has %d vertices\n", m, scene->mMeshes[m]->mNumVertices);
+////        meshes[m].numTriangles = scene->mMeshes[m]->mNumVertices/3;
+////        meshes[m].vi = new MeshVertexInfo[scene->mMeshes[m]->mNumVertices];
+//
+//        printf(" - mesh[%d] has normals:   %d\n", m, scene->mMeshes[m]->HasNormals());
+//        printf(" - mesh[%d] has faces  :   %d\n", m, scene->mMeshes[m]->mNumFaces);
+//        printf(" - mesh[%d] has texcoords(0): %d\n", m, scene->mMeshes[m]->HasTextureCoords(0));
+//        printf(" - mesh[%d] has colors(0): %d\n", m, scene->mMeshes[m]->HasVertexColors(0));
+//        //        printf(" - texcooords[0][0] name: %s\n", scene->mMeshes[0]->mTextureCoordsNames[0][0].C_Str());
+//
+//        printf(" - - Allocated!\n");
+//        int numTriangles = 0;
+//        for(int f = 0; f < scene->mMeshes[m]->mNumFaces; f++) {
+//            if(scene->mMeshes[m]->mFaces[f].mNumIndices == 3) {
+//                numTriangles++;
 //            }
-        }
-        
-        aiColor4D diffuse;
-        float c[4];
-        if(AI_SUCCESS == aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &diffuse)) {
-            printf(" - - - Diffuse color: (%f,%f,%f,%f)\n", diffuse.r, diffuse.g, diffuse.b, diffuse.a);
-            mMaterials[i].hasDiffuseColor = true;
-            mMaterials[i].colorDiffuse = {diffuse.r, diffuse.g, diffuse.b};
-        }
-        
-        printf(" - Texture count : %d\n", material->GetTextureCount(aiTextureType_DIFFUSE));
-//        for(int t = 0; t < scene->mMaterials[i]->GetTextureCount(aiTextureType_DIFFUSE); t++) {
-//            scene->mMaterials[i]->
 //        }
-        mMaterials[i].numTextures = material->GetTextureCount(aiTextureType_DIFFUSE);
-        if(mMaterials[i].numTextures > 0) {
-            mMaterials[i].texture = new Texture[mMaterials[i].numTextures];
-            //        if(material->GetTextureCount(aiTextureType_DIFFUSE)) {
-            for(int t = 0; t < mMaterials[i].numTextures; t++) {
-                aiString textureName;
-                material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, t), textureName);
-                std::string textureFullPath = objectFileDirectory + "/" + textureName.C_Str();
-                printf(" = Texture name: %s\n", textureFullPath.c_str());
-                if(mMaterials[i].texture[t].loadPng(textureFullPath.c_str()))
-                {
-                    printf(" ---- Error loading texture\n");
-                }
-                
-                printf(" Texture size: (%d,%d)\n", mMaterials[i].texture[t].width, mMaterials[i].texture[t].height);
-                
-            }
-        } else {
-            mMaterials[i].texture = NULL;
-        }
-        
-    }
-    
-    printf("Loaded!\n");
+//        printf(" - mesh[%d] has triangles  :   %d\n", m, numTriangles);
+//        meshes[m].numTriangles = numTriangles;
+//        meshes[m].vi = new MeshVertexInfo[numTriangles*3];
+//
+//        int i = 0;
+//        for(int f = 0; f < scene->mMeshes[m]->mNumFaces; f++) {
+//            aiFace face = scene->mMeshes[m]->mFaces[f];
+//            if(face.mNumIndices == 3) {
+//                for(int fi = 0; fi < face.mNumIndices; fi++) {
+//                    meshes[m].vi[i].vertex.x = scene->mMeshes[m]->mVertices[face.mIndices[fi]].x;
+//                    meshes[m].vi[i].vertex.y = scene->mMeshes[m]->mVertices[face.mIndices[fi]].y;
+//                    meshes[m].vi[i].vertex.z = scene->mMeshes[m]->mVertices[face.mIndices[fi]].z;
+//                    meshes[m].vi[i].vertex.w = 1;
+//
+//                    meshes[m].vi[i].normal.x = scene->mMeshes[m]->mNormals[face.mIndices[fi]].x;
+//                    meshes[m].vi[i].normal.y = scene->mMeshes[m]->mNormals[face.mIndices[fi]].y;
+//                    meshes[m].vi[i].normal.z = scene->mMeshes[m]->mNormals[face.mIndices[fi]].z;
+//
+//                    if(scene->mMeshes[m]->HasTextureCoords(0)) {
+//                        meshes[m].vi[i].textureCoord.x = scene->mMeshes[m]->mTextureCoords[0][face.mIndices[fi]].x;
+//                        meshes[m].vi[i].textureCoord.y = scene->mMeshes[m]->mTextureCoords[0][face.mIndices[fi]].y;
+//                    }
+//                    i++;
+//                }
+//            }
+//        }
+//
+//
+//        meshes[m].materialId = scene->mMeshes[m]->mMaterialIndex;
+//        printf("meshes[%d].materialId = %d\n", m, meshes[m].materialId);
+//
+//    }
+////    struct Material {
+////        Texture* texture;
+////        int numTextures;
+////        bool hasDiffuseColor;
+////        Coordinates3D colorDiffuse;
+////    };
+//    int numMaterials = scene->mNumMaterials;
+//    Material mMaterials[numMaterials];
+////    Texture *mTextureDiffuse = new Texture[scene->mNumMaterials];   // Likely incorrect
+//    printf("Scene has textures: %d\n", scene->HasTextures());
+//    for(int i = 0; i < scene->mNumMaterials; i++) {
+//        aiMaterial* material = scene->mMaterials[i];
+////        printf(" - Name : %s\n", scene->mMaterials[i]->GetName().C_Str());
+//        printf(" - Material : %d num props:%d\n", i, material->mNumProperties);
+//
+//        aiPropertyTypeInfo pdas;
+//        for(int p = 0; p < material->mNumProperties; p++) {
+////            printf(" - - Type: %d\n", material->mProperties[p]->mType);
+////            printf(" - - Name: %s\n", material->mProperties[p]->mKey.C_Str());
+////            printf(" - - Semantic: %d\n", material->mProperties[p]->mSemantic);
+////            printf(" - - Data Length: %d\n", material->mProperties[p]->mDataLength);
+////            printf(" - - mIndex %d\n", material->mProperties[p]->mIndex);
+//
+////            ai_real fArray[
+////            switch (material->mProperties[p]->mType) {
+////                case aiPropertyTypeInfo::aiPTI_Float:
+////                    aiGetMaterialFloatArray(material, AI_MATKEY_COLOR_DIFFUSE, material->mProperties[p]->mType, )
+////                    break;
+////
+////                default:
+////                    break;
+////            }
+//        }
+//
+//        aiColor4D diffuse;
+//        float c[4];
+//        if(AI_SUCCESS == aiGetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE, &diffuse)) {
+//            printf(" - - - Diffuse color: (%f,%f,%f,%f)\n", diffuse.r, diffuse.g, diffuse.b, diffuse.a);
+//            mMaterials[i].hasDiffuseColor = true;
+//            mMaterials[i].colorDiffuse = {diffuse.r, diffuse.g, diffuse.b};
+//        }
+//
+//        printf(" - Texture count : %d\n", material->GetTextureCount(aiTextureType_DIFFUSE));
+////        for(int t = 0; t < scene->mMaterials[i]->GetTextureCount(aiTextureType_DIFFUSE); t++) {
+////            scene->mMaterials[i]->
+////        }
+//        mMaterials[i].numTextures = material->GetTextureCount(aiTextureType_DIFFUSE);
+//        if(mMaterials[i].numTextures > 0) {
+//            mMaterials[i].textures = new Texture[mMaterials[i].numTextures];
+//            //        if(material->GetTextureCount(aiTextureType_DIFFUSE)) {
+//            for(int t = 0; t < mMaterials[i].numTextures; t++) {
+//                aiString textureName;
+//                material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, t), textureName);
+//                std::string textureFullPath = objectFileDirectory + "/" + textureName.C_Str();
+//                printf(" = Texture name: %s\n", textureFullPath.c_str());
+//                if(mMaterials[i].textures[t].loadPng(textureFullPath.c_str()))
+//                {
+//                    printf(" ---- Error loading texture\n");
+//                }
+//
+//                printf(" Texture size: (%d,%d)\n", mMaterials[i].textures[t].width, mMaterials[i].textures[t].height);
+//
+//            }
+//        } else {
+//            mMaterials[i].textures = NULL;
+//        }
+//
+//    }
+//
+//    printf("Loaded!\n");
 //        return 0;
     
 //    for(int t = 0; t < meshes[0].numTriangles; t++) {
@@ -399,10 +401,10 @@ int main(int argc, char** argv) {
     
     double minVertex = 1e100;
     double maxVertex = 0;
-    for(int m = 0; m < numMeshes; m++) {
-        for(int i = 0; i < meshes[m].numTriangles*3; i++) {
-            minVertex = fmin(fabs(meshes[m].vi[i].vertex.x), fmin(fabs(meshes[m].vi[i].vertex.y), fmin(fabs(meshes[m].vi[i].vertex.z), minVertex)));
-            maxVertex = fmax(fabs(meshes[m].vi[i].vertex.x), fmax(fabs(meshes[m].vi[i].vertex.y), fmax(fabs(meshes[m].vi[i].vertex.z), maxVertex)));
+    for(int m = 0; m < mScene.numMeshes; m++) {
+        for(int i = 0; i < mScene.meshes[m].numTriangles*3; i++) {
+            minVertex = fmin(fabs(mScene.meshes[m].vi[i].vertex.x), fmin(fabs(mScene.meshes[m].vi[i].vertex.y), fmin(fabs(mScene.meshes[m].vi[i].vertex.z), minVertex)));
+            maxVertex = fmax(fabs(mScene.meshes[m].vi[i].vertex.x), fmax(fabs(mScene.meshes[m].vi[i].vertex.y), fmax(fabs(mScene.meshes[m].vi[i].vertex.z), maxVertex)));
         }
     }
 //    return 0;
@@ -564,7 +566,7 @@ int main(int argc, char** argv) {
         
         
         RenderStats mRenderStats = {0,0,0};
-        for(int m = 0; m < numMeshes; m++) {
+        for(int m = 0; m < mScene.numMeshes; m++) {
             Coordinates3D modelColor = {1.0,1.0,1.0};
             Mat4D model = scaleMatrix(6.0/maxVertex, 6.0/maxVertex, 6.0/maxVertex);
             UniformInfo mUniformData;
@@ -574,20 +576,20 @@ int main(int argc, char** argv) {
 //            RenderStats mRenderStats2 = mRenderPipeline.rasterizeShader(meshes[m].vi, &mUniformData, meshes[m].numTriangles, &modelColor, myVertexShader);
             
             RenderStats mRenderStats2;
-            if(mMaterials[meshes[m].materialId].numTextures > 0) {
+            if(mScene.materials[mScene.meshes[m].materialId].numTextures > 0) {
                 mRenderPipeline.setFragmentShader(textureFs);
-                mLightParamsAndTexture.texture = &mMaterials[meshes[m].materialId].texture[0];
+                mLightParamsAndTexture.texture = &mScene.materials[mScene.meshes[m].materialId].textures[0];
                 //            mRenderPipeline.setFragmentShader(textureFs);
-                mRenderStats2 = mRenderPipeline.rasterizeShader(meshes[m].vi, &mUniformData, meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
+                mRenderStats2 = mRenderPipeline.rasterizeShader(mScene.meshes[m].vi, &mUniformData, mScene.meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
             } else {
-                if(mMaterials[meshes[m].materialId].hasDiffuseColor) {
-                    mLightParamsAndTexture.colorDiffuse = mMaterials[meshes[m].materialId].colorDiffuse;
+                if(mScene.materials[mScene.meshes[m].materialId].hasDiffuseColor) {
+                    mLightParamsAndTexture.colorDiffuse = mScene.materials[mScene.meshes[m].materialId].colorDiffuse;
                 } else {
                     mLightParamsAndTexture.colorDiffuse = {1,1,1};
                 }
                 
                 mRenderPipeline.setFragmentShader(materialFs);
-                mRenderStats2 = mRenderPipeline.rasterizeShader(meshes[m].vi, &mUniformData, meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
+                mRenderStats2 = mRenderPipeline.rasterizeShader(mScene.meshes[m].vi, &mUniformData, mScene.meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
             }
             
             mRenderStats.timeDrawing += mRenderStats2.timeDrawing;
@@ -707,9 +709,6 @@ int main(int argc, char** argv) {
 
     }
     
-    if(meshes[0].vi) {
-        delete [] meshes[0].vi;
-    }
     return 0;
 };
 

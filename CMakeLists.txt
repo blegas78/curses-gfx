@@ -58,8 +58,8 @@ endif()
 project(curses-gfx)
 set(LIBNAME cursesgfx)
 
-find_package(LibPng REQUIRED)
-find_package(LibAssimp)
+find_package(PNG REQUIRED)
+find_package(ASSIMP)
 
 
 
@@ -83,14 +83,10 @@ find_package(Threads REQUIRED)
 
 include_directories(include)
 if(PNG_FOUND)
+#    message(" ----- ${PNG_INCLUDE_DIR}")
 	include_directories(${PNG_INCLUDE_DIR})
-	message(" ----- ${PNG_INCLUDE_DIR}")
 endif(PNG_FOUND)
-#if(ASSIMP_FOUND)
-#	include_directories(${ASSIMP_INCLUDE_DIR})
-	message(" ----- ${ASSIMP_INCLUDE_DIR}")
-	message(" ----- ${ASSIMP_LIBRARY}")
-#endif(ASSIMP_FOUND)
+
 
 include(CheckIncludeFileCXX)
 CHECK_INCLUDE_FILE_CXX("linux/fb.h" FB_EXISTS)
@@ -105,7 +101,7 @@ if(EXISTS /home/pi/rpi-rgb-led-matrix)
 	
 endif()
 
-
+set(DEPENDENCIES ${DEPENDENCIES} ncurses ${CMAKE_THREAD_LIBS_INIT} ${PNG_LIBRARY})
 
 set(c_sources src/cursesGfx3d.cpp
                       src/cursesGfx-drawPolygon.cpp
@@ -126,6 +122,12 @@ set(c_headers  include/curses-gfx-3d.h
         include/curses-gfx-png-loader.h
         include/curses-gfx-types.h
         )
+        
+if(ASSIMP_FOUND)
+set(c_sources ${c_sources} src/cursesGfxLoader.cpp )
+set(c_headers ${c_headers} include/curses-gfx-loader.h )
+set(DEPENDENCIES ${DEPENDENCIES} ${ASSIMP_LIBRARY})
+endif(ASSIMP_FOUND)
 set(c_sources ${c_sources} ${c_headers} )
 
 # Libraries:
@@ -137,7 +139,7 @@ set_target_properties(${LIBNAME}-static PROPERTIES OUTPUT_NAME "${LIBNAME}")
 set_target_properties(${LIBNAME} PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(${LIBNAME}-static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
-target_link_libraries(${LIBNAME} ncurses ${CMAKE_THREAD_LIBS_INIT} ${PNG_LIBRARY})
+target_link_libraries(${LIBNAME} ${DEPENDENCIES})
 
 
 new_install( ${LIBNAME} )

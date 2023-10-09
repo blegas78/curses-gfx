@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <mutex>
 
-#include "curses-gfx.h"
+//#include "curses-gfx.h"
 
 
 typedef struct _Coordinates2D {
