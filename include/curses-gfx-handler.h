@@ -229,12 +229,22 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
             // Give to a user-defined shader which produces user-defined struct of vertex attributes
         }
         
+        
+        vertexShader(uniformInfo, scratch[0],  vertexInfo[triangleLayout[t][0]]);
+        if(backfaceCulling) {
+            vertexShader(uniformInfo, scratch[1],  vertexInfo[triangleLayout[t][1]]);
+            vertexShader(uniformInfo, scratch[2],  vertexInfo[triangleLayout[t][2]]);
+        } else {
+            vertexShader(uniformInfo, scratch[2],  vertexInfo[triangleLayout[t][1]]);   // indices are flipped
+            vertexShader(uniformInfo, scratch[1],  vertexInfo[triangleLayout[t][2]]);
+        }
+        
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
         before = now;
         mRenderStats.timeVertexShading += float_ms.count()/1000.0;
         
-        // Then.. clip geometry?
+        // Then.. clip geometry
         clipPolygon(scratch, 3, scratchClipped, clippedVertexCount);
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
@@ -246,21 +256,11 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
 //            scratch[i].vertex = matrixVectorMultiply(viewport, scratch[i].vertex);
             scratchClipped[i].vertex = matrixVectorMultiply(viewport, scratchClipped[i].vertex);
         }
-//        now = std::chrono::high_resolution_clock::now();
-//        float_ms = (now - before);
-//        before = now;
-//        mRenderStats.timeVertexShading += float_ms.count()/1000.0;
         
         
 //            triangleFill(&scratch[0], &scratch[1], &scratch[2]);
         for(int i = 2; i < clippedVertexCount; i++) {
-//            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
-//            br.userData = userData;
-//            br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
-            if(backfaceCulling)
                 br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
-            else
-                br.triangleFill(&scratchClipped[0], &scratchClipped[i], &scratchClipped[i-1], userData);
         }
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
@@ -312,8 +312,13 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
 //        }
         
         vertexShader(uniformInfo, scratch[0],  *vertexInfo++);
-        vertexShader(uniformInfo, scratch[1],  *vertexInfo++);
-        vertexShader(uniformInfo, scratch[2],  *vertexInfo++);
+        if(backfaceCulling) {
+            vertexShader(uniformInfo, scratch[1],  *vertexInfo++);
+            vertexShader(uniformInfo, scratch[2],  *vertexInfo++);
+        } else {
+            vertexShader(uniformInfo, scratch[2],  *vertexInfo++);
+            vertexShader(uniformInfo, scratch[1],  *vertexInfo++);
+        }
         
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
@@ -342,10 +347,10 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
         for(int i = 2; i < clippedVertexCount; i++) {
 //            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
 //            br.userData = userData;
-            if(backfaceCulling)
+//            if(!backfaceCulling)
                 br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
-            else
-                br.triangleFill(&scratchClipped[0], &scratchClipped[i], &scratchClipped[i-1], userData);
+//            else
+//                br.triangleFill(&scratchClipped[0], &scratchClipped[i], &scratchClipped[i-1], userData);
         }
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
