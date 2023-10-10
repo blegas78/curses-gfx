@@ -9,6 +9,8 @@
 #include <chrono>
 #include <thread>
 
+#include <unistd.h>
+
 //#ifdef FB_SUPPORT
 //#include <linux/fb.h>
 //#include <sys/ioctl.h>
@@ -45,59 +47,82 @@ typedef struct _RenderStats {
 } RenderStats;
 
 class RasterizerThreadPool {
-public:
-    static int numberRenderThreads;
-    static std::list<std::future<void>> threadStatus;
-    
-    static void setRenderThreadCount(int numberOfThreads) {
-        numberRenderThreads = numberOfThreads;
-    };
-    
-    static void waitThreads(int threadCount) {
-
-        while(threadStatus.size() > threadCount) {
-            for(std::list<std::future<void>>::iterator it = threadStatus.begin(); it != threadStatus.end(); it++) {
-                if((*it).wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-                {
-                    threadStatus.erase(it);
-                    it = threadStatus.begin();
-//                    break;
-                }
-            }
-            if(threadStatus.size() > threadCount) {
-                std::this_thread::sleep_for(std::chrono::nanoseconds(10));
-            }
-        }
-    }
-    
-    static void busyWait() {
-        waitThreads(numberRenderThreads - 1);
-    }
-    
-    ~RasterizerThreadPool() {
-        //waitThreads(0);
-    }
-};
-
-
-
-class CursesGfxHandler {
 private:
-	pthread_t* threads;
-	pthread_mutex_t mutex;
-	pthread_mutex_t condMutex;
-	pthread_cond_t cond;
-	
-	int totalThreads;
-	bool busyThreads;
-	
+    void ThreadLoop();
+
+    int activeThreadCount;
+    bool should_terminate;           // Tells threads to stop looking for jobs
+    std::mutex queue_mutex;                  // Prevents data races to the job queue
+    std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination
+    std::mutex busy_mutex;                  // Prevents data races to the job queue
+    std::condition_variable mutex_cv_busy; // Allows threads to wait on new jobs or termination
+    std::vector<std::thread> threads;
+//    std::queue<std::function<void()>> jobs;
+    std::queue<std::pair<std::function<void(void*)>,void*>> jobs;
+    
 public:
-	CursesGfxHandler();
-	~CursesGfxHandler();
-	
-	void setTotalThreads(int numthreads);
-	
+//    static int numberRenderThreads;
+//    static std::list<std::future<void>> threadStatus;
+//    
+//    static void setRenderThreadCount(int numberOfThreads) {
+//        numberRenderThreads = numberOfThreads;
+//    };
+//
+//    static void waitThreads(int threadCount) {
+//
+//        while(threadStatus.size() > threadCount) {
+//            for(std::list<std::future<void>>::iterator it = threadStatus.begin(); it != threadStatus.end(); it++) {
+//                if((*it).wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+//                {
+//                    threadStatus.erase(it);
+//                    it = threadStatus.begin();
+////                    break;
+//                }
+//            }
+//            if(threadStatus.size() > threadCount) {
+//                std::this_thread::sleep_for(std::chrono::nanoseconds(10));
+//            }
+//        }
+//    }
+//
+////    static void busyWait() {
+////        waitThreads(numberRenderThreads - 1);
+////
+////    }
+//
+//    ~RasterizerThreadPool() {
+//        //waitThreads(0);
+//    }
+    
+    // Following this: https://stackoverflow.com/questions/15752659/thread-pooling-in-c11
+    
+    void Start(uint32_t numThreads);
+//    void QueueJob(const std::function<void()>& job);
+    void QueueJob(const std::function<void(void*)>& job, void* data);
+    void Stop();
+    bool busy();
+    void busyWait();
 };
+
+
+
+//class CursesGfxHandler {
+//private:
+//	pthread_t* threads;
+//	pthread_mutex_t mutex;
+//	pthread_mutex_t condMutex;
+//	pthread_cond_t cond;
+//
+//	int totalThreads;
+//	bool busyThreads;
+//
+//public:
+//	CursesGfxHandler();
+//	~CursesGfxHandler();
+//
+//	void setTotalThreads(int numthreads);
+//
+//};
 
 
 //template <class T> void clipPolygon(T* input, int inputCount, T* output, int& outputCountResult);
@@ -110,6 +135,7 @@ public:
     bool backfaceCulling;
 	double depthClearColor;
 	
+    RasterizerThreadPool mRasterizerThreadPool;
 	std::queue<pthread_t*> renderThreads;
 	
 //	DepthBuffer tempD;
@@ -208,25 +234,11 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
     
 //    this->userData = userData;
     BlockRenderer<T> br(this);
+    br.rtp = &mRasterizerThreadPool;
     for (int t = 0; t < numTriangles; t++) {
-//        scratch[0] = vertexInfo[triangleLayout[t][0]];
-//        scratch[1] = vertexInfo[triangleLayout[t][1]];
-//        scratch[2] = vertexInfo[triangleLayout[t][2]];
         
         for(int i = 0; i < 3; i++) {
-            //            scratch[i].vertex = matrixVectorMultiply(modelView, scratch[i].vertex);
-            //            scratch[i].location = scratch[i].vertex;
-            //            scratch[i].normal = matrixVectorMultiply(modelView, scratch[i].normal);
-            //            scratch[i].vertex = matrixVectorMultiply(projection, scratch[i].vertex);
-            //            vertexShader = (void*)myVertexShader;
-            //            myVertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
-            
             vertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
-            //            scratch[i].vertex.y = -scratch[i].vertex.y;
-            
-            // For every vertex, perform a vertex shading:
-            // Should be able to take inputs from a set of custom VertexInformation like model, projection, view matrics
-            // Give to a user-defined shader which produces user-defined struct of vertex attributes
         }
         
         
@@ -270,6 +282,7 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
 
     }
 //    RasterizerThreadPool::busyWait();   // finish rendering
+//    mRasterizerThreadPool.busyWait();
     return mRenderStats;
 }
 
@@ -290,26 +303,8 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
     
 //    this->userData = userData;
     BlockRenderer<T> br(this);
+    br.rtp = &mRasterizerThreadPool;
     for (int t = 0; t < numTriangles; t++) {
-//        scratch[0] = vertexInfo[triangleLayout[t][0]];
-//        scratch[1] = vertexInfo[triangleLayout[t][1]];
-//        scratch[2] = vertexInfo[triangleLayout[t][2]];
-//
-//        for(int i = 0; i < 3; i++) {
-//            //            scratch[i].vertex = matrixVectorMultiply(modelView, scratch[i].vertex);
-//            //            scratch[i].location = scratch[i].vertex;
-//            //            scratch[i].normal = matrixVectorMultiply(modelView, scratch[i].normal);
-//            //            scratch[i].vertex = matrixVectorMultiply(projection, scratch[i].vertex);
-//            //            vertexShader = (void*)myVertexShader;
-//            //            myVertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
-//
-//            vertexShader(uniformInfo, scratch[i], vertexInfo[triangleLayout[t][i]]);
-//            //            scratch[i].vertex.y = -scratch[i].vertex.y;
-//
-//            // For every vertex, perform a vertex shading:
-//            // Should be able to take inputs from a set of custom VertexInformation like model, projection, view matrics
-//            // Give to a user-defined shader which produces user-defined struct of vertex attributes
-//        }
         
         vertexShader(uniformInfo, scratch[0],  *vertexInfo++);
         if(backfaceCulling) {
@@ -345,12 +340,7 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
         
 //            triangleFill(&scratch[0], &scratch[1], &scratch[2]);
         for(int i = 2; i < clippedVertexCount; i++) {
-//            triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i]);
-//            br.userData = userData;
-//            if(!backfaceCulling)
                 br.triangleFill(&scratchClipped[0], &scratchClipped[i-1], &scratchClipped[i], userData);
-//            else
-//                br.triangleFill(&scratchClipped[0], &scratchClipped[i], &scratchClipped[i-1], userData);
         }
         now = std::chrono::high_resolution_clock::now();
         float_ms = (now - before);
@@ -360,6 +350,7 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
 
     }
 //    RasterizerThreadPool::busyWait();   // finish rendering
+//    mRasterizerThreadPool.busyWait();
     return mRenderStats;
 }
 
@@ -402,7 +393,7 @@ void baryInterpolate(T& output, const T& input, const T& input2, const T& input3
 //std::list<std::future<void>> TriangleRasterizer::threadStatus;
 //int TriangleRasterizer::numberRenderThreads = 1;
 
-template <class T> class BlockRenderer : public RasterizerThreadPool {
+template <class T> class BlockRenderer {
 private:
 //    static int numberRenderThreads;
     struct RenderInfo {
@@ -435,10 +426,12 @@ private:
     };
     
     
-    static void renderThread(RenderInfo rip) {
+//    static void renderThread(RenderInfo rip) {
+      static void renderThread(void* data) {
+        RenderInfo* rip = (RenderInfo*)data;  // TODO make this not another copy
 //        RenderInfo* ri = ;
-        Coordinates2D pt = rip.pt;
-        //BlockRenderer<T>* This = (BlockRenderer<T>*) rip.This;
+        Coordinates2D pt = rip->pt;
+        //BlockRenderer<T>* This = (BlockRenderer<T>*) rip->This;
         int xp;
         int yp;
         double alpha, beta, gamma;
@@ -447,37 +440,41 @@ private:
         Coordinates2D ipt;
         
         T fragment;
-        rip.f1 = regist(rip.fragment1);
-        rip.f2 = regist(rip.fragment2);
-        rip.f3 = regist(rip.fragment3);
+        rip->f1 = regist(rip->fragment1);
+        rip->f2 = regist(rip->fragment2);
+        rip->f3 = regist(rip->fragment3);
         auto output = regist(fragment);
-        for(ipt.y = pt.y; ipt.y < pt.y + rip.q; ipt.y++)
+        for(ipt.y = pt.y; ipt.y < pt.y + rip->q; ipt.y++)
         {
             yp = ipt.y << 4;
-            for(ipt.x = pt.x; ipt.x < pt.x + rip.q; ipt.x++)
+            for(ipt.x = pt.x; ipt.x < pt.x + rip->q; ipt.x++)
             {
                 xp = ipt.x << 4;
-                alpha = (double)(xp*rip.Y2 + rip.aX2Y3mX3Y2 + rip.X3*yp - xp*rip.Y3 - rip.X2*yp)*rip.A;
-                beta = (double)(rip.X1*yp + xp*rip.Y3 + rip.bX3Y1mX1Y3 - xp*rip.Y1 - rip.X3*yp)*rip.A;
+                alpha = (double)(xp*rip->Y2 + rip->aX2Y3mX3Y2 + rip->X3*yp - xp*rip->Y3 - rip->X2*yp)*rip->A;
+                beta = (double)(rip->X1*yp + xp*rip->Y3 + rip->bX3Y1mX1Y3 - xp*rip->Y1 - rip->X3*yp)*rip->A;
                 gamma = 1.0 - alpha - beta;
                 
-                correctInvDepth = rip.invDepth1 * alpha + rip.invDepth2 * beta + rip.invDepth3 * gamma;
-                pBaryDivisor = 1.0/(alpha*rip.invW1 + beta*rip.invW2 + gamma*rip.invW3);
-                alpha *= rip.invW1 * pBaryDivisor;
-                beta  *= rip.invW2 * pBaryDivisor;
-                gamma *= rip.invW3 * pBaryDivisor;
+                correctInvDepth = rip->invDepth1 * alpha + rip->invDepth2 * beta + rip->invDepth3 * gamma;
+                pBaryDivisor = 1.0/(alpha*rip->invW1 + beta*rip->invW2 + gamma*rip->invW3);
+                alpha *= rip->invW1 * pBaryDivisor;
+                beta  *= rip->invW2 * pBaryDivisor;
+                gamma *= rip->invW3 * pBaryDivisor;
                 
-                baryInterpolate(output, rip.f1, rip.f2, rip.f3, alpha, beta, gamma);
-                rip.p->setWithShader2( ipt, correctInvDepth, (void*)&fragment, rip.userData);
+                baryInterpolate(output, rip->f1, rip->f2, rip->f3, alpha, beta, gamma);
+                rip->p->setWithShader2( ipt, correctInvDepth, (void*)&fragment, rip->userData);
             }
         }
 //        pthread_exit(NULL);
+          
+          delete rip;
     }
     
-    static void renderThread2(RenderInfo rip) {
+//    static void renderThread2(RenderInfo rip) {
+        static void renderThread2(void* data) {
+        RenderInfo* rip = (RenderInfo*)data;  // TODO make this not another copy
 //        RenderInfo* ri = ;
-        Coordinates2D pt = rip.pt;
-//        BlockRenderer<T>* This = (BlockRenderer<T>*) rip.This;
+        Coordinates2D pt = rip->pt;
+//        BlockRenderer<T>* This = (BlockRenderer<T>*) rip->This;
         int xp;
         int yp;
         double alpha, beta, gamma;
@@ -486,54 +483,55 @@ private:
         Coordinates2D ipt;
         
         T fragment;
-        rip.f1 = regist(rip.fragment1);
-        rip.f2 = regist(rip.fragment2);
-        rip.f3 = regist(rip.fragment3);
+        rip->f1 = regist(rip->fragment1);
+        rip->f2 = regist(rip->fragment2);
+        rip->f3 = regist(rip->fragment3);
         auto output = regist(fragment);
         //                continue;
-        int CY1 = rip.CY1; //C1 + DX12 * y0 - DY12 * x0;
-        int CY2 = rip.CY2; //C2 + DX23 * y0 - DY23 * x0;
-        int CY3 = rip.CY3; //C3 + DX31 * y0 - DY31 * x0;
+        int CY1 = rip->CY1; //C1 + DX12 * y0 - DY12 * x0;
+        int CY2 = rip->CY2; //C2 + DX23 * y0 - DY23 * x0;
+        int CY3 = rip->CY3; //C3 + DX31 * y0 - DY31 * x0;
         
-        for(ipt.y = pt.y; ipt.y < pt.y + rip.q; ipt.y++)
+        for(ipt.y = pt.y; ipt.y < pt.y + rip->q; ipt.y++)
         {
             int CX1 = CY1;
             int CX2 = CY2;
             int CX3 = CY3;
             
-            for(ipt.x = pt.x; ipt.x < pt.x + rip.q; ipt.x++)
+            for(ipt.x = pt.x; ipt.x < pt.x + rip->q; ipt.x++)
             {
                 if(CX1 > 0 && CX2 > 0 && CX3 > 0)
                 {
                     //                            buffer[ix] = 0x0000007F;   // Blue
                     xp = ipt.x << 4;
                     yp = ipt.y << 4;
-                    alpha = (double)(xp*rip.Y2 + rip.aX2Y3mX3Y2 + rip.X3*yp - xp*rip.Y3 - rip.X2*yp)*rip.A;
-                    beta = (double)(rip.X1*yp + xp*rip.Y3 + rip.bX3Y1mX1Y3 - xp*rip.Y1 - rip.X3*yp)*rip.A;
+                    alpha = (double)(xp*rip->Y2 + rip->aX2Y3mX3Y2 + rip->X3*yp - xp*rip->Y3 - rip->X2*yp)*rip->A;
+                    beta = (double)(rip->X1*yp + xp*rip->Y3 + rip->bX3Y1mX1Y3 - xp*rip->Y1 - rip->X3*yp)*rip->A;
                     gamma = 1.0 - alpha - beta;
                     
-                    correctInvDepth = rip.invDepth1 * alpha + rip.invDepth2 * beta + rip.invDepth3 * gamma;
-                    pBaryDivisor = 1.0/(alpha*rip.invW1 + beta*rip.invW2 + gamma*rip.invW3);
-                    alpha *= rip.invW1 * pBaryDivisor;
-                    beta  *= rip.invW2 * pBaryDivisor;
-                    gamma *= rip.invW3 * pBaryDivisor;
+                    correctInvDepth = rip->invDepth1 * alpha + rip->invDepth2 * beta + rip->invDepth3 * gamma;
+                    pBaryDivisor = 1.0/(alpha*rip->invW1 + beta*rip->invW2 + gamma*rip->invW3);
+                    alpha *= rip->invW1 * pBaryDivisor;
+                    beta  *= rip->invW2 * pBaryDivisor;
+                    gamma *= rip->invW3 * pBaryDivisor;
                     
-                    baryInterpolate(output, rip.f1, rip.f2, rip.f3, alpha, beta, gamma);
-                    rip.p->setWithShader2( ipt, correctInvDepth, (void*)&fragment, rip.userData);
+                    baryInterpolate(output, rip->f1, rip->f2, rip->f3, alpha, beta, gamma);
+                    rip->p->setWithShader2( ipt, correctInvDepth, (void*)&fragment, rip->userData);
                 }
                 
-                CX1 -= rip.FDY12;
-                CX2 -= rip.FDY23;
-                CX3 -= rip.FDY31;
+                CX1 -= rip->FDY12;
+                CX2 -= rip->FDY23;
+                CX3 -= rip->FDY31;
             }
             
-            CY1 += rip.FDX12;
-            CY2 += rip.FDX23;
-            CY3 += rip.FDX31;
+            CY1 += rip->FDX12;
+            CY2 += rip->FDX23;
+            CY3 += rip->FDX31;
             
             //                    (char*&)buffer += stride;
         }
 //        pthread_exit(NULL);
+            delete rip;
     }
   
 public:
@@ -555,6 +553,7 @@ public:
 //    decltype(regist(std::declval<T&>())) f2;
 //    decltype(regist(std::declval<T&>())) f3;
     RenderPipeline* p;
+    RasterizerThreadPool* rtp;
     
 //    std::atomic<int> threadCount;
 //    std::queue<std::thread*> threads;
@@ -571,13 +570,31 @@ public:
     
     void render(RenderInfo& ri) {
 //        waitThreads(3);
-        busyWait();
-        threadStatus.push_back(std::async(std::launch::async, renderThread, ri));
+//        rtp->busyWait();
+//        rtp->threadStatus.push_back(std::async(std::launch::async, renderThread, ri));
+        
+//        while (rtp->busy()) {
+//            usleep(1);
+//        }
+        RenderInfo* copy = new RenderInfo(ri);
+//        rtp->busyWait();
+        rtp->QueueJob(renderThread, copy);
+//        rtp->busyWait();
+        
     }
     void render2(RenderInfo& ri) {
 //        waitThreads(3);
-        busyWait();
-        threadStatus.push_back(std::async(std::launch::async, renderThread2, ri));
+//        rtp->busyWait();
+//        rtp->threadStatus.push_back(std::async(std::launch::async, renderThread2, ri));
+        
+        
+//        while (rtp->busy()) {
+//            usleep(1);
+//        }
+        RenderInfo* copy = new RenderInfo(ri);
+//        rtp->busyWait();
+        rtp->QueueJob(renderThread2, copy);
+//        rtp->busyWait();
     }
     
     
@@ -890,29 +907,6 @@ template <class T> void RenderPipeline::triangleFill(T* fragment1, T* fragment2,
             // Accept whole block when totally covered
             if(a == 0xF && b == 0xF && c == 0xF)
             {
-                
-//                BlockRenderer<T,__typeof__(f1)> mBlockRenderer(&f1, &f2, &f3);
-//                mBlockRenderer.p = this;
-//                mBlockRenderer.userData = userData;
-//                mBlockRenderer.pt = pt;
-//                mBlockRenderer.q = q;
-//                mBlockRenderer.X1 = X1;
-//                mBlockRenderer.X2 = X2;
-//                mBlockRenderer.X3 = X3;
-//                mBlockRenderer.Y1 = Y1;
-//                mBlockRenderer.Y2 = Y2;
-//                mBlockRenderer.Y3 = Y3;
-//                mBlockRenderer.aX2Y3mX3Y2 = aX2Y3mX3Y2;
-//                mBlockRenderer.bX3Y1mX1Y3 = bX3Y1mX1Y3;
-//                mBlockRenderer.A = A;
-//                mBlockRenderer.invDepth1 = invDepth1;
-//                mBlockRenderer.invDepth2 = invDepth2;
-//                mBlockRenderer.invDepth3 = invDepth3;
-//                mBlockRenderer.invW1 = invW1;
-//                mBlockRenderer.invW2 = invW2;
-//                mBlockRenderer.invW3 = invW3;
-//                mBlockRenderer.render();
-//                if(0)
                 for(ipt.y = pt.y; ipt.y < pt.y + q; ipt.y++)
                 {
                     for(ipt.x = pt.x; ipt.x < pt.x + q; ipt.x++)

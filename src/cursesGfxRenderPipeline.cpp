@@ -14,6 +14,8 @@ RenderPipeline::RenderPipeline() {
 #ifdef FB_SUPPORT
 	setupLinuxFb();
 #endif
+    
+    mRasterizerThreadPool.Start(4);
 }
 
 
@@ -104,7 +106,8 @@ template <typename T, int count> void perspectiveIntBary2(void* result, const vo
 
 RenderPipeline::~RenderPipeline() {
 	// Fuck it, save the render and depth buffer to a file:
-
+    mRasterizerThreadPool.Stop();
+    
 	saveFrameBufferToFile("render.ppm", &fbo[0]);
 	saveFrameBufferToFile("depth.pgm", &depthBuffer[0]);
 	
@@ -131,7 +134,8 @@ void RenderPipeline::reset() {
 }
 
 void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo&)) {
-    RasterizerThreadPool::waitThreads(0);
+//    RasterizerThreadPool::waitThreads(0);
+    mRasterizerThreadPool.busyWait();
 	this->fragmentShader = fragmentShader;
 };
 
@@ -1405,7 +1409,8 @@ void RenderPipeline::setRenderBuffer(const int& index, ColorRGBA& color) {
 
 void RenderPipeline::renderBufferToTerminal() {
 //	waitForThreads();
-    RasterizerThreadPool::waitThreads(0);
+//    RasterizerThreadPool::waitThreads(0);
+    mRasterizerThreadPool.busyWait();
 	
 	Coordinates2D pixel;
 	Coordinates3D color;
@@ -1460,7 +1465,8 @@ void RenderPipeline::renderBufferToTerminal() {
 
 void RenderPipeline::depthBufferToTerminal() {
 //	waitForThreads();
-    RasterizerThreadPool::waitThreads(0);
+//    RasterizerThreadPool::waitThreads(0);
+    mRasterizerThreadPool.busyWait();
 	
 	Coordinates2D pixel;
 	Coordinates3D color;

@@ -418,7 +418,7 @@ int main(int argc, char** argv) {
 	int screenSizeX, screenSizeY;
 	getmaxyx(stdscr, screenSizeY, screenSizeX);
 	
-    RasterizerThreadPool::setRenderThreadCount(4);
+//    RasterizerThreadPool::setRenderThreadCount(4);
 	RenderPipeline mRenderPipeline;
 	mRenderPipeline.resize(screenSizeX, screenSizeY);
 	

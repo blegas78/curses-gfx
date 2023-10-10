@@ -471,7 +471,7 @@ int main(int argc, char** argv) {
     int screenSizeX, screenSizeY;
     getmaxyx(stdscr, screenSizeY, screenSizeX);
     
-    RasterizerThreadPool::setRenderThreadCount(4);
+//    RasterizerThreadPool::setRenderThreadCount(4);
     RenderPipeline mRenderPipeline;
     mRenderPipeline.resize(screenSizeX, screenSizeY);
     
@@ -524,7 +524,7 @@ int main(int argc, char** argv) {
     bool usePerspective = true;
     bool autoRotate = true;
     bool showDepth = false;
-    bool showGround = true;
+    bool showGround = false;
     double delayTime = 0;//1.0/60;
     while (keepRunning == true) {
         debugLine = 0;
@@ -741,7 +741,7 @@ int main(int argc, char** argv) {
         
         // HUD
         mvprintw(debugLine++, 0, "FPS: %f", 1000.0/float_ms.count());
-        mvprintw(debugLine++, 0, "Render Threads: %d", RasterizerThreadPool::numberRenderThreads);
+//        mvprintw(debugLine++, 0, "Render Threads: %d", RasterizerThreadPool::numberRenderThreads);
 //        mvprintw(debugLine++, 0, "Delay time %f", delayTime);
         mvprintw(debugLine++, 0, "Total Time  %0.6f", totalTime);
         mvprintw(debugLine++, 0, "Prep        %0.6f % 3.2f%%", timeToPrepare, timeToPrepare/totalTime*100);
@@ -793,8 +793,8 @@ int main(int argc, char** argv) {
             autoRotate = !autoRotate;
         } else if ( ch == 'd' || ch == 'D' ) {
             showDepth = !showDepth;
-        } else if ( ch >= '1' && ch <= '9' ) {
-            RasterizerThreadPool::setRenderThreadCount(ch-'0');
+//        } else if ( ch >= '1' && ch <= '9' ) {
+//            RasterizerThreadPool::setRenderThreadCount(ch-'0');
         } else if ( ch == 'r' || ch == 'R') {
             if (usePerspective) {
                 viewAngle += M_PI * 0.0125;

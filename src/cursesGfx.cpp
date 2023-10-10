@@ -43,7 +43,7 @@ void drawDotFloat(double x, double y) {
  ln2() and getp() are more heavily tweaked versions to support more characters
  https://gist.github.com/Mashpoe/3d949824be514c43b58706eb29c33c43
  */
-void set( Coordinates2D pt, char c)
+void set(const Coordinates2D& pt, const char& c)
 {
 	mvaddch( pt.y, pt.x, c);
 }

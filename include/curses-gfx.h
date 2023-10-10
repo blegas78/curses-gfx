@@ -10,7 +10,7 @@ void drawDotFloat(double x, double y);
 
 void ln2( Coordinates2D a, Coordinates2D b);
 
-void set( Coordinates2D pt, char c);
+void set(const Coordinates2D& pt, const char& c);
 char getp( Coordinates2D* pts, double err);
 void ln( Coordinates2D a, Coordinates2D b);
 

@@ -113,6 +113,7 @@ set(c_sources src/cursesGfx3d.cpp
                       src/cursesGfxTexture.cpp
                       src/cursesGfxPngLoader.cpp
                       src/cursesGfxTerminal.cpp
+                      src/cursesGfxThreadpool.cpp
                       ) 
 set(c_headers  include/curses-gfx-3d.h
 		include/curses-gfx.h
@@ -191,4 +192,8 @@ target_link_libraries(test3D ncurses ${LIBNAME})
 
 add_executable(testFill src/testFill.cpp)
 target_link_libraries(testFill ncurses ${LIBNAME})
+
+
+add_executable(threadPoolCheck src/threadPoolCheck.cpp)
+target_link_libraries(threadPoolCheck ncurses ${LIBNAME})
 

@@ -157,10 +157,10 @@ void CursesGfxTerminal::setRGB( const Coordinates2D& pixel, const Coordinates3D&
         
 //        colorIndex = floor(hsl.x/360.0*256.0);
 //        colorIndex |= (((uint8_t)(hsl.y*1-1)) << 8) & 0x00;
-        colorIndex = floor(hsl.x/360.0*128.0);
-        colorIndex |= (((uint8_t)(hsl.y*2-1)) << 7) & 0x80;
-        colorIndex = floor(hsl.x/360.0*64.0);
-        colorIndex |= (((uint8_t)(hsl.y*4-1)) << 6) & 0xC0;
+//        colorIndex = floor(hsl.x/360.0*128.0);
+//        colorIndex |= (((uint8_t)(hsl.y*2-1)) << 7) & 0x80;
+//        colorIndex = floor(hsl.x/360.0*64.0);
+//        colorIndex |= (((uint8_t)(hsl.y*4-1)) << 6) & 0xC0;
         
         
         colorIndex = floor(hsl.x/360.0*(double)numHueLevels);
