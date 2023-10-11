@@ -263,9 +263,9 @@ void lightFs4(const FragmentInfo& fInfo) {
     //setRGB(fInfo.pixel, colorRGB);
     
     //    ColorRGBA result;
-    colorRGB.x *= 0.5;
-    colorRGB.y *= 0.5;
-    colorRGB.z *= 0.5;
+    colorRGB.x *= 0.85;
+    colorRGB.y *= 0.85;
+    colorRGB.z *= 0.85;
     colorRGB.x += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).r * (1.0/255.0 * 0.75);
     colorRGB.y += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).g * (1.0/255.0 * 0.75);
     colorRGB.z += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).b * (1.0/255.0 * 0.75);

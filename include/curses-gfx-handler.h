@@ -61,39 +61,7 @@ private:
     std::queue<std::pair<std::function<void(void*)>,void*>> jobs;
     
 public:
-//    static int numberRenderThreads;
-//    static std::list<std::future<void>> threadStatus;
-//    
-//    static void setRenderThreadCount(int numberOfThreads) {
-//        numberRenderThreads = numberOfThreads;
-//    };
-//
-//    static void waitThreads(int threadCount) {
-//
-//        while(threadStatus.size() > threadCount) {
-//            for(std::list<std::future<void>>::iterator it = threadStatus.begin(); it != threadStatus.end(); it++) {
-//                if((*it).wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-//                {
-//                    threadStatus.erase(it);
-//                    it = threadStatus.begin();
-////                    break;
-//                }
-//            }
-//            if(threadStatus.size() > threadCount) {
-//                std::this_thread::sleep_for(std::chrono::nanoseconds(10));
-//            }
-//        }
-//    }
-//
-////    static void busyWait() {
-////        waitThreads(numberRenderThreads - 1);
-////
-////    }
-//
-//    ~RasterizerThreadPool() {
-//        //waitThreads(0);
-//    }
-    
+
     // Following this: https://stackoverflow.com/questions/15752659/thread-pooling-in-c11
     
     void Start(uint32_t numThreads);
@@ -104,28 +72,6 @@ public:
     void busyWait();
 };
 
-
-
-//class CursesGfxHandler {
-//private:
-//	pthread_t* threads;
-//	pthread_mutex_t mutex;
-//	pthread_mutex_t condMutex;
-//	pthread_cond_t cond;
-//
-//	int totalThreads;
-//	bool busyThreads;
-//
-//public:
-//	CursesGfxHandler();
-//	~CursesGfxHandler();
-//
-//	void setTotalThreads(int numthreads);
-//
-//};
-
-
-//template <class T> void clipPolygon(T* input, int inputCount, T* output, int& outputCountResult);
 
 class RenderPipeline {
 public:
@@ -265,7 +211,6 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
             
         for(int i = 0; i < clippedVertexCount; i++) {
             // Then.. apply a viewport and provide to triangle rasterizer
-//            scratch[i].vertex = matrixVectorMultiply(viewport, scratch[i].vertex);
             scratchClipped[i].vertex = matrixVectorMultiply(viewport, scratchClipped[i].vertex);
         }
         
@@ -281,7 +226,6 @@ template <class T, class U> RenderStats RenderPipeline::rasterizeShader(T* verte
 //        fbo->data[20*4 + 3] = '0'+clippedVertexCount;
 
     }
-//    RasterizerThreadPool::busyWait();   // finish rendering
 //    mRasterizerThreadPool.busyWait();
     return mRenderStats;
 }
@@ -535,66 +479,23 @@ private:
     }
   
 public:
-//    Coordinates2D pt;
-//    int q;
-//    int X1, Y1, X2, Y2, X3, Y3;
-//    int FDX12;
-//    int FDX23;
-//    int FDX31;
-//
-//    int FDY12;
-//    int FDY23;
-//    int FDY31;
-//    int aX2Y3mX3Y2, bX3Y1mX1Y3;
-//    double A;
-//    double invDepth1, invDepth2, invDepth3;
-//    double invW1, invW2, invW3;
-//    decltype(regist(std::declval<T&>())) f1;
-//    decltype(regist(std::declval<T&>())) f2;
-//    decltype(regist(std::declval<T&>())) f3;
+
     RenderPipeline* p;
     RasterizerThreadPool* rtp;
-    
-//    std::atomic<int> threadCount;
-//    std::queue<std::thread*> threads;
-//    static std::list<std::future<void>> threadStatus;
-    
+
     BlockRenderer(RenderPipeline* p)
     :p(p) {
-//    :f1(f1), f2(f2), f3(f3) {
     }
-    
-    
-    
     
     
     void render(RenderInfo& ri) {
-//        waitThreads(3);
-//        rtp->busyWait();
-//        rtp->threadStatus.push_back(std::async(std::launch::async, renderThread, ri));
-        
-//        while (rtp->busy()) {
-//            usleep(1);
-//        }
         RenderInfo* copy = new RenderInfo(ri);
-//        rtp->busyWait();
         rtp->QueueJob(renderThread, copy);
-//        rtp->busyWait();
         
     }
     void render2(RenderInfo& ri) {
-//        waitThreads(3);
-//        rtp->busyWait();
-//        rtp->threadStatus.push_back(std::async(std::launch::async, renderThread2, ri));
-        
-        
-//        while (rtp->busy()) {
-//            usleep(1);
-//        }
         RenderInfo* copy = new RenderInfo(ri);
-//        rtp->busyWait();
         rtp->QueueJob(renderThread2, copy);
-//        rtp->busyWait();
     }
     
     

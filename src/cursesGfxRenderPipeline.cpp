@@ -135,7 +135,8 @@ void RenderPipeline::reset() {
 
 void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo&)) {
 //    RasterizerThreadPool::waitThreads(0);
-    mRasterizerThreadPool.busyWait();
+    if(this->fragmentShader != fragmentShader)
+        mRasterizerThreadPool.busyWait();
 	this->fragmentShader = fragmentShader;
 };
 
@@ -1306,17 +1307,17 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
 		((double*)depthBuffer->data)[depthIndex] = invDepth;
 		
 		
-        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
+//        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
 		FragmentInfo fInfo;
 		fInfo.pixel = pixel;
 		fInfo.location3D = pt3D;
 		fInfo.normal = normal;
 		fInfo.data = userData;
-		fInfo.colorOutput = &colorOutput;
+//		fInfo.colorOutput = &colorOutput;
+        fInfo.colorOutput = &((ColorRGBA*)(fbo[0].data))[depthIndex];
 		fragmentShader(fInfo);
 		
-//		setRenderBuffer(pixel.x, pixel.y, colorOutput);
-		setRenderBuffer(depthIndex, colorOutput);
+//		setRenderBuffer(depthIndex, colorOutput);
 	}
 }
 
@@ -1326,22 +1327,22 @@ void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void
 //    }
     int depthIndex = pixel.x + depthBuffer->cols*pixel.y;
 //    depthBuffer->mutex.lock();
+    
     if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
         ((double*)depthBuffer->data)[depthIndex] = invDepth;
 //        depthBuffer->mutex.unlock();
         
-        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
+//        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
         FragmentInfo fInfo;
         fInfo.pixel = pixel;
         fInfo.data = userData;
         fInfo.interpolated = interpolatedData;
-        fInfo.colorOutput = &colorOutput;
+//        fInfo.colorOutput = &colorOutput;
+        fInfo.colorOutput = &((ColorRGBA*)(fbo[0].data))[depthIndex];
         fragmentShader(fInfo);
         
-//        ((ColorRGBA*)(fbo[0].data))[depthIndex] = *fInfo.colorOutput;
-//        setRenderBuffer(pixel.x, pixel.y, colorOutput);
-        setRenderBuffer(depthIndex, colorOutput);
-        return;
+//        setRenderBuffer(depthIndex, colorOutput);
+//        return;
     }
 //    depthBuffer->mutex.unlock();
 }
