@@ -120,6 +120,12 @@ int Scene::load(const char* file) {
                         meshes[m].vi[i].textureCoord.x = scene->mMeshes[m]->mTextureCoords[0][face.mIndices[fi]].x;
                         meshes[m].vi[i].textureCoord.y = scene->mMeshes[m]->mTextureCoords[0][face.mIndices[fi]].y;
                     }
+                    if(scene->mMeshes[m]->HasVertexColors(0)) {
+                        meshes[m].vi[i].color.r = scene->mMeshes[m]->mColors[0][face.mIndices[fi]].r*255;
+                        meshes[m].vi[i].color.g = scene->mMeshes[m]->mColors[0][face.mIndices[fi]].g*255;
+                        meshes[m].vi[i].color.b = scene->mMeshes[m]->mColors[0][face.mIndices[fi]].b*255;
+                        meshes[m].vi[i].color.a = scene->mMeshes[m]->mColors[0][face.mIndices[fi]].a*255;
+                    }
                     i++;
                 }
             }

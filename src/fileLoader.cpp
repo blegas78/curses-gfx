@@ -122,6 +122,21 @@ void materialFs(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
 }
 
+void vertexColorFs(const FragmentInfo& fInfo) {
+//    LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
+    MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
+    
+    Coordinates3D normal = normalizeVectorFast(vertexInfo->normal);
+    
+    double magnitude = normal.z;
+    magnitude *= magnitude;
+    magnitude = fmin(1,magnitude);
+    fInfo.colorOutput->r = magnitude*vertexInfo->color.r;
+    fInfo.colorOutput->g = magnitude*vertexInfo->color.g;
+    fInfo.colorOutput->b = magnitude*vertexInfo->color.b;
+    fInfo.colorOutput->a = 0;
+}
+
 
 typedef struct _UniformInfo {
     Mat4D modelView;
@@ -568,7 +583,12 @@ int main(int argc, char** argv) {
         RenderStats mRenderStats = {0,0,0};
         for(int m = 0; m < mScene.numMeshes; m++) {
             Coordinates3D modelColor = {1.0,1.0,1.0};
-            Mat4D model = scaleMatrix(6.0/maxVertex, 6.0/maxVertex, 6.0/maxVertex);
+            Mat4D model = scaleMatrix(2.0/maxVertex, 2.0/maxVertex, 2.0/maxVertex);
+            
+            Coordinates3D modelRotationAxis = {1,1,0};
+            modelRotationAxis = normalizeVector(modelRotationAxis);
+            Mat4D modelRotation = rotationFromAngleAndUnitAxis(angle, modelRotationAxis);
+            model = matrixMultiply(modelRotation, model);
             UniformInfo mUniformData;
             mUniformData.modelView = matrixMultiply(viewMatrix, model);
             mUniformData.modelViewProjection = matrixMultiply(projection, mUniformData.modelView);
@@ -584,11 +604,13 @@ int main(int argc, char** argv) {
             } else {
                 if(mScene.materials[mScene.meshes[m].materialId].hasDiffuseColor) {
                     mLightParamsAndTexture.colorDiffuse = mScene.materials[mScene.meshes[m].materialId].colorDiffuse;
+                    mRenderPipeline.setFragmentShader(materialFs);
                 } else {
-                    mLightParamsAndTexture.colorDiffuse = {1,1,1};
+                    mRenderPipeline.setFragmentShader(vertexColorFs);
                 }
+//                mRenderPipeline.setFragmentShader(vertexColorFs);
+//                mRenderPipeline.setFragmentShader(vertexColorFs);
                 
-                mRenderPipeline.setFragmentShader(materialFs);
                 mRenderStats2 = mRenderPipeline.rasterizeShader(mScene.meshes[m].vi, &mUniformData, mScene.meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
             }
             

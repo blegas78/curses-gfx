@@ -15,7 +15,7 @@ RenderPipeline::RenderPipeline() {
 	setupLinuxFb();
 #endif
     
-    mRasterizerThreadPool.Start(4);
+    mRasterizerThreadPool.Start(std::thread::hardware_concurrency());
 }
 
 
