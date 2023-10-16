@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
 //    read_png_file("macOsGreyTerminal.png");
 //    process_png_file(pairs, 1);
     
-    read_png_file("macOsTerminal.png");
+    read_png_file(argv[1]);
     process_png_file(pairs, 2);
     
     double max = 0;

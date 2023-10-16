@@ -6,6 +6,25 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mod
 
 
 function( new_install LIBNAME )
+    # Resources
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources")
+        file(GLOB ${LIBNAME}_RESOURCES resources/*)
+        set(${LIBNAME}_resources ${${LIBNAME}_RESOURCES})
+        set(resources_subdirectory etc/${LIBNAME} PARENT_SCOPE)
+        set(resources_subdirectory etc/${LIBNAME})
+        file(COPY
+                    ${CMAKE_CURRENT_SOURCE_DIR}/resources
+                    DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/
+                    )
+        install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resources #${${LIBNAME}_resources}
+                    DESTINATION ${resources_subdirectory}
+                    COMPONENT resources
+                        )
+        add_definitions(-DRESOURCES_DIRECTORY="${CMAKE_INSTALL_PREFIX}/${resources_subdirectory}")
+        set(CURSES_ROUSOURCE_DIR "${CMAKE_INSTALL_PREFIX}/${resources_subdirectory}/resources/")
+        configure_file(include/curses-gfx-resources.h.in "${CMAKE_CURRENT_BINARY_DIR}/curses-gfx-resources.h" @ONLY)
+    endif()
+    
 	# Install
 	if(BUILD_SHARED_LIBS)
 		install( TARGETS ${LIBNAME}
@@ -103,6 +122,9 @@ endif()
 
 set(DEPENDENCIES ${DEPENDENCIES} ncurses ${CMAKE_THREAD_LIBS_INIT} ${PNG_LIBRARY})
 
+
+set(GENERATED_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/curses-gfx-resources.h)
+
 set(c_sources src/cursesGfx3d.cpp
                       src/cursesGfx-drawPolygon.cpp
                       src/cursesGfxRenderPipeline.cpp
@@ -122,12 +144,13 @@ set(c_headers  include/curses-gfx-3d.h
         include/curses-gfx-texture.h
         include/curses-gfx-png-loader.h
         include/curses-gfx-types.h
+        ${GENERATED_HEADERS}
         )
         
 if(ASSIMP_FOUND)
-set(c_sources ${c_sources} src/cursesGfxLoader.cpp )
-set(c_headers ${c_headers} include/curses-gfx-loader.h )
-set(DEPENDENCIES ${DEPENDENCIES} ${ASSIMP_LIBRARY})
+    set(c_sources ${c_sources} src/cursesGfxLoader.cpp )
+    set(c_headers ${c_headers} include/curses-gfx-loader.h )
+    set(DEPENDENCIES ${DEPENDENCIES} ${ASSIMP_LIBRARY})
 endif(ASSIMP_FOUND)
 set(c_sources ${c_sources} ${c_headers} )
 

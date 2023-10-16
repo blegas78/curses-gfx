@@ -1,0 +1,8 @@
+#ifndef CURSES_GFX_RESOURCES_H
+#define CURSES_GFX_RESOURCES_H
+
+
+const char CURSES_GFX_RESOURCE_PATH[] = "@CURSES_ROUSOURCE_DIR@";
+
+
+#endif

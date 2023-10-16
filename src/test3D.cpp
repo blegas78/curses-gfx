@@ -204,10 +204,11 @@ int main(void) {
         }
         
         
-        int y = 0;
+        int x = 0;
 //        for(int j = 0; j < 32; j++) {
 //            CursesGfxTerminal::setRGB({y++, 11}, {255, 255, 255});
 //        }
+        
         for(int i = 0; i < 8; i++) {
             for(int j = 0; j < 32; j++)
             {
@@ -218,9 +219,38 @@ int main(void) {
                 rgb.x /= 255;
                 rgb.y /= 255;
                 rgb.z /= 255;
-                CursesGfxTerminal::setRGB({y++, 11}, rgb);
+                CursesGfxTerminal::setRGB({x++, 11}, rgb);
             }
         }
+        
+        
+        // Show cube-ified slices of the HSV cube
+//        double hueLevels = 8;
+//        double satLevels = 8;
+//        double valLevels = 8;
+//        for(int h = 0; h < hueLevels; h++) {
+//            for(int s = 0; s < satLevels; s++) {
+//                for(int v = 0; v < valLevels; v++) {
+//
+//                    Coordinates3D rgb;
+//                    rgb = hsvToRgb({ (double)h/hueLevels*360,  (double)s/satLevels, (double)v/valLevels});
+//                    rgb.x /= 255;
+//                    rgb.y /= 255;
+//                    rgb.z /= 255;
+//                    CursesGfxTerminal::setRGB({h*(1+satLevels) , 13}, rgb);
+//                }
+//            }
+//        }
+        int cubeSlices = 15;
+        for(int r = 0; r <= cubeSlices; r++) {
+            for(int g = 0; g <= cubeSlices; g++) {
+                for(int b = 0; b <= cubeSlices; b++) {
+                    Coordinates3D rgb = {(double)r/(double)cubeSlices, (double)g/(double)cubeSlices, (double)b/(double)cubeSlices};
+                    CursesGfxTerminal::setRGB({b + g*(cubeSlices+2), 13 + r}, rgb);
+                }
+            }
+        }
+        
         
         
 		int ch;
