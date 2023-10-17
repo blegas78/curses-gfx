@@ -266,9 +266,9 @@ void lightFs4(const FragmentInfo& fInfo) {
     colorRGB.x *= 0.85;
     colorRGB.y *= 0.85;
     colorRGB.z *= 0.85;
-    colorRGB.x += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).r * (1.0/255.0 * 0.75);
-    colorRGB.y += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).g * (1.0/255.0 * 0.75);
-    colorRGB.z += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).b * (1.0/255.0 * 0.75);
+    colorRGB.x += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).r * (1.0/255.0 * 0.5);
+    colorRGB.y += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).g * (1.0/255.0 * 0.5);
+    colorRGB.z += (double)testTexture.sample(vertexInfo->textureCoord.x, vertexInfo->textureCoord.y).b * (1.0/255.0 * 0.5);
     Coordinates3D clippedRGB = clipRGB(colorRGB);
     fInfo.colorOutput->r = clippedRGB.x*255;
     fInfo.colorOutput->g = clippedRGB.y*255;

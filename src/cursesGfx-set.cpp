@@ -15,25 +15,28 @@ Coordinates3D rgbToHsv( const Coordinates3D& rgb) {
 	
 	result.z = -1e100;
 	
-	if ( rgb.x < cMin ) {
-		cMin = rgb.x;
-	}
-	if ( rgb.y < cMin ) {
-		cMin = rgb.y;
-	}
-	if ( rgb.z < cMin ) {
-		cMin = rgb.z;
-	}
-	
-	if ( rgb.x > result.z ) {
-		result.z = rgb.x;
-	}
-	if ( rgb.y > result.z) {
-		result.z = rgb.y;
-	}
-	if ( rgb.z > result.z ) {
-		result.z = rgb.z;
-	}
+    cMin = fmin(fmin(rgb.x, rgb.y) ,rgb.z);
+    
+//	if ( rgb.x < cMin ) {
+//		cMin = rgb.x;
+//	}
+//	if ( rgb.y < cMin ) {
+//		cMin = rgb.y;
+//	}
+//	if ( rgb.z < cMin ) {
+//		cMin = rgb.z;
+//	}
+//
+//	if ( rgb.x > result.z ) {
+//		result.z = rgb.x;
+//	}
+//	if ( rgb.y > result.z) {
+//		result.z = rgb.y;
+//	}
+//	if ( rgb.z > result.z ) {
+//		result.z = rgb.z;
+//	}
+    result.z = fmax(fmax(rgb.x, rgb.y), rgb.z);
 	
 	delta = result.z - cMin;
 	
@@ -61,77 +64,100 @@ Coordinates3D rgbToHsv( const Coordinates3D& rgb) {
 
 Coordinates3D hsvToRgb(const Coordinates3D& hsvIn) {
     double r = 0, g = 0, b = 0;
-    Coordinates3D hsv = hsvIn;
-    if (hsv.y == 0)
+//    Coordinates3D hsv = hsvIn;
+    if (hsvIn.y == 0)
     {
-        r = hsv.z;
-        g = hsv.z;
-        b = hsv.z;
+        r = hsvIn.z*255;
+//        g = hsv.z;
+//        b = hsv.z;
+        return {r, r, r};
     }
-    else
-    {
-        int i;
-        double f, p, q, t;
-
-        hsv.x = fmod(hsv.x, 360);
-//        if (hsv.x == 360)
-//            hsv.x = 0;
-//        else
-        hsv.x = hsv.x / 60;
-
-        i = floor(hsv.x);// (int)trunc(hsv.x);
-        f = hsv.x - i;
-
-        p = hsv.z * (1.0 - hsv.y);
-        q = hsv.z * (1.0 - (hsv.y * f));
-        t = hsv.z * (1.0 - (hsv.y * (1.0 - f)));
-
-        switch (i)
-        {
-        case 0:
-            r = hsv.z;
-            g = t;
-            b = p;
-            break;
-
-        case 1:
-            r = q;
-            g = hsv.z;
-            b = p;
-            break;
-
-        case 2:
-            r = p;
-            g = hsv.z;
-            b = t;
-            break;
-
-        case 3:
-            r = p;
-            g = q;
-            b = hsv.z;
-            break;
-
-        case 4:
-            r = t;
-            g = p;
-            b = hsv.z;
-            break;
-
-        default:
-            r = hsv.z;
-            g = p;
-            b = q;
-            break;
-        }
-
-    }
+//    else
+//    {
+//        int i;
+//        double f, p, q, t;
+//
+//        hsv.x = fmod(hsv.x, 360);
+////        if (hsv.x == 360)
+////            hsv.x = 0;
+////        else
+//        hsv.x = hsv.x / 60;
+//
+//        i = floor(hsv.x);// (int)trunc(hsv.x);
+//        f = hsv.x - i;
+//
+//        p = hsv.z * (1.0 - hsv.y);
+//        q = hsv.z * (1.0 - (hsv.y * f));
+//        t = hsv.z * (1.0 - (hsv.y * (1.0 - f)));
+//
+//        switch (i)
+//        {
+//        case 0:
+//            r = hsv.z;
+//            g = t;
+//            b = p;
+//            break;
+//
+//        case 1:
+//            r = q;
+//            g = hsv.z;
+//            b = p;
+//            break;
+//
+//        case 2:
+//            r = p;
+//            g = hsv.z;
+//            b = t;
+//            break;
+//
+//        case 3:
+//            r = p;
+//            g = q;
+//            b = hsv.z;
+//            break;
+//
+//        case 4:
+//            r = t;
+//            g = p;
+//            b = hsv.z;
+//            break;
+//
+//        default:
+//            r = hsv.z;
+//            g = p;
+//            b = q;
+//            break;
+//        }
+//
+//    }
 
     Coordinates3D rgb;
-    rgb.x = r * 255;
-    rgb.y = g * 255;
-    rgb.z = b * 255;
+//    rgb.x = r * 255;
+//    rgb.y = g * 255;
+//    rgb.z = b * 255;
+    
+    double C = hsvIn.y*hsvIn.z;
+    double X = C*(1 - fabs(fmod(hsvIn.x/60.0, 2) - 1));
+    double m = hsvIn.z - C;
 
+    if(hsvIn.x < 60) {
+        r = C; g = X; b = 0;
+    } else if(hsvIn.x < 120) {
+        r = X; g = C; b = 0;
+    } else if(hsvIn.x < 180) {
+        r = 0; g = C; b = X;
+    } else if(hsvIn.x < 240) {
+        r = 0; g = X; b = C;
+    } else if(hsvIn.x < 300) {
+        r = X; g = 0; b = C;
+    } else { //} if(hsvIn.x < 360) {
+        r = C; g = 0; b = X;
+    }
+
+    rgb.x = (r+m) * 255;
+    rgb.y = (g+m) * 255;
+    rgb.z = (b+m) * 255;
+    
     return rgb;
 }
 

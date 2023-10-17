@@ -36,6 +36,9 @@ public:
     CursesGfxTerminal();
     ~CursesGfxTerminal();
     
+    static const int& hueLevels() { return numHueLevels; }
+    static const int& satLevels() { return numSatLevels; }
+    
 };
 
 #endif

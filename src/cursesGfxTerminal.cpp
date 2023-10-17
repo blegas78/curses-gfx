@@ -64,6 +64,7 @@ void CursesGfxTerminal::setupTerminal() {
         color_content(i, &restoreR[i], &restoreG[i], &restoreB[i]);
     }
     
+//    init_color(0, 1000,1000,1000);
     init_pair(0, 0, -1);    // White
     
 //    int numSatLevels = 8;
@@ -72,19 +73,30 @@ void CursesGfxTerminal::setupTerminal() {
     satShift = numHueBits;
     hueMask = ((1 << numHueBits) - 1) & 0xFF;
     satMask = ((numColors-1) - hueMask) & 0xFF;
-    numSatLevels = 1 << numSatBits;
+    numSatLevels = (1 << numSatBits);
     numHueLevels = numColors/numSatLevels;
-    for(int i = 0; i < COLORS; i++) {
-//        int hueIndex = mod((i-1)*numSatLevels,COLORS);
-//        int satIndex = ceil((double)(i-1)/((double)COLORS/(double)(numSatLevels)));
-        int hueIndex = mod(i*numSatLevels,COLORS);
-        int satIndex = ceil((double)i/((double)COLORS/(double)(numSatLevels)));
-        double hue = (double)(hueIndex)/(double)(COLORS) *360.0;
-        double sat = ((double)satIndex)/((double)numSatLevels);
+
+    for(int i = 1; i < COLORS; i++) {
+////        int hueIndex = mod((i-1)*numSatLevels,COLORS);
+////        int satIndex = ceil((double)(i-1)/((double)COLORS/(double)(numSatLevels)));
+//        int hueIndex = mod(i*(numSatLevels),COLORS);
+//        int satIndex = ceil((double)i/((double)COLORS/(double)(numSatLevels)));
+//        double hue = (double)(hueIndex)/(double)(COLORS) * 360.0;
+//        double sat = ((double)satIndex)/((double)(numSatLevels));
+        
+        
+        double hue = ((double)(((uint8_t)i) & hueMask ))*360.0/(double)numHueLevels;
+        double sat = ((double)((((uint8_t)i) & satMask ) >> satShift) + 1) /(double)numSatLevels;
+        
         Coordinates3D rgb = hsvToRgb({hue, sat, 1});
-        init_color(i, (int)(rgb.x/255.0*1000.0), (int)(rgb.y/255.0*1000.0), (int)(rgb.z/255.0*1000.0));
+//        if(i == 0)
+//            init_color(i, 1000,1000,1000);
+//        else
+            init_color(i, (int)(rgb.x/255.0*1000.0), (int)(rgb.y/255.0*1000.0), (int)(rgb.z/255.0*1000.0));
         init_pair(i, i, -1);
     }
+    
+    numSatLevels += 1; // HACK we techincally have 9 levels since sat of 0 == white
     
 //    for(int i = 0; i < COLORS; i++) {
 //
@@ -163,8 +175,8 @@ void CursesGfxTerminal::setRGB( const Coordinates2D& pixel, const Coordinates3D&
 //        colorIndex |= (((uint8_t)(hsl.y*4-1)) << 6) & 0xC0;
         
         
-        colorIndex = floor(hsl.x/360.0*(double)numHueLevels);
-        colorIndex |= (((uint8_t)(hsl.y*(double)numSatLevels-1)) << satShift) & satMask;
+        colorIndex = floor(hsl.x/360.0*(double)(numHueLevels));
+        colorIndex |= (((uint8_t)floor(hsl.y*((double)numSatLevels-2))) << satShift) & satMask;
     }
 //    colorIndex |= (((uint8_t)(hsl.y*8)) << 5) & 0xE0;
     
