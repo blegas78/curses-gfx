@@ -31,6 +31,7 @@ public:
     void setupTerminal();
     void cleanupTerminal();
     
+    static int rgbToColorIndex(const Coordinates3D& rgb, double& outputLevel);
     static void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb);
     
     CursesGfxTerminal();

@@ -26,18 +26,18 @@
 class RenderPipeline;
 template <class T> class BlockRenderer;
 
-typedef struct _Renderable {
-	RenderPipeline* pipeline;
-	Polygon4D* polygons;
-	int count;
-	Mat4D modelView;
-	Mat4D projection;
-	Mat4D viewPort;
-	void* userData;
-//	DepthBuffer* depthBuffer;
-	void (*fragmentShader)(const FragmentInfo&);
-	int line;
-} Renderable;
+//typedef struct _Renderable {
+//	RenderPipeline* pipeline;
+//	Polygon4D* polygons;
+//	int count;
+//	Mat4D modelView;
+//	Mat4D projection;
+//	Mat4D viewPort;
+//	void* userData;
+////	DepthBuffer* depthBuffer;
+//	void (*fragmentShader)(const FragmentInfo&);
+//	int line;
+//} Renderable;
 
 
 typedef struct _RenderStats {

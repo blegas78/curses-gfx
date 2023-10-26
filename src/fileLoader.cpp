@@ -567,12 +567,12 @@ int main(int argc, char** argv) {
 //            mRenderPipeline.rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, mRenderPipeline.viewport, (void*)&mLightParams.color[i], debugLine);
         }
 
-        LightParamsAndTexture mLightParamsAndTexture;
-        mLightParamsAndTexture.lightParams = &mLightParams;
+        LightParamsAndTexture mLightParamsAndTexture[mScene.numMeshes];
+//        mLightParamsAndTexture.lightParams = &mLightParams;
 //        mLightParamsAndTexture.texture = &pngTexture;
         Coordinates4D zeroVector = {0,0,0,1};
         Coordinates4D camLocation = matrixVectorMultiply(cameraTranslation, zeroVector);
-        mLightParamsAndTexture.cameraLocation = {0,0,0};
+//        mLightParamsAndTexture.cameraLocation = {0,0,0};
         
         now = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> float_ms2 = (now - before2);
@@ -582,6 +582,9 @@ int main(int argc, char** argv) {
         
         RenderStats mRenderStats = {0,0,0};
         for(int m = 0; m < mScene.numMeshes; m++) {
+            mLightParamsAndTexture[m].lightParams = &mLightParams;
+            mLightParamsAndTexture[m].cameraLocation = {0,0,0};
+            
             Coordinates3D modelColor = {1.0,1.0,1.0};
             Mat4D model = scaleMatrix(2.0/maxVertex, 2.0/maxVertex, 2.0/maxVertex);
             
@@ -598,12 +601,12 @@ int main(int argc, char** argv) {
             RenderStats mRenderStats2;
             if(mScene.materials[mScene.meshes[m].materialId].numTextures > 0) {
                 mRenderPipeline.setFragmentShader(textureFs);
-                mLightParamsAndTexture.texture = &mScene.materials[mScene.meshes[m].materialId].textures[0];
+                mLightParamsAndTexture[m].texture = &mScene.materials[mScene.meshes[m].materialId].textures[0];
                 //            mRenderPipeline.setFragmentShader(textureFs);
-                mRenderStats2 = mRenderPipeline.rasterizeShader(mScene.meshes[m].vi, &mUniformData, mScene.meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
+                mRenderStats2 = mRenderPipeline.rasterizeShader(mScene.meshes[m].vi, &mUniformData, mScene.meshes[m].numTriangles, &mLightParamsAndTexture[m], myVertexShader);
             } else {
                 if(mScene.materials[mScene.meshes[m].materialId].hasDiffuseColor) {
-                    mLightParamsAndTexture.colorDiffuse = mScene.materials[mScene.meshes[m].materialId].colorDiffuse;
+                    mLightParamsAndTexture[m].colorDiffuse = mScene.materials[mScene.meshes[m].materialId].colorDiffuse;
                     mRenderPipeline.setFragmentShader(materialFs);
                 } else {
                     mRenderPipeline.setFragmentShader(vertexColorFs);
@@ -611,7 +614,7 @@ int main(int argc, char** argv) {
 //                mRenderPipeline.setFragmentShader(vertexColorFs);
 //                mRenderPipeline.setFragmentShader(vertexColorFs);
                 
-                mRenderStats2 = mRenderPipeline.rasterizeShader(mScene.meshes[m].vi, &mUniformData, mScene.meshes[m].numTriangles, &mLightParamsAndTexture, myVertexShader);
+                mRenderStats2 = mRenderPipeline.rasterizeShader(mScene.meshes[m].vi, &mUniformData, mScene.meshes[m].numTriangles, &mLightParamsAndTexture[m], myVertexShader);
             }
             
             mRenderStats.timeDrawing += mRenderStats2.timeDrawing;

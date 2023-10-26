@@ -210,8 +210,8 @@ endif(ASSIMP_FOUND)
 add_executable(aviz src/aviz.cpp)
 target_link_libraries(aviz ncurses ${LIBNAME})
 
-add_executable(test3D src/test3D.cpp)
-target_link_libraries(test3D ncurses ${LIBNAME})
+add_executable(testColor src/testColor.cpp)
+target_link_libraries(testColor ncurses ${LIBNAME})
 
 add_executable(testFill src/testFill.cpp)
 target_link_libraries(testFill ncurses ${LIBNAME})

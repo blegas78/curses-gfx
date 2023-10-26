@@ -85,7 +85,10 @@ void CursesGfxTerminal::setupTerminal() {
 //        double sat = ((double)satIndex)/((double)(numSatLevels));
         
         
-        double hue = ((double)(((uint8_t)i) & hueMask ))*360.0/(double)numHueLevels;
+        double hue = ((double)(((uint8_t)i) & hueMask ) - 0.5)*360.0/(double)numHueLevels;
+        if(hue < 0) {
+            hue += 360;
+        }
         double sat = ((double)((((uint8_t)i) & satMask ) >> satShift) + 1) /(double)numSatLevels;
         
         Coordinates3D rgb = hsvToRgb({hue, sat, 1});
@@ -148,40 +151,55 @@ struct AsciiLutInfo asciiLUT[256] = {{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2
 //struct AsciiLutInfo asciiLUT[256] = {{' ', 1},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'`', 1},{'.', 1},{'.', 1},{'.', 1},{'-', 1},{'-', 1},{'-', 1},{'\'', 1},{'\'', 1},{':', 1},{',', 1},{'_', 1},{'`', 2},{'`', 2},{'.', 2},{'"', 1},{'"', 1},{';', 1},{';', 1},{';', 1},{'|', 1},{'|', 1},{'!', 1},{'!', 1},{'-', 2},{'+', 1},{'\\', 1},{'^', 1},{'=', 1},{'i', 1},{'\'', 2},{'r', 1},{'r', 1},{'?', 1},{'l', 1},{'L', 1},{'_', 2},{'v', 1},{'J', 1},{'J', 1},{'T', 1},{'f', 1},{'j', 1},{'x', 1},{'z', 1},{'C', 1},{'I', 1},{'o', 1},{'~', 2},{'y', 1},{'2', 1},{'[', 1},{'a', 1},{'3', 1},{'V', 1},{'P', 1},{';', 2},{'5', 1},{'U', 1},{'G', 1},{'m', 1},{'d', 1},{'A', 1},{'K', 1},{'!', 2},{'O', 1},{'D', 1},{'$', 1},{'$', 1},{'R', 1},{'g', 1},{'+', 2},{'8', 1},{'8', 1},{'N', 1},{'/', 2},{'Q', 1},{'&', 1},{'@', 1},{'=', 2},{'i', 2},{'i', 2},{'0', 1},{'r', 2},{'M', 1},{'M', 1},{'W', 1},{'W', 1},{'W', 1},{'W', 1},{'l', 2},{'l', 2},{'L', 2},{'L', 2},{'c', 2},{'*', 2},{'*', 2},{'*', 2},{'v', 2},{'v', 2},{'v', 2},{'J', 2},{'J', 2},{'J', 2},{'T', 2},{'T', 2},{'7', 2},{'t', 2},{'t', 2},{'f', 2},{'1', 2},{'j', 2},{'j', 2},{'Y', 2},{'F', 2},{'u', 2},{'n', 2},{'(', 2},{'I', 2},{'C', 2},{'C', 2},{'}', 2},{'}', 2},{'{', 2},{'o', 2},{'o', 2},{'o', 2},{'e', 2},{'e', 2},{']', 2},{'y', 2},{'2', 2},{'2', 2},{'2', 2},{'a', 2},{'a', 2},{'S', 2},{'E', 2},{'h', 2},{'k', 2},{'V', 2},{'Z', 2},{'Z', 2},{'Z', 2},{'5', 2},{'5', 2},{'5', 2},{'5', 2},{'U', 2},{'U', 2},{'U', 2},{'p', 2},{'G', 2},{'q', 2},{'w', 2},{'d', 2},{'d', 2},{'A', 2},{'A', 2},{'H', 2},{'H', 2},{'K', 2},{'K', 2},{'K', 2},{'O', 2},{'O', 2},{'O', 2},{'D', 2},{'#', 2},{'9', 2},{'6', 2},{'$', 2},{'$', 2},{'$', 2},{'R', 2},{'R', 2},{'R', 2},{'R', 2},{'B', 2},{'B', 2},{'B', 2},{'g', 2},{'8', 2},{'8', 2},{'8', 2},{'N', 2},{'N', 2},{'N', 2},{'N', 2},{'N', 2},{'Q', 2},{'Q', 2},{'Q', 2},{'Q', 2},{'&', 2},{'&', 2},{'&', 2},{'&', 2},{'&', 2},{'&', 2},{'&', 2},{'%', 2},{'%', 2},{'%', 2},{'%', 2},{'@', 2},{'0', 2},{'0', 2},{'M', 2},{'M', 2},{'M', 2},{'M', 2},{'M', 2},{'M', 2},{'W', 2},{'W', 2},{'W', 2},{'W', 2},{'W', 2}};
 //#endif //__APPLE__
 
-void CursesGfxTerminal::setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
-    
+int CursesGfxTerminal::rgbToColorIndex(const Coordinates3D& rgb, double& outputLevel) {
     Coordinates3D clippedRGB = clipRGB(rgb);
     Coordinates3D hsl = rgbToHsv(clippedRGB);
-    
-//    int hueIndex = floor(hsl.x + 1.5);
-//    if(hueIndex > 6) {
-//        hueIndex = 1;
-//    }
-//
-//    if (hsl.y < 0.33) {
-//        hueIndex = 7;
-//    }
+
     int colorIndex = 0;
-    if(hsl.y != 0 ) {//}> 1.0/255.0) {
-//        colorIndex = floor(hsl.x/360.0*32.0);
-//        colorIndex |= (((uint8_t)(hsl.y*8-1)) << 5) & 0xE0;
-        
-        
-//        colorIndex = floor(hsl.x/360.0*256.0);
-//        colorIndex |= (((uint8_t)(hsl.y*1-1)) << 8) & 0x00;
-//        colorIndex = floor(hsl.x/360.0*128.0);
-//        colorIndex |= (((uint8_t)(hsl.y*2-1)) << 7) & 0x80;
-//        colorIndex = floor(hsl.x/360.0*64.0);
-//        colorIndex |= (((uint8_t)(hsl.y*4-1)) << 6) & 0xC0;
-        
-        
+    if(hsl.y != 0 ) {
         colorIndex = floor(hsl.x/360.0*(double)(numHueLevels));
         colorIndex |= (((uint8_t)floor(hsl.y*((double)numSatLevels-2))) << satShift) & satMask;
     }
-//    colorIndex |= (((uint8_t)(hsl.y*8)) << 5) & 0xE0;
-    
+    outputLevel = hsl.z;
+    return colorIndex;
+}
+
+void CursesGfxTerminal::setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
+//
+//    Coordinates3D clippedRGB = clipRGB(rgb);
+//    Coordinates3D hsl = rgbToHsv(clippedRGB);
+//
+////    int hueIndex = floor(hsl.x + 1.5);
+////    if(hueIndex > 6) {
+////        hueIndex = 1;
+////    }
+////
+////    if (hsl.y < 0.33) {
+////        hueIndex = 7;
+////    }
+//    int colorIndex = 0;
+//    if(hsl.y != 0 ) {//}> 1.0/255.0) {
+////        colorIndex = floor(hsl.x/360.0*32.0);
+////        colorIndex |= (((uint8_t)(hsl.y*8-1)) << 5) & 0xE0;
+//
+//
+////        colorIndex = floor(hsl.x/360.0*256.0);
+////        colorIndex |= (((uint8_t)(hsl.y*1-1)) << 8) & 0x00;
+////        colorIndex = floor(hsl.x/360.0*128.0);
+////        colorIndex |= (((uint8_t)(hsl.y*2-1)) << 7) & 0x80;
+////        colorIndex = floor(hsl.x/360.0*64.0);
+////        colorIndex |= (((uint8_t)(hsl.y*4-1)) << 6) & 0xC0;
+//
+//
+//        colorIndex = floor(hsl.x/360.0*(double)(numHueLevels));
+//        colorIndex |= (((uint8_t)floor(hsl.y*((double)numSatLevels-2))) << satShift) & satMask;
+//    }
+////    colorIndex |= (((uint8_t)(hsl.y*8)) << 5) & 0xE0;
+//
+    double level;
+    int colorIndex = rgbToColorIndex(rgb, level);
     attron(COLOR_PAIR(colorIndex));
-    struct AsciiLutInfo aLut = asciiLUT[(int)(hsl.z*255)];
+    struct AsciiLutInfo aLut = asciiLUT[(int)(level*255)];
 //    if (aLut.type == 1) {
 //        attron(WA_DIM);
 ////        attrset(WA_DIM);

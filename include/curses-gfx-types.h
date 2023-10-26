@@ -9,8 +9,18 @@
 #include <mutex>
 
 //#include "curses-gfx.h"
-
-
+/* TODO: I'd like to make the folowing template but there are some architectural challenges to implement it and be ultra fast:
+template <typename T, unsigned int length> class GfxVector {
+    T d[length];
+    GfxVector() {}
+//    _Coordinates3D( const double& x, const double& y, const double& z) : x(x), y(y), z(z) {}
+    GfxVector( const GfxVector<T,length>& p) { std::memcpy(d, p.d, length*sizeof(T)); }
+    GfxVector operator + (const double &d) const { return GfxVector<T,length>(d+x, d+y, d+z); }
+    GfxVector operator + (const GfxVector<T,length> &p) const { return _Coordinates3D(p.x+x, p.y+y, p.z+z); }
+    GfxVector operator * (const double &d) const { return GfxVector<T,length>(d*x, d*y, d*z); }
+    GfxVector operator * (const GfxVector<T,length> &p) const { return GfxVector<T,length>(p.x*x, p.y*y, p.z*z); }
+};
+*/
 typedef struct _Coordinates2D {
     int x;
     int y;
