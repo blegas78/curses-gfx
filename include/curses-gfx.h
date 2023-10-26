@@ -23,6 +23,7 @@ private:
     static int satShift;
     static int satMask;
     static int hueMask;
+    static int enabledColor;
     short* restoreR;
     short* restoreG;
     short* restoreB;
@@ -33,6 +34,9 @@ public:
     
     static int rgbToColorIndex(const Coordinates3D& rgb, double& outputLevel);
     static void setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb);
+    
+    static void enableColor(const Coordinates3D& rgb, double& outputLevel);
+    static void disableColor();
     
     CursesGfxTerminal();
     ~CursesGfxTerminal();

@@ -13,6 +13,7 @@ int CursesGfxTerminal::numSatLevels = 16;
 int CursesGfxTerminal::satShift = 4;
 int CursesGfxTerminal::satMask = 0xF0;
 int CursesGfxTerminal::hueMask = 0x0F;
+int CursesGfxTerminal::enabledColor = 0;
 
 CursesGfxTerminal::CursesGfxTerminal()
 : configured(false) {
@@ -165,54 +166,29 @@ int CursesGfxTerminal::rgbToColorIndex(const Coordinates3D& rgb, double& outputL
 }
 
 void CursesGfxTerminal::setRGB( const Coordinates2D& pixel, const Coordinates3D& rgb) {
-//
-//    Coordinates3D clippedRGB = clipRGB(rgb);
-//    Coordinates3D hsl = rgbToHsv(clippedRGB);
-//
-////    int hueIndex = floor(hsl.x + 1.5);
-////    if(hueIndex > 6) {
-////        hueIndex = 1;
-////    }
-////
-////    if (hsl.y < 0.33) {
-////        hueIndex = 7;
-////    }
-//    int colorIndex = 0;
-//    if(hsl.y != 0 ) {//}> 1.0/255.0) {
-////        colorIndex = floor(hsl.x/360.0*32.0);
-////        colorIndex |= (((uint8_t)(hsl.y*8-1)) << 5) & 0xE0;
-//
-//
-////        colorIndex = floor(hsl.x/360.0*256.0);
-////        colorIndex |= (((uint8_t)(hsl.y*1-1)) << 8) & 0x00;
-////        colorIndex = floor(hsl.x/360.0*128.0);
-////        colorIndex |= (((uint8_t)(hsl.y*2-1)) << 7) & 0x80;
-////        colorIndex = floor(hsl.x/360.0*64.0);
-////        colorIndex |= (((uint8_t)(hsl.y*4-1)) << 6) & 0xC0;
-//
-//
-//        colorIndex = floor(hsl.x/360.0*(double)(numHueLevels));
-//        colorIndex |= (((uint8_t)floor(hsl.y*((double)numSatLevels-2))) << satShift) & satMask;
-//    }
-////    colorIndex |= (((uint8_t)(hsl.y*8)) << 5) & 0xE0;
-//
+
     double level;
-    int colorIndex = rgbToColorIndex(rgb, level);
-    attron(COLOR_PAIR(colorIndex));
-    struct AsciiLutInfo aLut = asciiLUT[(int)(level*255)];
-//    if (aLut.type == 1) {
-//        attron(WA_DIM);
-////        attrset(WA_DIM);
-//        set(pixel, aLut.c);
-//        attroff(WA_DIM);
-////        move(pixel.y, pixel.x);
-////        putchar(aLut.c);
-////        fprintf(stderr, "%c", aLut.c);
-////        move(pixel.y, pixel.x);
-////        mvprintw(pixel.x, pixel.y, "\x1b[2;37;40m%c\x1b[0m", aLut.c);
-//    } else {
-        set(pixel, aLut.c);
-//    }
+//    int colorIndex = rgbToColorIndex(rgb, level);
+//    attron(COLOR_PAIR(colorIndex));
+    enableColor(rgb, level);
+    AsciiLutInfo aLut = asciiLUT[(int)(level*255)];
+    set(pixel, aLut.c);
     
-    attroff(COLOR_PAIR(colorIndex));
+//    attroff(COLOR_PAIR(colorIndex));
+    disableColor();
+}
+
+void CursesGfxTerminal::enableColor(const Coordinates3D& rgb, double& outputLevel) {
+    enabledColor = rgbToColorIndex(rgb, outputLevel);
+//    if(enabledColor) {
+    attron(A_BOLD);
+    attron(COLOR_PAIR(enabledColor));
+//    }
+}
+
+void CursesGfxTerminal::disableColor() {
+//    if(enabledColor) {
+    attroff(COLOR_PAIR(enabledColor));
+    attroff(A_BOLD);
+//    }
 }
