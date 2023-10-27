@@ -114,7 +114,7 @@ void CursesGfxTerminal::setupTerminal() {
 //    getch();
     
     
-    
+    disableThinAscii();
     configured = true;
 }
 void CursesGfxTerminal::cleanupTerminal() {
@@ -181,7 +181,6 @@ void CursesGfxTerminal::setRGB( const Coordinates2D& pixel, const Coordinates3D&
 void CursesGfxTerminal::enableColor(const Coordinates3D& rgb, double& outputLevel) {
     enabledColor = rgbToColorIndex(rgb, outputLevel);
 //    if(enabledColor) {
-    attron(A_BOLD);
     attron(COLOR_PAIR(enabledColor));
 //    }
 }
@@ -189,6 +188,14 @@ void CursesGfxTerminal::enableColor(const Coordinates3D& rgb, double& outputLeve
 void CursesGfxTerminal::disableColor() {
 //    if(enabledColor) {
     attroff(COLOR_PAIR(enabledColor));
-    attroff(A_BOLD);
+    
 //    }
+}
+
+void CursesGfxTerminal::enableThinAscii() {
+    attroff(A_BOLD);
+}
+
+void CursesGfxTerminal::disableThinAscii() {
+    attron(A_BOLD);
 }

@@ -93,7 +93,12 @@ int main(void) {
                 rgb.x /= 255;
                 rgb.y /= 255;
                 rgb.z /= 255;
-                CursesGfxTerminal::setRGB({x++ + i, 11}, rgb);
+                CursesGfxTerminal::setRGB({x + i, 11}, rgb);
+                
+                CursesGfxTerminal::enableThinAscii();
+                CursesGfxTerminal::setRGB({x + i, 12}, rgb);
+                CursesGfxTerminal::disableThinAscii();
+                x++;
             }
         }
         
@@ -120,7 +125,7 @@ int main(void) {
             for(int g = 0; g <= cubeSlices; g++) {
                 for(int b = 0; b <= cubeSlices; b++) {
                     Coordinates3D rgb = {(double)r/(double)cubeSlices, (double)g/(double)cubeSlices, (double)b/(double)cubeSlices};
-                    CursesGfxTerminal::setRGB({b + g*(cubeSlices+2), 13 + r}, rgb);
+                    CursesGfxTerminal::setRGB({b + g*(cubeSlices+2), 14 + r}, rgb);
                 }
             }
         }

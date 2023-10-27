@@ -38,6 +38,9 @@ public:
     static void enableColor(const Coordinates3D& rgb, double& outputLevel);
     static void disableColor();
     
+    static void enableThinAscii();
+    static void disableThinAscii();
+    
     CursesGfxTerminal();
     ~CursesGfxTerminal();
     
