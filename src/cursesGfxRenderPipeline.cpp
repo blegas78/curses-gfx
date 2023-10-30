@@ -1431,20 +1431,11 @@ void RenderPipeline::renderBufferToTerminal() {
 #ifndef FB_SUPPORT
 			if (((ColorRGBA*)fbo[0].data)[index].a == 0) {
 				CursesGfxTerminal::setRGB(pixel, color);
-//                set(pixel, 'k');
 			} else {
-				Coordinates3D clippedRGB = clipRGB(color);
-				Coordinates3D hsl = rgbToHsv(clippedRGB);
-				
-				int hueIndex = floor(hsl.x/60.0 + 1);
-				
-				if (hsl.y < 0.33) {
-					hueIndex = 7;
-				}
-				
-				attron(COLOR_PAIR(hueIndex));
+                double dummyLevel;
+                CursesGfxTerminal::enableColor(color, dummyLevel);
 				set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
-				attroff(COLOR_PAIR(hueIndex));
+                CursesGfxTerminal::disableColor();
 			}
 			
 #else

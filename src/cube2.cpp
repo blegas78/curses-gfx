@@ -472,29 +472,7 @@ int main(int argc, char** argv) {
 		}
 		
 //		rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, lightCubeModelView, projection, windowFull, (void*)&mLightParams, &depthBuffer, lightFs2, debugLine);
-		
-//		// Cube
-//		Coordinates4D cubeRotated[sizeof(cube)/sizeof(cube[0])];
-//		for (int i = 0; i < sizeof(cube)/sizeof(cube[0]); i++) {
-//			// Copy
-//			cubeRotated[i] = cube[i];
-//
-//			// Model
-//
-//			// View
-//			cubeRotated[i] = matrixVectorMultiply(viewMatrix, cubeRotated[i]);
-//
-//			// Projection (final step)
-//			cubeRotated[i] = matrixVectorMultiply(projection, cubeRotated[i]);
-//		}
-//		numEdges = sizeof(edgeIndices)/sizeof(edgeIndices[0]);
-//		attron(COLOR_PAIR(3));
-//		attron(A_BOLD);
-//		rasterize(cubeRotated, edgeIndices, numEdges, windowFull, &depthBuffer);
-//		attroff(A_BOLD);
-//		attroff(COLOR_PAIR(3));
-		
-		
+
 		// Cube 2
 		cube2angle += 0.02;
 		Coordinates3D cube2roationAxis = {1+sin(0.9*cube2angle), sin(0.8*cube2angle), sin(0.7*cube2angle)};
@@ -503,121 +481,21 @@ int main(int argc, char** argv) {
 		Mat4D cube2translation = translationMatrix(1, -1, 0.1);
 		Mat4D modelViewCube2 = matrixMultiply(cube2translation, cube2rotation);
 		modelViewCube2 = matrixMultiply(viewMatrix, modelViewCube2);
-//		for (int i = 0; i < sizeof(cube)/sizeof(cube[0]); i++) {
-//			// Copy
-//			cubeRotated[i] = cube[i];
-//
-//			// Model
-//			cubeRotated[i] = matrixVectorMultiply(cube2rotation, cube[i]);
-//			cubeRotated[i] = matrixVectorMultiply(cube2translation, cubeRotated[i]);
-//
-//			// View
-//			cubeRotated[i] = matrixVectorMultiply(viewMatrix, cubeRotated[i]);
-//
-//			// Projection (final step)
-//			cubeRotated[i] = matrixVectorMultiply(projection, cubeRotated[i]);
-//		}
-//		attron(COLOR_PAIR(2));
-//		attron(A_BOLD);
-//		rasterize(cubeRotated, edgeIndices, numEdges, windowFull, &depthBuffer);
-//		numEdges = sizeof(cubeTriangleIndices)/sizeof(cubeTriangleIndices[0]);
-//		rasterizeTriangle(cubeRotated, cubeTriangleIndices, numEdges, windowFull, &depthBuffer, '`', 12);
+        
 		numEdges = sizeof(cubeQuadIndices)/sizeof(cubeQuadIndices[0]);
-//		rasterizeQuads(cubeRotated, cubeQuadIndices, numEdges, windowFull, &depthBuffer, '`', debugLine);
-//		rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewCube2, projection, windowFull, NULL, &depthBuffer, defaultFragment, debugLine);
 		mRenderPipeline.setFragmentShader(defaultFragment);
 		mRenderPipeline.rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewCube2, projection, windowFull, NULL, debugLine);
-//		attroff(A_BOLD);
-//		attroff(COLOR_PAIR(2));
-		
-//		// Pyramid
-//		Coordinates4D pyramid2[sizeof(pyramid)/sizeof(pyramid[0])];
-////		Mat4D pyramidTranslation = translationMatrix(0, 0, sin(cube2angle*2));
-//		Mat4D pyramidTranslation = translationMatrix(0, 0, -1);
-//		Mat4D pyramidScale = scaleMatrix(1.5, 1.5, 1.5);
-//		for (int i = 0; i < sizeof(pyramid2)/sizeof(pyramid2[0]); i++) {
-//			// Copy
-//			pyramid2[i] = pyramid[i];
-//
-//			// Model
-//			pyramid2[i] = matrixVectorMultiply(pyramidScale, pyramid2[i]);
-//			pyramid2[i] = matrixVectorMultiply(pyramidTranslation, pyramid2[i]);
-//
-//			// View
-//			pyramid2[i] = matrixVectorMultiply(viewMatrix, pyramid2[i]);
-//
-//			// Projection (final step)
-//			pyramid2[i] = matrixVectorMultiply(projection, pyramid2[i]);
-//		}
-//		numEdges = sizeof(pyramidEdgeIndices)/sizeof(pyramidEdgeIndices[0]);
-//		attron(COLOR_PAIR(1));
-//		attron(A_BOLD);
-//		rasterize(pyramid2, pyramidEdgeIndices, numEdges, windowFull, &depthBuffer);
-//		attroff(A_BOLD);
-//		attroff(COLOR_PAIR(1));
-//
-//
-//		// Grid
-//		if (showGrid) {
-//			Coordinates4D grid2[sizeof(grid)/sizeof(grid[0])];
-//			for (int i = 0; i < sizeof(grid2)/sizeof(grid2[0]); i++) {
-//				grid2[i] = grid[i];
-//				// Model
-//
-//				// View
-//				grid2[i] = matrixVectorMultiply(viewMatrix, grid2[i]);
-//
-//				// Projection
-//				grid2[i] = matrixVectorMultiply(projection, grid2[i]);
-//			}
-//			numEdges = sizeof(gridEdgeIndices)/sizeof(gridEdgeIndices[0]);
-//			rasterize(grid2, gridEdgeIndices, numEdges, windowFull, &depthBuffer);
-//		}
-		
-//		// triangle
-//		Coordinates4D triangle2[sizeof(triangle)/sizeof(triangle[0])];
-//		for (int i = 0; i < sizeof(triangle2)/sizeof(triangle2[0]); i++) {
-//			// Model
-//			triangle2[i] = matrixVectorMultiply(cube2translation, triangle[i]);
-//
-//			// View
-//			triangle2[i] = matrixVectorMultiply(viewMatrix, triangle2[i]);
-//
-//			// Projection
-//			triangle2[i] = matrixVectorMultiply(projection, triangle2[i]);
-//		}
-//		numEdges = sizeof(triangleEdgeIndices)/sizeof(triangleEdgeIndices[0]);
-//		rasterizeTriangle(triangle2, triangleEdgeIndices, numEdges, windowFull, &depthBuffer, '`');
 		
 		// triangle
-//		Coordinates4D cubeTriangle[sizeof(triangle)/sizeof(triangle[0])];
 		Mat4D solidCubeScale = scaleMatrix(1.05, 1.05, 1.05);
 		Coordinates3D solidAxis = {0,0,1};
 		Mat4D solidRotation = rotationFromAngleAndUnitAxis(M_PI_4, solidAxis);
-//		for (int i = 0; i < sizeof(cube)/sizeof(cube[0]); i++) {
-//			// Model
-//
-//			cubeRotated[i] = matrixVectorMultiply(solidCubeScale, cube[i]);
-//			cubeRotated[i] = matrixVectorMultiply(solidRotation, cube[i]);
-//			cubeRotated[i] = matrixVectorMultiply(cube2translation, cubeRotated[i]);
-//
-//			// View
-//			cubeRotated[i] = matrixVectorMultiply(viewMatrix, cubeRotated[i]);
-//
-//			// Projection
-//			cubeRotated[i] = matrixVectorMultiply(projection, cubeRotated[i]);
-//		}
-////		numEdges = sizeof(cubeTriangleIndices)/sizeof(cubeTriangleIndices[0]);
-////		rasterizeTriangle(cubeRotated, cubeTriangleIndices, numEdges, windowFull, &depthBuffer, ' ', 0);
-//		numEdges = sizeof(cubeQuadIndices)/sizeof(cubeQuadIndices[0]);
-//		rasterizeQuads(cubeRotated, cubeQuadIndices, numEdges, windowFull, &depthBuffer, ' ', debugLine);
+
 		
 		Mat4D modelViewBlackCube = matrixMultiply(solidRotation, solidCubeScale);
 		modelViewBlackCube = matrixMultiply( cube2translation, modelViewBlackCube);
 		modelViewBlackCube = matrixMultiply(viewMatrix, modelViewBlackCube);
 		numEdges = sizeof(cubeQuadIndices)/sizeof(cubeQuadIndices[0]);
-//		rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewBlackCube, projection, windowFull, (void*)&lightModelView, &depthBuffer, lightFs, debugLine);
-//		rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewBlackCube, projection, windowFull, (void*)&mLightParams, &depthBuffer, lightFs2, debugLine);
 		mRenderPipeline.setFragmentShader(lightFs2);
 		mRenderPipeline.rasterizeQuadsShader(cube, cubeQuadIndices, numEdges, modelViewBlackCube, projection, windowFull, (void*)&mLightParams, debugLine);
 		
@@ -638,35 +516,15 @@ int main(int argc, char** argv) {
 		
 		// ground:
 		if (!showGrid) {
-//			Polygon4D groundCopy;
-//			groundCopy.numVertices = ground.numVertices;
-//			for (int i = 0; i < groundCopy.numVertices; i++) {
-//				// View
-//				groundCopy.vertices[i] = matrixVectorMultiply(viewMatrix, ground.vertices[i]);
-//				groundCopy.normals[i] = matrixVectorMultiply(viewMatrix, ground.normals[i]);
-//
-////				 Projection
-////				groundCopy.vertices[i] = matrixVectorMultiply(projection, groundCopy.vertices[i]);
-//			}
 			Mat4D groundTranslation = translationMatrix(0, 0, -1);
 			Mat4D groundModelView = matrixMultiply( viewMatrix, groundTranslation);
-//			rasterizePolygon(&groundCopy, 1, windowFull, &depthBuffer, ' ', debugLine);
-//			attron(COLOR_PAIR(0));
 			debugLine += 5;
-//			rasterizePolygonsShader(&ground, 1, groundModelView, projection, windowFull, &depthBuffer, defaultFragment, debugLine);
-//			rasterizePolygonsShader(ground, 5, groundModelView, projection, windowFull, (void*)&lightModelView, &depthBuffer, lightFs, debugLine);
-//			rasterizePolygonsShader(ground, 5, groundModelView, projection, windowFull, (void*)&mLightParams, &depthBuffer, lightFs2, debugLine);
 			mRenderPipeline.setFragmentShader(lightFs2);
 			
 			mRenderPipeline.rasterizePolygonsShader(ground, 5, groundModelView, projection, windowFull, (void*)&mLightParams, debugLine);
-//			rasterizePolygonsShader(&ground, 1, groundModelView, projection, windowFull, NULL, &depthBuffer, defaultFragment, debugLine);
-//			attroff(COLOR_PAIR(0));
 		}
 		
 		
-//		Coordinates4D p;
-//		Coordinates3D n;
-//		drawHorizonalLineWithShader(30, 210, 1, 0.4, 0.01, p, p, n, n, modelViewBlackCube, NULL, &depthBuffer, defaultFragment);
 		
 		if (showDepth) {
 			mRenderPipeline.depthBufferToTerminal();
@@ -679,8 +537,6 @@ int main(int argc, char** argv) {
 		}
 
 		int ch;
-//		refresh();
-//		continue;
 		if ((ch = getch()) == 0x1B) {	// Escape
 			keepRunning = false;
 		} else if (ch == KEY_RESIZE) {

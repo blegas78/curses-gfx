@@ -81,8 +81,8 @@ int main(void) {
 	char ch;
 	
 	
-//	double aspect = 12.0/28.0;	// MacOS
-	double aspect = 14.0/28.0;	// raspbian
+	double aspect = 12.0/28.0;	// MacOS
+//	double aspect = 14.0/28.0;	// raspbian
 //	double aspect = 4.0/6.0;	// ZipitZ2
 
 	int screenSizeX, screenSizeY;
