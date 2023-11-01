@@ -79,7 +79,9 @@ set(LIBNAME cursesgfx)
 
 find_package(PNG REQUIRED)
 find_package(ASSIMP)
-
+#find_package(BULLET)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(BULLET bullet)
 
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -152,6 +154,15 @@ if(ASSIMP_FOUND)
     set(c_headers ${c_headers} include/curses-gfx-loader.h )
     set(DEPENDENCIES ${DEPENDENCIES} ${ASSIMP_LIBRARY})
 endif(ASSIMP_FOUND)
+
+if(BULLET_FOUND)
+    message(" - BULLET_INCLUDE_DIRS: ${BULLET_INCLUDE_DIRS}")
+    include_directories(${BULLET_INCLUDEDIR})
+    set(c_sources ${c_sources} src/cursesGfxPhysics.cpp )
+    set(c_headers ${c_headers} include/curses-gfx-physics.h )
+    link_directories(${BULLET_LIBDIR})
+    set(DEPENDENCIES ${DEPENDENCIES} ${BULLET_LIBRARIES})
+endif(BULLET_FOUND)
 set(c_sources ${c_sources} ${c_headers} )
 
 # Libraries:
@@ -168,55 +179,55 @@ target_link_libraries(${LIBNAME} ${DEPENDENCIES})
 
 new_install( ${LIBNAME} )
 
-#find_package(PkgConfig REQUIRED)
-#pkg_check_modules(ncurses  REQUIRED ncurses )
-#if(ncurses_FOUND)
-#    message(" --- ncurses_FOUND")
-#    message(" --- ${ncurses_LIBRARIES}")
-#endif(ncurses_FOUND)
 
 
-add_executable(asciilines src/testAsciiLines.cpp)
+add_executable(asciilines examples/testAsciiLines.cpp)
 target_link_libraries(asciilines ncurses ${LIBNAME})
 
-add_executable(chaos_clocks src/chaosClocks.cpp)
+add_executable(chaos_clocks examples/chaosClocks.cpp)
 target_link_libraries(chaos_clocks ncurses ${LIBNAME})
 
-add_executable(stopwatch src/stopwatch.cpp)
+add_executable(stopwatch examples/stopwatch.cpp)
 target_link_libraries(stopwatch ncurses ${LIBNAME})
 
 
-add_executable(cube src/cube.cpp)
+add_executable(cube examples/cube.cpp)
 target_link_libraries(cube ncurses ${LIBNAME})
 
-add_executable(cube2 src/cube2.cpp)
+add_executable(cube2 examples/cube2.cpp)
 target_link_libraries(cube2 ncurses ${LIBNAME})
 
-add_executable(cube3 src/cube3.cpp)
+add_executable(cube3 examples/cube3.cpp)
 target_link_libraries(cube3 ncurses ${LIBNAME})
 
 if(PNG_FOUND)
 	message("-- Building examples with libpng!")
-	add_executable(cubepng src/cubepng.cpp)
+	add_executable(cubepng examples/cubepng.cpp)
 	target_link_libraries(cubepng ncurses ${PNG_LIBRARY} ${LIBNAME})
 endif(PNG_FOUND)
 
 if(ASSIMP_FOUND)
     message("-- Building examples with libassimp!")
-    add_executable(fileLoader src/fileLoader.cpp)
+    add_executable(fileLoader examples/fileLoader.cpp)
     target_link_libraries(fileLoader ncurses ${LIBNAME} ${ASSIMP_LIBRARY})
 endif(ASSIMP_FOUND)
 
-add_executable(aviz src/aviz.cpp)
+if(BULLET_FOUND)
+    message("-- Building examples with bullet physics!")
+    add_executable(bullet examples/bullet.cpp)
+    target_link_libraries(bullet ncurses ${LIBNAME} ${BULLET_LIBRARY})
+endif(BULLET_FOUND)
+
+add_executable(aviz examples/aviz.cpp)
 target_link_libraries(aviz ncurses ${LIBNAME})
 
-add_executable(testColor src/testColor.cpp)
+add_executable(testColor examples/testColor.cpp)
 target_link_libraries(testColor ncurses ${LIBNAME})
 
-add_executable(testFill src/testFill.cpp)
+add_executable(testFill examples/testFill.cpp)
 target_link_libraries(testFill ncurses ${LIBNAME})
 
 
-add_executable(threadPoolCheck src/threadPoolCheck.cpp)
+add_executable(threadPoolCheck examples/threadPoolCheck.cpp)
 target_link_libraries(threadPoolCheck ncurses ${LIBNAME})
 

@@ -102,13 +102,6 @@ void CursesGfxTerminal::setupTerminal() {
     
     numSatLevels += 1; // HACK we techincally have 9 levels since sat of 0 == white
     
-//    for(int i = 0; i < COLORS; i++) {
-//
-//        attron(COLOR_PAIR(i));
-////        attron(A_DIM);
-//        mvaddch(line, i, 'W');
-////        attroff(COLOR_PAIR(i));
-//    }
     curs_set(0);    // no cursor
 
 //    getch();
