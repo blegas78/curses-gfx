@@ -108,6 +108,7 @@ void lightFs2(const FragmentInfo& fInfo) {
 typedef struct _UniformInfo {
     Mat4D modelView;
     Mat4D modelViewProjection;
+    Mat4D normalMatrix;
 } UniformInfo;
 
 
@@ -115,7 +116,7 @@ typedef struct _UniformInfo {
 template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const T& input) {
     output.vertex = matrixVectorMultiply(uniformInfo->modelViewProjection, input.vertex);
     output.location = matrixVectorMultiply(uniformInfo->modelView, input.vertex);
-    output.normal = matrixVectorMultiply(uniformInfo->modelView, input.normal);
+    output.normal = matrixVectorMultiply(uniformInfo->normalMatrix, input.normal);
     output.color = input.color;
     output.textureCoord = input.textureCoord;
 }
@@ -158,6 +159,7 @@ void lightFs3(const FragmentInfo& fInfo) {
     double intensity;
     
     Coordinates3D vNormal = normalizeVectorFast(vertexInfo->normal);
+    Coordinates3D viewDir = normalizeVectorFast(vertexInfo->location);
     
     for (int i = 0; i < lights->numLights; i++) {
 //        lightToFrag = vectorSubtract(lights->modelView[i], fInfo.location3D);
@@ -176,12 +178,15 @@ void lightFs3(const FragmentInfo& fInfo) {
         
         intensitySpecular = dotProduct(lightReflected, vertexInfo->location);
 //        intensitySpecular /= sqrt(dotProduct(fInfo.location3D,     fInfo.location3D));
-        intensitySpecular *= Q_rsqrt(dotProduct(vertexInfo->location, vertexInfo->location));
+//        intensitySpecular *= Q_rsqrt(dotProduct(vertexInfo->location, vertexInfo->location));
+        
+        lightReflected = normalizeVectorFast(lightReflected);
+        intensitySpecular = (fmax(0,dotProduct(viewDir, lightReflected)));
         intensitySpecular = pow(intensitySpecular, 32)*0.9;
         
 //        intensity = (1/(lightMagnitudeSquared) * intensity2 +  intensitySpecular);
-        intensity = (lightMagnitude*lightMagnitude * intensity2 +  intensitySpecular);
-        
+        intensity = (lightMagnitude*lightMagnitude * intensity2 + lightMagnitude) +  intensitySpecular;
+        intensity *= 1;
         
         colorRGB.x += intensity*lights->color[i].x;
         colorRGB.y += intensity*lights->color[i].y;
@@ -199,7 +204,7 @@ void lightFs3(const FragmentInfo& fInfo) {
 //    colorRGB.x += (double)vertexInfo->color.r * (1.0/255.0 * 0.5);
 //    colorRGB.y += (double)vertexInfo->color.g * (1.0/255.0 * 0.5);
 //    colorRGB.z += (double)vertexInfo->color.b * (1.0/255.0 * 0.5);
-    Coordinates3D clippedRGB = clipRGB(colorRGB + *lights->colorModel);
+    Coordinates3D clippedRGB = clipRGB(colorRGB * *lights->colorModel + *lights->colorModel*0.15);
     fInfo.colorOutput->r = clippedRGB.x*255;
     fInfo.colorOutput->g = clippedRGB.y*255;
     fInfo.colorOutput->b = clippedRGB.z*255;
@@ -286,13 +291,17 @@ int main(int argc, char** argv) {
 
     const int numCubes = 1000;
     Mat4D cubeInitial[numCubes];
-    double cubeScale[numCubes];
+    Coordinates3D cubeScale[numCubes];
     double cubeMass[numCubes];
     btRigidBody* cubePhysics[numCubes];
     Coordinates3D cubeColor[numCubes];
     
     for(int i = 0; i < numCubes; i++) {
-        Coordinates3D axis = {sin(i), cos(i), tan(i)};
+        Coordinates3D axis = {sin(pow(i+1,2)), cos(pow(i,3)), cos(i)*sin(i*i)};
+        cubeColor[i] = axis;
+        if(dotProduct(cubeColor[i],cubeColor[i]) < 0.5) {
+            cubeColor[i] = normalizeVector(cubeColor[i]);
+        }
         axis = normalizeVector(axis);
         Mat4D initialCubeRotation = rotationFromAngleAndUnitAxis(i*40, axis);
         cubeInitial[i] = translationMatrix(0, 0, 5*(i+1));
@@ -300,24 +309,56 @@ int main(int argc, char** argv) {
 //        initialCubeRotation = rotationFromAngleAndUnitAxis(348923, {sqrt(2), 0, sqrt(2)});
 //        cubeInitial[1] = translationMatrix(0, 0, 20);
 //        cubeInitial[1] = matrixMultiply( cubeInitial[1], initialCubeRotation);
-        cubeScale[i] = i*1.0/(double)numCubes +0.15;
+        double scale = i*1.0/(double)numCubes +0.15;
+        cubeScale[i] = {scale, scale, scale};
 //        cubeScale[1] = 1.5;
 //        cubeMass[0] = 1;
-        cubeMass[i] = 1.0 * pow(cubeScale[i], 3);
+        cubeMass[i] = 1.0 * pow(scale, 3);
         
-        cubeColor[i] = axis * 0.15;
+        
     }
+    
+    const int numStatic = 5;
+    btRigidBody* staticCollision[numStatic];
+    Coordinates3D staticScale[numStatic];
+    Mat4D staticMatrix[numStatic];
+    Coordinates3D staticColor[numStatic];
+    
+    staticColor[0] = {0.75, 0.75, 0.75};
+    staticScale[0] = {10, 10, 1};
+    for(int i = 1; i < numStatic; i++) {
+        staticColor[i] = {0.1, 0.1, 1};
+        staticColor[i] = normalizeVector(staticColor[i]);
+    }
+    
+//    staticCollision[0] = mCursesGfxPhysics.addCube(10, 0, cubeInitial[i]);
+    staticMatrix[0] = translationMatrix(0, 0, -1);
+    staticMatrix[1] = translationMatrix(-10.1, 0, 1);
+    staticScale[1] = {.1, 10, 5};
+    staticMatrix[2] = translationMatrix(10.1, 0, 1);
+    staticScale[2] = {.1, 10, 5};
+    staticMatrix[3] = translationMatrix(0, -10.1, 1);
+    staticScale[3] = {10, .1, 5};
+    staticMatrix[4] = translationMatrix(0, 10.1, 1);
+    staticScale[4] = {10, .1, 5};
+    
     
     CursesGfxPhysics mCursesGfxPhysics;
     printf("mCursesGfxPhysics.initialize()...\n");
     mCursesGfxPhysics.initialize();
-    printf("mCursesGfxPhysics.addBody()...\n");
-    mCursesGfxPhysics.addBody();
+//    printf("mCursesGfxPhysics.addBody()...\n");
+//    mCursesGfxPhysics.addBody();
+    
 //    printf("mCursesGfxPhysics.addSphere()...\n");
 //    mCursesGfxPhysics.addSphere();
     for(int i = 0; i < numCubes; i++) {
-        printf("mCursesGfxPhysics.addCube()... %d\n", i);
+//        printf("mCursesGfxPhysics.addCube()... %d\n", i);
         cubePhysics[i] = mCursesGfxPhysics.addCube(cubeScale[i], cubeMass[i], cubeInitial[i]);
+    }
+    
+    for(int i = 0; i < numStatic; i++) {
+//            printf("mCursesGfxPhysics.addCube()... %d\n", i);
+        staticCollision[i] = mCursesGfxPhysics.addCube(staticScale[i], 0, staticMatrix[i]);
     }
 //    printf("mCursesGfxPhysics.addCube() again...\n");
 //    initial = translationMatrix(0, 0, 20);
@@ -479,7 +520,7 @@ int main(int argc, char** argv) {
 	Mat4D viewMatrix = matrixMultiply( cameraOrientation, cameraTranslation );
 	
 	// Projection
-	double zFar = 30;
+	double zFar = 1000;
 	double zNear = 0.1;
 	Mat4D projection = projectionMatrixPerspective(M_PI*0.5, screenAspect, zFar, zNear);
 	
@@ -507,6 +548,7 @@ int main(int argc, char** argv) {
 	bool autoRotate = true;
 	bool showDepth = false;
 	double delayTime = 1.0/60;
+//    double minuteResetTracker = 0;
 	while (keepRunning == true) {
 		debugLine = 0;
 		
@@ -516,6 +558,23 @@ int main(int argc, char** argv) {
 		
         double dTime = float_ms.count()/1000.0;
         mCursesGfxPhysics.update(dTime);
+        
+//        minuteResetTracker += dTime;
+//        if(minuteResetTracker > 60) {
+//            minuteResetTracker = 0;
+//            for(int c = 0; c < numCubes; c++) {
+//
+//                btTransform trans;
+//                float mat[16];
+//                for(int i = 0; i < 4; i++) {
+//                    for(int j = 0; j < 4; j++) {
+//                        mat[i + 4*j] = cubeInitial[c].d[i][j];
+//                    }
+//                }
+//                trans.setFromOpenGLMatrix(mat);
+//                cubePhysics[c]->getMotionState()->setWorldTransform(trans);
+//            }
+//        }
         
 		delayTime += 0.001*(1.0/60.0 - dTime);
         if (delayTime> 0 && delayTime < 1.0/60) {
@@ -537,8 +596,8 @@ int main(int argc, char** argv) {
 		cameraOrientation = rotationFromAngleAndUnitAxis(angle, cameraAxis);
 		cameraOrientation = transpose(cameraOrientation);
 		
-		double distance = 2*sin(angle/2);
-		cameraTranslation = translationMatrix(-(5+distance)*sin(angle), (5+distance) * cos(angle), -(2*cos(angle/5)+distance)-4);
+		double distance = 2*sin(angle/2)+10;
+		cameraTranslation = translationMatrix(-(5+distance)*sin(angle), (5+distance) * cos(angle), -(2*cos(angle/5)+distance)-6);
 
 		viewMatrix = matrixMultiply( cameraOrientation, cameraTranslation);
 		
@@ -559,7 +618,7 @@ int main(int argc, char** argv) {
 		
 		// Light Model
 		LightParams mLightParams;
-		mLightParams.numLights = 1;
+		mLightParams.numLights = 2;
 		mLightParams.modelView[0] = lightModelView;
 		mLightParams.color[0].x = 255.0/255.0;//1.25/3.0;
         mLightParams.color[0].y = 142.0/255.0;//0.9/3.0;
@@ -571,9 +630,9 @@ int main(int argc, char** argv) {
 		light[1].z = 3 + 1.0*sin(lightAngle*6.0);
 		light[1].w = 1;
 		mLightParams.modelView[1] = matrixVectorMultiply(viewMatrix, light[1]);
-		mLightParams.color[1].x = 0.0;
-		mLightParams.color[1].y = 1;//0.1;
-		mLightParams.color[1].z = 0.0;
+		mLightParams.color[1].x = 200.0/255.0;
+		mLightParams.color[1].y = 220.0/255.0;//0.1;
+		mLightParams.color[1].z = 255.0/255.0;
 		
 		light[2].x = 6*cos(lightAngle*1.75);
 		light[2].y = 6*sin(lightAngle*1.75);
@@ -622,7 +681,7 @@ int main(int argc, char** argv) {
         btTransform trans;
 //        mLightParams.colorModel = {0.25, 0, 0.15};
         for(int i = 0; i < numCubes; i++) {
-            Mat4D solidCubeScale = scaleMatrix(cubeScale[i], cubeScale[i], cubeScale[i]);
+            Mat4D solidCubeScale = scaleMatrix(cubeScale[i].x, cubeScale[i].y, cubeScale[i].z);
             
             if(cubePhysics[i] && cubePhysics[i]->getMotionState()) {
                 cubePhysics[i]->getMotionState()->getWorldTransform(trans);
@@ -654,6 +713,8 @@ int main(int argc, char** argv) {
             numEdges = sizeof(cubeQuadIndices)/sizeof(cubeQuadIndices[0]);
             mUniformInfo.modelView = modelViewBlackCube;
             mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+            mUniformInfo.normalMatrix = invert3x3Slow(mUniformInfo.modelView);
+            mUniformInfo.normalMatrix = transpose(mUniformInfo.normalMatrix);
             mRenderPipeline.setFragmentShader(lightFs3);
             mRenderPipeline.mRasterizerThreadPool.busyWait();
             mLightParams.colorModel = &cubeColor[i];
@@ -683,57 +744,60 @@ int main(int argc, char** argv) {
         
         
         
-        
-//        mRenderPipeline.trianglesFill(squareVi, squareViIndices, 2);
-        Mat4D modelTranslation = translationMatrix(0, 0, -1 );
-        Mat4D modelScale = scaleMatrix(10, 10, 10);
-        Mat4D modelGround = matrixMultiply(modelTranslation, modelScale);
-        
-//        mCursesGfxPhysics.groundShape->
-//        mCursesGfxPhysics.ground->;
-        
-        if(mCursesGfxPhysics.ground && mCursesGfxPhysics.ground->getMotionState()) {
-            mCursesGfxPhysics.ground->getMotionState()->getWorldTransform(trans);
-//            trans.deSerializeDouble(**modelGround.d);
+        for(int i = 0; i < numStatic; i++) {
+            //        mRenderPipeline.trianglesFill(squareVi, squareViIndices, 2);
+            Mat4D modelTranslation = staticMatrix[i];
+            Mat4D modelScale = scaleMatrix(staticScale[i].x, staticScale[i].y, staticScale[i].z);
+            Mat4D modelGround = matrixMultiply(modelTranslation, modelScale);
             
-//            modelGround = scaleMatrix(8, 8, 8);
-//            modelTranslation = translationMatrix(trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ());
-//            modelGround = matrixMultiply(modelTranslation, modelGround);
-//
-//            Mat4D modelRotation;
-//            for(int i = 0; i < 3; i++) {
-//                modelRotation.d[i][0] = trans.getBasis().getRow(i).getX();
-//                modelRotation.d[i][1] = trans.getBasis().getRow(i).getY();
-//                modelRotation.d[i][2] = trans.getBasis().getRow(i).getZ();
-//            }
-//            modelRotation.d[3][3] = 1;
-//
-//            modelGround = matrixMultiply(modelRotation, modelGround);
+            //        mCursesGfxPhysics.groundShape->
+            //        mCursesGfxPhysics.ground->;
             
-            float mat[16];
-            trans.getOpenGLMatrix(mat);
-            for(int i = 0; i < 4; i++) {
-                for(int j = 0; j < 4; j++) {
-                    modelGround.d[i][j] = mat[i + 4*j];
+            if(staticCollision[i] && staticCollision[i]->getMotionState()) {
+                staticCollision[i]->getMotionState()->getWorldTransform(trans);
+                //            trans.deSerializeDouble(**modelGround.d);
+                
+                //            modelGround = scaleMatrix(8, 8, 8);
+                //            modelTranslation = translationMatrix(trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ());
+                //            modelGround = matrixMultiply(modelTranslation, modelGround);
+                //
+                //            Mat4D modelRotation;
+                //            for(int i = 0; i < 3; i++) {
+                //                modelRotation.d[i][0] = trans.getBasis().getRow(i).getX();
+                //                modelRotation.d[i][1] = trans.getBasis().getRow(i).getY();
+                //                modelRotation.d[i][2] = trans.getBasis().getRow(i).getZ();
+                //            }
+                //            modelRotation.d[3][3] = 1;
+                //
+                //            modelGround = matrixMultiply(modelRotation, modelGround);
+                
+                float mat[16];
+                trans.getOpenGLMatrix(mat);
+                for(int i = 0; i < 4; i++) {
+                    for(int j = 0; j < 4; j++) {
+                        modelGround.d[i][j] = mat[i + 4*j];
+                    }
                 }
+                
+                modelGround = matrixMultiply(modelGround, modelScale);
+            } else {
+                //            modelGround;
             }
+            Mat4D modelViewSquare = matrixMultiply(viewMatrix, modelGround);
+            mUniformInfo.modelView = modelViewSquare;
+            mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+            mUniformInfo.normalMatrix = invert3x3Slow(mUniformInfo.modelView);
+            mUniformInfo.normalMatrix = transpose(mUniformInfo.normalMatrix);
+            //        mRenderPipeline.setFragmentShader(lightFs4);
+            //        mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParams, myVertexShader);
             
-            modelGround = matrixMultiply(modelGround, modelScale);
-        } else {
-//            modelGround;
+            mRenderPipeline.setFragmentShader(lightFs3);
+//            Coordinates3D groundColor = {201.0/255.0, 226.0/255.0, 255.0/255.0};
+//            groundColor = groundColor * 0.1;
+            mRenderPipeline.mRasterizerThreadPool.busyWait();
+            mLightParams.colorModel = &staticColor[i];
+            mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParams, myVertexShader);
         }
-        Mat4D modelViewSquare = matrixMultiply(viewMatrix, modelGround);
-        mUniformInfo.modelView = modelViewSquare;
-        mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
-//        mRenderPipeline.setFragmentShader(lightFs4);
-//        mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParams, myVertexShader);
-        
-        mRenderPipeline.setFragmentShader(lightFs3);
-        mRenderPipeline.mRasterizerThreadPool.busyWait();
-        Coordinates3D groundColor = {201.0/255.0, 226.0/255.0, 255.0/255.0};
-        groundColor = groundColor * 0.1;
-        mLightParams.colorModel = &groundColor;
-        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParams, myVertexShader);
 
 		if (showDepth) {
 			mRenderPipeline.depthBufferToTerminal();

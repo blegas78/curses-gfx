@@ -141,6 +141,7 @@ void vertexColorFs(const FragmentInfo& fInfo) {
 typedef struct _UniformInfo {
     Mat4D modelView;
     Mat4D modelViewProjection;
+    Mat4D normalMatrix;
 } UniformInfo;
 
 
@@ -148,7 +149,7 @@ typedef struct _UniformInfo {
 template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const T& input) {
     output.vertex = matrixVectorMultiply(uniformInfo->modelViewProjection, input.vertex);
     output.location = matrixVectorMultiply(uniformInfo->modelView, input.vertex);
-    output.normal = matrixVectorMultiply(uniformInfo->modelView, input.normal);
+    output.normal = matrixVectorMultiply(uniformInfo->normalMatrix, input.normal);
     output.textureCoord = input.textureCoord;
     output.color = input.color;
 }
@@ -595,6 +596,8 @@ int main(int argc, char** argv) {
             UniformInfo mUniformData;
             mUniformData.modelView = matrixMultiply(viewMatrix, model);
             mUniformData.modelViewProjection = matrixMultiply(projection, mUniformData.modelView);
+            mUniformData.normalMatrix = invert3x3Slow(mUniformData.modelView);
+            mUniformData.normalMatrix = transpose(mUniformData.normalMatrix);
             //        mRenderPipeline.rasterizeShader(fileVertices, &mUniformData, fileIndices, numFileEdges, &modelColor, myVertexShader);
 //            RenderStats mRenderStats2 = mRenderPipeline.rasterizeShader(meshes[m].vi, &mUniformData, meshes[m].numTriangles, &modelColor, myVertexShader);
             

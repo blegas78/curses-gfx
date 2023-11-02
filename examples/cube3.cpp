@@ -106,6 +106,7 @@ void lightFs2(const FragmentInfo& fInfo) {
 typedef struct _UniformInfo {
     Mat4D modelView;
     Mat4D modelViewProjection;
+    Mat4D normalMatrix;
 } UniformInfo;
 
 
@@ -113,7 +114,7 @@ typedef struct _UniformInfo {
 template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const T& input) {
     output.vertex = matrixVectorMultiply(uniformInfo->modelViewProjection, input.vertex);
     output.location = matrixVectorMultiply(uniformInfo->modelView, input.vertex);
-    output.normal = matrixVectorMultiply(uniformInfo->modelView, input.normal);
+    output.normal = matrixVectorMultiply(uniformInfo->normalMatrix, input.normal);
     output.color = input.color;
     output.textureCoord = input.textureCoord;
 }
@@ -587,6 +588,8 @@ int main(int argc, char** argv) {
         
         mUniformInfo.modelView = modelViewBlackCube;
         mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+        mUniformInfo.normalMatrix = invert3x3Slow(mUniformInfo.modelView);
+        mUniformInfo.normalMatrix = transpose(mUniformInfo.normalMatrix);
 //        mRenderPipeline.userData = (void*)&mLightParams;
         mRenderPipeline.setFragmentShader(lightFs3);
 //        mRenderPipeline.trianglesFill(cubeVi, cubeViIndices, 12);
@@ -600,6 +603,8 @@ int main(int argc, char** argv) {
         Mat4D modelViewSquare = matrixMultiply(viewMatrix, modelSquare);
         mUniformInfo.modelView = modelViewSquare;
         mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+        mUniformInfo.normalMatrix = invert3x3Slow(mUniformInfo.modelView);
+        mUniformInfo.normalMatrix = transpose(mUniformInfo.normalMatrix);
         mRenderPipeline.setFragmentShader(lightFs4);
         mRenderPipeline.rasterizeShader(squareVi, &mUniformInfo, squareViIndices, 2, (void*)&mLightParams, myVertexShader);
 

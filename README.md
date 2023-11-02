@@ -34,6 +34,11 @@ Uses libassimp to load 3D models
 
 ![fileLoader2](https://github.com/blegas78/curses-gfx/blob/main/docs/images/mario.png?raw=true)
 
+#### bullet
+An example integrating the Bullet physics engine
+
+[![bullet](https://img.youtube.com/vi/6goxQYAVHiQ/maxresdefault.jpg)](https://youtu.be/6goxQYAVHiQ)
+
 #### stopwatch
 
 ![Stopwatch](https://github.com/blegas78/curses-gfx/blob/main/docs/images/stopwatch.png?raw=true)

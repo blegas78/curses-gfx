@@ -37,7 +37,7 @@ public:
     
     void addBody();
     void addSphere();
-    btRigidBody* addCube(double scale, double mass, Mat4D initial);
+    btRigidBody* addCube(Coordinates3D scale, double mass, Mat4D initial);
     
     void update(double dTime);
 };

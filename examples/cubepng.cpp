@@ -60,6 +60,7 @@ void lightModelFs(const FragmentInfo& fInfo) {
 typedef struct _UniformInfo {
     Mat4D modelView;
     Mat4D modelViewProjection;
+    Mat4D normalMatrix;
 } UniformInfo;
 
 
@@ -67,7 +68,7 @@ typedef struct _UniformInfo {
 template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const T& input) {
     output.vertex = matrixVectorMultiply(uniformInfo->modelViewProjection, input.vertex);
     output.location = matrixVectorMultiply(uniformInfo->modelView, input.vertex);
-    output.normal = matrixVectorMultiply(uniformInfo->modelView, input.normal);
+    output.normal = matrixVectorMultiply(uniformInfo->normalMatrix, input.normal);
     output.color = input.color;
     output.textureCoord = input.textureCoord;
 }
@@ -654,6 +655,9 @@ int main(int argc, char** argv) {
         mUniformInfo.modelView = modelViewBlackCube;
 //        mUniformInfo.modelView = modelBlackCube;
         mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+        mUniformInfo.normalMatrix = invert3x3Slow(mUniformInfo.modelView);
+        mUniformInfo.normalMatrix = transpose(mUniformInfo.normalMatrix);
+
 //        mRenderPipeline.setFragmentShader(lightFs3);
 //        mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, cubeViIndices, 12, (void*)&mLightParams, myVertexShader);
         mRenderPipeline.setFragmentShader(textureshader);
@@ -675,6 +679,9 @@ int main(int argc, char** argv) {
                 mUniformInfo.modelView = modelViewSquare;
                 //        mUniformInfo.modelView = modelSquare;
                 mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+            
+            mUniformInfo.normalMatrix = invert3x3Slow(mUniformInfo.modelView);
+            mUniformInfo.normalMatrix = transpose(mUniformInfo.normalMatrix);
                 
                 
                 
@@ -704,6 +711,8 @@ int main(int argc, char** argv) {
                 Mat4D thisWallModelView = matrixMultiply(viewMatrix, thisWallModel);
                 mUniformInfo.modelView = thisWallModelView;
                 mUniformInfo.modelViewProjection = matrixMultiply(projection, mUniformInfo.modelView);
+                mUniformInfo.normalMatrix = invert3x3Slow(mUniformInfo.modelView);
+                mUniformInfo.normalMatrix = transpose(mUniformInfo.normalMatrix);
                 mRenderStats2 = mRenderPipeline.rasterizeShader(squareWall, &mUniformInfo, squareViIndices, 2, (void*)&mLightParamsAndTexture, myVertexShader);
                 mRenderStats.timeDrawing += mRenderStats2.timeDrawing;
                 mRenderStats.timeClipping += mRenderStats2.timeClipping;

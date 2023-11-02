@@ -83,11 +83,11 @@ void CursesGfxPhysics::addSphere() {
     dynamicsWorld->addRigidBody(ball);
 }
 
-btRigidBody* CursesGfxPhysics::addCube(double scale, double m, Mat4D initial) {
+btRigidBody* CursesGfxPhysics::addCube(Coordinates3D scale, double m, Mat4D initial) {
     //create a dynamic rigidbody
     
     //btCollisionShape* colShape = new btBoxShape(btVector3(1,1,1));
-    btCollisionShape* colShape = new btBoxShape(btVector3(btScalar(scale), btScalar(scale), btScalar(scale)));
+    btCollisionShape* colShape = new btBoxShape(btVector3(btScalar(scale.x), btScalar(scale.y), btScalar(scale.z)));
     collisionShapes.push_back(colShape);
     
     /// Create Dynamic Objects
@@ -128,5 +128,5 @@ btRigidBody* CursesGfxPhysics::addCube(double scale, double m, Mat4D initial) {
 
 
 void CursesGfxPhysics::update(double dTime) {
-    dynamicsWorld->stepSimulation(dTime, 10);
+    dynamicsWorld->stepSimulation(dTime, 100);
 }
