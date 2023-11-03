@@ -285,11 +285,13 @@ void lightFs4(const FragmentInfo& fInfo) {
     //    fInfo.colorOutput = result;
 }
 
-
+float randZeroToOne() {
+    return static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+}
 
 int main(int argc, char** argv) {
 
-    const int numCubes = 1000;
+    const int numCubes = 500;
     Mat4D cubeInitial[numCubes];
     Coordinates3D cubeScale[numCubes];
     double cubeMass[numCubes];
@@ -297,11 +299,12 @@ int main(int argc, char** argv) {
     Coordinates3D cubeColor[numCubes];
     
     for(int i = 0; i < numCubes; i++) {
-        Coordinates3D axis = {sin(pow(i+1,2)), cos(pow(i,3)), cos(i)*sin(i*i)};
+        
+        Coordinates3D axis = {randZeroToOne(), randZeroToOne(), randZeroToOne()};
         cubeColor[i] = axis;
-        if(dotProduct(cubeColor[i],cubeColor[i]) < 0.5) {
-            cubeColor[i] = normalizeVector(cubeColor[i]);
-        }
+//        if(dotProduct(cubeColor[i],cubeColor[i]) < 0.2) {
+//            cubeColor[i] = normalizeVector(cubeColor[i]);
+//        }
         axis = normalizeVector(axis);
         Mat4D initialCubeRotation = rotationFromAngleAndUnitAxis(i*40, axis);
         cubeInitial[i] = translationMatrix(0, 0, 5*(i+1));
@@ -548,7 +551,7 @@ int main(int argc, char** argv) {
 	bool autoRotate = true;
 	bool showDepth = false;
 	double delayTime = 1.0/60;
-//    double minuteResetTracker = 0;
+    double minuteResetTracker = 0;
 	while (keepRunning == true) {
 		debugLine = 0;
 		
@@ -559,22 +562,32 @@ int main(int argc, char** argv) {
         double dTime = float_ms.count()/1000.0;
         mCursesGfxPhysics.update(dTime);
         
-//        minuteResetTracker += dTime;
-//        if(minuteResetTracker > 60) {
-//            minuteResetTracker = 0;
-//            for(int c = 0; c < numCubes; c++) {
-//
-//                btTransform trans;
-//                float mat[16];
-//                for(int i = 0; i < 4; i++) {
-//                    for(int j = 0; j < 4; j++) {
-//                        mat[i + 4*j] = cubeInitial[c].d[i][j];
-//                    }
-//                }
-//                trans.setFromOpenGLMatrix(mat);
-//                cubePhysics[c]->getMotionState()->setWorldTransform(trans);
-//            }
-//        }
+        minuteResetTracker += dTime;
+        if(minuteResetTracker > 30) {
+            minuteResetTracker = 0;
+            for(int c = 0; c < numCubes; c++) {
+                
+                btTransform trans;
+                float mat[16];
+                for(int i = 0; i < 4; i++) {
+                    for(int j = 0; j < 4; j++) {
+                        mat[i + 4*j] = cubeInitial[c].d[i][j];
+                    }
+                }
+                trans.setFromOpenGLMatrix(mat);
+                cubePhysics[c]->clearForces();
+                //                cubePhysics[c]->setGravity(btVector3(0,0,-9.81));
+                cubePhysics[c]->setAngularVelocity(btVector3(0,0,0));
+                cubePhysics[c]->setLinearVelocity(btVector3(0,0,0));
+                cubePhysics[c]->setWorldTransform(trans);
+                //                cubePhysics[c]->set
+                cubePhysics[c]->getMotionState()->setWorldTransform(trans);
+            }
+            
+            for(int c = 0; c < numCubes; c++) {
+                cubePhysics[c]->forceActivationState(DISABLE_DEACTIVATION);
+            }
+        }
         
 		delayTime += 0.001*(1.0/60.0 - dTime);
         if (delayTime> 0 && delayTime < 1.0/60) {
@@ -612,7 +625,7 @@ int main(int argc, char** argv) {
 		lightAngle+=0.75 * dTime;
 		light[0].x = 6*cos(lightAngle);
 		light[0].y = 6*sin(lightAngle);
-		light[0].z = 3 + 1.0*sin(lightAngle*5.0);
+		light[0].z = 6 + 1.0*sin(lightAngle*5.0);
 		light[0].w = 1;
 		lightModelView = matrixVectorMultiply(viewMatrix, light[0]);
 		
@@ -627,11 +640,11 @@ int main(int argc, char** argv) {
 		
 		light[1].x = 6*cos(lightAngle*1.25);
 		light[1].y = 6*sin(lightAngle*1.25);
-		light[1].z = 3 + 1.0*sin(lightAngle*6.0);
+		light[1].z = 6 + 1.0*sin(lightAngle*6.0);
 		light[1].w = 1;
 		mLightParams.modelView[1] = matrixVectorMultiply(viewMatrix, light[1]);
 		mLightParams.color[1].x = 200.0/255.0;
-		mLightParams.color[1].y = 220.0/255.0;//0.1;
+		mLightParams.color[1].y = 180.0/255.0;//0.1;
 		mLightParams.color[1].z = 255.0/255.0;
 		
 		light[2].x = 6*cos(lightAngle*1.75);
