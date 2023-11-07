@@ -4,7 +4,7 @@
 
 #include <ncurses.h>
 RenderPipeline::RenderPipeline() {
-	fbo = new FrameBuffer;
+	fbo = new FrameBuffer[1];
 	depthBuffer = new FrameBuffer;
 	
 	asTexImage2d(fbo, FBT_RGBA, 1, 1);
@@ -24,11 +24,15 @@ void RenderPipeline::mvaddstring(int x, int y, const char* string) {
     
     if (fbo->type == FBT_RGBA) {
         for (int i=x; i < x+strlen(string); i++) {
-            fbo->data[(i + y*fbo->cols)*4+0] = 255;
-            fbo->data[(i + y*fbo->cols)*4+1] = 255;
-            fbo->data[(i + y*fbo->cols)*4+2] = 255;
-            fbo->data[(i + y*fbo->cols)*4+3] = string[i-x];
-            ((double*)depthBuffer->data)[i + y*depthBuffer->cols] = 0;
+//            ColorRGBA* location = fbo->at(i,y);
+//            *location =
+            fbo->set(i,y, ColorRGBA({255, 255, 255, string[i-x]}));
+//            fbo->data[(i + y*fbo->cols)*4+0] = 255;
+//            fbo->data[(i + y*fbo->cols)*4+1] = 255;
+//            fbo->data[(i + y*fbo->cols)*4+2] = 255;
+//            fbo->data[(i + y*fbo->cols)*4+3] = string[i-x];
+//            ((double*)depthBuffer->data)[i + y*depthBuffer->cols] = 0;
+            fbo->set(i, y, double(0));
         }
     }
 }
@@ -65,7 +69,8 @@ void saveFrameBufferToFile(const char* filename, FrameBuffer* fbo) {
 		case FBT_RGBA:
 			fprintf(fp, "P6\n%d %d\n255\n", fbo->cols, fbo->rows);
 			for (int i = 0; i < fbo->cols*fbo->rows; i++) {
-				fwrite( &((ColorRGBA*)fbo->data)[i], 1, 3, fp);
+//				fwrite( &((ColorRGBA*)fbo->data)[i], 1, 3, fp);
+                fwrite( &fbo->at<ColorRGBA>(i, 0), 1, 3, fp);
 			}
 			break;
 			
@@ -73,10 +78,12 @@ void saveFrameBufferToFile(const char* filename, FrameBuffer* fbo) {
 			fprintf(fp, "P5\n%d %d\n255\n", fbo->cols, fbo->rows);
 			for (int i = 0; i < fbo->cols*fbo->rows; i++) {
 				uint8_t data;
-				if ( ((double*)fbo->data)[i] == 0 ) {
+//				if ( ((double*)fbo->data)[i] == 0 ) {
+                if ( fbo->at<double>(i, 0) == 0 ) {
 					data = 0;
 				} else {
-					data = (((double*)fbo->data)[i]-1)*200000;
+//					data = (((double*)fbo->data)[i]-1)*200000;
+                    data = (fbo->at<double>(i, 0)-1)*200000;
 				}
 //				printf("%f == %d\n", ((double*)fbo->data)[i], data);
 				fwrite( &data, 1, 1, fp);
@@ -111,7 +118,7 @@ RenderPipeline::~RenderPipeline() {
 	saveFrameBufferToFile("render.ppm", &fbo[0]);
 	saveFrameBufferToFile("depth.pgm", &depthBuffer[0]);
 	
-	delete fbo;
+	delete [] fbo;
 	delete depthBuffer;
 }
 
@@ -134,7 +141,7 @@ void RenderPipeline::reset() {
 //    clearColor.g = 255;
 //    clearColor.b = 255;
 //    clearColor.a = 0;
-	fbo->clear(&clearColor);
+	fbo->clear(clearColor);
 }
 
 void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo&)) {
@@ -1159,7 +1166,8 @@ void RenderPipeline::setWithDepthBuffer( Coordinates2D pt, char c, double invDep
 			return;
 		}
 		int depthIndex = pt.x + depthBuffer->cols*pt.y;
-		if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
+//		if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
+        if (invDepth > depthBuffer->at<double>(depthIndex)) {
 			ColorRGBA color;
 			color.b = 255;
 			color.g = 255;
@@ -1168,7 +1176,8 @@ void RenderPipeline::setWithDepthBuffer( Coordinates2D pt, char c, double invDep
 //			setRenderBuffer(pt.x, pt.y, color);
 			setRenderBuffer(depthIndex, color);
 			
-			((double*)depthBuffer->data)[depthIndex] = invDepth;
+//			((double*)depthBuffer->data)[depthIndex] = invDepth;
+            depthBuffer->at<double>(depthIndex) = invDepth;
 //			return;
 //
 //
@@ -1307,9 +1316,10 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
 		return;
 	}
 	int depthIndex = pixel.x + depthBuffer->cols*pixel.y;
-	if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
-		((double*)depthBuffer->data)[depthIndex] = invDepth;
-		
+//	if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
+//		((double*)depthBuffer->data)[depthIndex] = invDepth;
+        if (invDepth > depthBuffer->at<double>(depthIndex)) {
+            depthBuffer->at<double>(depthIndex) = invDepth;
 		
 //        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
 		FragmentInfo fInfo;
@@ -1318,7 +1328,8 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
 		fInfo.normal = normal;
 		fInfo.data = userData;
 //		fInfo.colorOutput = &colorOutput;
-        fInfo.colorOutput = &((ColorRGBA*)(fbo[0].data))[depthIndex];
+//        fInfo.colorOutput = &((ColorRGBA*)(fbo[0].data))[depthIndex];
+        fInfo.colorOutput = &fbo[0].at<ColorRGBA>(depthIndex);
 		fragmentShader(fInfo);
 		
 //		setRenderBuffer(depthIndex, colorOutput);
@@ -1332,8 +1343,10 @@ void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void
     int depthIndex = pixel.x + depthBuffer->cols*pixel.y;
 //    depthBuffer->mutex.lock();
     
-    if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
-        ((double*)depthBuffer->data)[depthIndex] = invDepth;
+//    if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
+//        ((double*)depthBuffer->data)[depthIndex] = invDepth;
+        if (invDepth > depthBuffer->at<double>(depthIndex)) {
+            depthBuffer->at<double>(depthIndex) = invDepth;
 //        depthBuffer->mutex.unlock();
         
 //        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
@@ -1342,7 +1355,8 @@ void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void
         fInfo.data = userData;
         fInfo.interpolated = interpolatedData;
 //        fInfo.colorOutput = &colorOutput;
-        fInfo.colorOutput = &((ColorRGBA*)(fbo[0].data))[depthIndex];
+//        fInfo.colorOutput = &((ColorRGBA*)(fbo[0].data))[depthIndex];
+        fInfo.colorOutput = &fbo[0].at<ColorRGBA>(depthIndex);
         fragmentShader(fInfo);
         
 //        setRenderBuffer(depthIndex, colorOutput);
@@ -1357,9 +1371,12 @@ void RenderPipeline::setFloatDotWithDepthBuffer( double x, double y, double invD
 		if ( (int)x < 0 || (int)y < 0 || depthBuffer->cols <= (int)x || depthBuffer->rows <= (int)y) {
 			return;
 		}
-		if (invDepth > ((double*)depthBuffer->data)[(int)x + depthBuffer->cols*(int)y]) {
-			drawDotFloat(x, y);
-			((double*)depthBuffer->data)[(int)x + depthBuffer->cols*(int)y] = invDepth;
+        int depthIndex = (int)x + depthBuffer->cols*(int)y;
+        if (invDepth > depthBuffer->at<double>(depthIndex)) {
+            depthBuffer->at<double>(depthIndex) = invDepth;
+//		if (invDepth > ((double*)depthBuffer->data)[(int)x + depthBuffer->cols*(int)y]) {
+//			drawDotFloat(x, y);
+//			((double*)depthBuffer->data)[(int)x + depthBuffer->cols*(int)y] = invDepth;
 		}
 	} else {
 		drawDotFloat(x, y);
@@ -1405,14 +1422,16 @@ void RenderPipeline::drawDotFloat(double x, double y) {
 
 
 void RenderPipeline::setRenderBuffer(const int& x, const int& y, ColorRGBA& color) {
-	((ColorRGBA*)(fbo[0].data))[x + fbo[0].cols * y] = color;
+//	((ColorRGBA*)(fbo[0].data))[x + fbo[0].cols * y] = color;
+    fbo[0].at<ColorRGBA>(x, y) = color;
 }
 void RenderPipeline::setRenderBuffer(const int& index, ColorRGBA& color) {
-	((ColorRGBA*)(fbo[0].data))[index] = color;
+//	((ColorRGBA*)(fbo[0].data))[index] = color;
+    fbo[0].at<ColorRGBA>(index) = color;
 }
 
 
-void RenderPipeline::renderBufferToTerminal() {
+void RenderPipeline::renderBufferToTerminal(int fboIndex) {
 //	waitForThreads();
 //    RasterizerThreadPool::waitThreads(0);
     mRasterizerThreadPool.busyWait();
@@ -1421,24 +1440,25 @@ void RenderPipeline::renderBufferToTerminal() {
 	Coordinates3D color;
 	int offset, index;
 	
-	for (int y = 0; y < fbo[0].rows; y++) {
-		offset = y * fbo[0].cols;
-		for (int x = 0; x < fbo[0].cols; x++) {
+	for (int y = 0; y < fbo[fboIndex].rows; y++) {
+		offset = y * fbo[fboIndex].cols;
+		for (int x = 0; x < fbo[fboIndex].cols; x++) {
 			index = x + offset;
 			
 			pixel.x = x;
 			pixel.y = y;
-			
-			color.x = (double)((ColorRGBA*)fbo[0].data)[index].r / 255.0;
-			color.y = (double)((ColorRGBA*)fbo[0].data)[index].g / 255.0;
-			color.z = (double)((ColorRGBA*)fbo[0].data)[index].b / 255.0;
+            
+			color.x = (double)fbo[fboIndex].at<ColorRGBA>(index).r / 255.0;
+			color.y = (double)fbo[fboIndex].at<ColorRGBA>(index).g / 255.0;
+			color.z = (double)fbo[fboIndex].at<ColorRGBA>(index).b / 255.0;
 #ifndef FB_SUPPORT
-			if (((ColorRGBA*)fbo[0].data)[index].a == 0) {
+			if (fbo[fboIndex].at<ColorRGBA>(index).a == 0) {
 				CursesGfxTerminal::setRGB(pixel, color);
 			} else {
                 double dummyLevel;
                 CursesGfxTerminal::enableColor(color, dummyLevel);
-				set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
+//				set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
+                set(pixel, fbo[fboIndex].at<ColorRGBA>(index).a);
                 CursesGfxTerminal::disableColor();
 			}
 			
@@ -1450,9 +1470,9 @@ void RenderPipeline::renderBufferToTerminal() {
 //			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].b & 0xF8) >> (3);
 //			*(uint16_t*)&fbdata[0 + offsetfb] = finalcolor;
 			
-			fbdata[2 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].r;
-   			fbdata[1 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].g;
-   			fbdata[0 + offsetfb] = ((ColorRGBA*)fbo[0].data)[index].b;
+			fbdata[2 + offsetfb] = ((ColorRGBA*)fbo[fboIndex].data)[index].r;
+   			fbdata[1 + offsetfb] = ((ColorRGBA*)fbo[fboIndex].data)[index].g;
+   			fbdata[0 + offsetfb] = ((ColorRGBA*)fbo[fboIndex].data)[index].b;
 			
 #endif
 		}
@@ -1473,11 +1493,14 @@ void RenderPipeline::depthBufferToTerminal() {
         offset = y * depthBuffer->cols;
         for (int x = 0; x < depthBuffer->cols; x++) {
             index = x + offset;
-            if(((double*)depthBuffer->data)[index] < minDepth) {
-                minDepth =((double*)depthBuffer->data)[index];
+//            if(((double*)depthBuffer->data)[index] < minDepth) {
+//              minDepth = ((double*)depthBuffer->data)[index];
+            if(depthBuffer->at<double>(index) < minDepth) {
+                minDepth = depthBuffer->at<double>(index);
             }
-            if(((double*)depthBuffer->data)[index] > maxDepth) {
-                maxDepth = ((double*)depthBuffer->data)[index];
+            if(depthBuffer->at<double>(index) > maxDepth) {
+//                maxDepth = ((double*)depthBuffer->data)[index];
+                maxDepth = depthBuffer->at<double>(index);
             }
         }
     }
@@ -1500,7 +1523,8 @@ void RenderPipeline::depthBufferToTerminal() {
 			
 //			uint8_t luminosity = (((double*)depthBuffer->data)[index]-1)*150000;
 //			int L = ((((double*)depthBuffer->data)[index])-1)*25500000.0;
-            int L = ((((double*)depthBuffer->data)[index])-minDepth)*scale;
+//            int L = ((((double*)depthBuffer->data)[index])-minDepth)*scale;
+            int L = (depthBuffer->at<double>(index)-minDepth)*scale;
 //            int L = ((((double*)depthBuffer->data)[index]))*scale;
 			//printf("d = %f\n",  1.0/((double*)depthBuffer->data)[index]);
 			L = L > 255 ? 255 : L;

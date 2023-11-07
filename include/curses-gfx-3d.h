@@ -41,39 +41,71 @@ enum FrameBufferType {
 	FBT_DEPTH	// 4 bytes, doubles
 };
 
-typedef struct _FrameBuffer {
+class FrameBuffer {
+private:
+    size_t typeSize;
+    void* data;
+    
+public:
 	FrameBufferType type;
 	
 	int rows;
 	int cols;
-	uint8_t* data;
     
     std::mutex mutex;
 	
-	void clear(void* color) {
-		switch (type) {
-			case FBT_RGB:
-				std::fill_n((ColorRGB*)&data[0], cols*rows, *(ColorRGB*)color);
-				break;
-				
-			case FBT_RGBA:
-				std::fill_n((ColorRGBA*)&data[0], cols*rows, *(ColorRGBA*)color);
-				break;
-				
-			case FBT_DEPTH:
-				std::fill_n((double*)&data[0], cols*rows, *(double*)color);
-				break;
-		}
-	}
+//	void clear(void* color) {
+//		switch (type) {
+//			case FBT_RGB:
+//				std::fill_n((ColorRGB*)&data[0], cols*rows, *(ColorRGB*)color);
+//				break;
+//
+//			case FBT_RGBA:
+//				std::fill_n((ColorRGBA*)&data[0], cols*rows, *(ColorRGBA*)color);
+//				break;
+//
+//			case FBT_DEPTH:
+//				std::fill_n((double*)&data[0], cols*rows, *(double*)color);
+//				break;
+//		}
+//	}
+    
+    template <class T> void clear(const T& color) {
+        std::fill_n((T*)data, cols*rows, color);
+    }
+    
+    template <class T> void get(int x, int y, T* value) {
+        value = &((T*)data)[x + y*cols];
+    }
+    
+    template <class T> void set(int x, int y, const T& value) {
+        ((T*)data)[x + y*cols] = value;
+    }
+    
+    template <class T> T& at(int x, int y) {
+        return ((T*)data)[x + y*cols];
+    }
+    template <class T> T& at(int index) {
+        return ((T*)data)[index];
+    }
+    
+    void setSize(int width, int height, size_t size) {
+        if (width*height*typeSize != rows*cols*size) {
+            data = realloc(data, size*width*height);
+        }
+        this->cols = width;
+        this->rows = height;
+        this->typeSize = size;
+    }
 	
-	_FrameBuffer(): rows(0), cols(0), data(NULL) {};
-	~_FrameBuffer() {
+	FrameBuffer(): typeSize(0), rows(0), cols(0), data(NULL) {};
+	~FrameBuffer() {
 		if (data) {
 			free(data);
 			data = NULL;
 		}
 	};
-} FrameBuffer;
+};
 
 void asTexImage2d(FrameBuffer* fbo, FrameBufferType type, int width, int height);
 

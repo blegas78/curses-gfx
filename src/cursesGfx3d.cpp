@@ -2914,8 +2914,8 @@ int clipPolygon(Polygon4D& input, Polygon4D* output, int& line) {
 
 
 void asTexImage2d(FrameBuffer* fbo, FrameBufferType type, int width, int height) {
-	fbo->rows = height;
-	fbo->cols = width;
+//	fbo->rows = height;
+//	fbo->cols = width;
 	fbo->type = type;
     
 	int channels = 0;
@@ -2930,10 +2930,11 @@ void asTexImage2d(FrameBuffer* fbo, FrameBufferType type, int width, int height)
 			channels = 1 * sizeof(double);
 			break;
 	}
-	if(fbo->data) {
-		free(fbo->data);
-	}
-	fbo->data = (uint8_t*)malloc(width*height*channels);
+    fbo->setSize(width, height, channels);
+//	if(fbo->data) {
+//		free(fbo->data);
+//	}
+//	fbo->data = (uint8_t*)malloc(width*height*channels);
 }
 
 
@@ -2943,7 +2944,8 @@ void setFrameBufferRGBA(int x, int y, FrameBuffer* fbo, const ColorRGBA& value) 
 		return;
 	}
 	
-	((ColorRGBA*)fbo->data)[y*fbo->cols + x] = value;
+//	((ColorRGBA*)fbo->data)[y*fbo->cols + x] = value;
+    fbo->set(x, y, value);
 	
 }
 

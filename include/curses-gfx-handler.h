@@ -149,7 +149,7 @@ public:
 	void setRenderBuffer(const int& x, const int& y, ColorRGBA& color);
 	void setRenderBuffer(const int& index, ColorRGBA& color);
 	
-	void renderBufferToTerminal();
+	void renderBufferToTerminal(int fboIndex = 0);
 	void depthBufferToTerminal();
     
     template <class T> void clipPolygon(T* input, int inputCount, T* output, int& outputCountResult);

@@ -80,6 +80,7 @@ int Scene::load(const char* file) {
 //    Mesh meshes[numMeshes];
     meshes = new Mesh[numMeshes];
     for(int m = 0; m < scene->mNumMeshes; m++) {
+        printf(" - mesh[%d] name: %s\n", m, scene->mMeshes[m]->mName.C_Str());
         
         printf(" - mesh[%d] has %d vertices\n", m, scene->mMeshes[m]->mNumVertices);
 //        meshes[m].numTriangles = scene->mMeshes[m]->mNumVertices/3;

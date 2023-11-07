@@ -276,7 +276,8 @@ Coordinates3D clipRGB(Coordinates3D rgb) {
 
 void setRGB( FrameBuffer* fbo, const Coordinates2D& pixel, const Coordinates3D& rgb) {
 	int offset = pixel.y * fbo->cols + pixel.x;
-	fbo->data[offset + 0] = rgb.x;
-	fbo->data[offset + 1] = rgb.y;
-	fbo->data[offset + 2] = rgb.z;
+//	fbo->data[offset + 0] = rgb.x;
+//	fbo->data[offset + 1] = rgb.y;
+//	fbo->data[offset + 2] = rgb.z;
+    fbo->set(pixel.x, pixel.y,  rgb);
 }

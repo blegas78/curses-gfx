@@ -189,7 +189,7 @@ int main(void) {
 	bool showPoints = true;
 	while (keepRunning == true) {
 		erase();
-		renderBuffer.clear(&clearColor);
+//		renderBuffer.clear(clearColor);
         mRenderPipeline.reset();
 	
 		Coordinates3D axis = {0,0,1};
