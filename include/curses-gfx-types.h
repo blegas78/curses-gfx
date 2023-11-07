@@ -96,6 +96,10 @@ typedef struct _Mat3D {
 
 typedef struct _Mat4D {
 	double d[4][4];
+    
+    _Mat4D() {}
+//    _Coordinates4D( const double* p[4]) { for(int i = 0; i < 4; i++) for(int j = 0; j < 4; j++) d[i][j] = p[i][j]; }
+//    _Mat4D operator * (const double &d) const { return _Mat4D(d*x, d*y, d*z, d*w); }
 } Mat4D;
 
 typedef struct _Polygon4D {

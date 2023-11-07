@@ -291,7 +291,7 @@ float randZeroToOne() {
 
 int main(int argc, char** argv) {
 
-    const int numCubes = 500;
+    const int numCubes = 100;
     Mat4D cubeInitial[numCubes];
     Coordinates3D cubeScale[numCubes];
     double cubeMass[numCubes];

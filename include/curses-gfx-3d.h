@@ -77,12 +77,13 @@ typedef struct _FrameBuffer {
 
 void asTexImage2d(FrameBuffer* fbo, FrameBufferType type, int width, int height);
 
-typedef struct _DepthBuffer {
+class DepthBuffer {
+public:
 	double* d;
 	int width;
 	int height;
 	
-	_DepthBuffer(): width(1), height(1) {
+	DepthBuffer(): width(1), height(1) {
 			d = (double*)malloc(sizeof(double));
 		}
 	
@@ -100,10 +101,10 @@ typedef struct _DepthBuffer {
 		std::fill_n(&d[0], width*height, std::numeric_limits<double>::max());
 	}
 	
-	~_DepthBuffer() {
+	~DepthBuffer() {
 		free(d);
 	}
-} DepthBuffer;
+};
 
 typedef struct _FragmentInfo {
 	Coordinates2D pixel;
@@ -158,8 +159,8 @@ Coordinates3D normalizeVectorFast(Coordinates4D& input);	// only in 3D
 
 // Operations
 int mod(int a, int b);
-Mat3D matrixMultiply(Mat3D& a, Mat3D& b);
-Mat4D matrixMultiply(Mat4D& a, Mat4D& b);
+Mat3D matrixMultiply(const Mat3D& a, const Mat3D& b);
+Mat4D matrixMultiply(const Mat4D& a, const Mat4D& b);
 Coordinates3D matrixVectorMultiple(Mat3D& rotation, const Coordinates3D& vec);
 Coordinates4D matrixVectorMultiply(Mat4D& rotation, const Coordinates4D& vec);
 Coordinates3D matrixVectorMultiply(Mat4D& rotation, const Coordinates3D& vec); // operated in 3d

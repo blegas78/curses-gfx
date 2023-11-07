@@ -985,6 +985,11 @@ Mat4D invert3x3Slow( const Mat4D& mat ) {
     result.d[2][1] = (mat.d[2][0]*mat.d[0][1] - mat.d[0][0]*mat.d[2][1]) * invDet;
     result.d[2][2] = (mat.d[0][0]*mat.d[1][1] - mat.d[1][0]*mat.d[0][1]) * invDet;
     
+    result.d[0][3] = 0;//-mat.d[0][3];
+    result.d[1][3] = 0;//-mat.d[1][3];
+    result.d[2][3] = 0;//-mat.d[2][3];
+    result.d[3][3] = 1;
+    
     return result;  // failure
 }
 Mat4D transpose( const Mat4D& mat ) {
@@ -997,7 +1002,7 @@ Mat4D transpose( const Mat4D& mat ) {
     return result;
 }
 
-Mat3D matrixMultiply(Mat3D& a, Mat3D& b) {
+Mat3D matrixMultiply(const Mat3D& a, const Mat3D& b) {
 	Mat3D result;
 	memset(&result, 0, sizeof(result));
 	
@@ -1014,7 +1019,7 @@ Mat3D matrixMultiply(Mat3D& a, Mat3D& b) {
 	return result;
 }
 
-Mat4D matrixMultiply(Mat4D& a, Mat4D& b) {
+Mat4D matrixMultiply(const Mat4D& a, const Mat4D& b) {
 	Mat4D result;
 	memset(&result, 0, sizeof(result));
 	

@@ -97,7 +97,11 @@ void CursesGfxTerminal::setupTerminal() {
 //            init_color(i, 1000,1000,1000);
 //        else
             init_color(i, (int)(rgb.x/255.0*1000.0), (int)(rgb.y/255.0*1000.0), (int)(rgb.z/255.0*1000.0));
-        init_pair(i, i, -1);
+        init_pair(i, i, -1);    // Normal
+//        init_pair(i, 0, i);    // Light mode
+        
+        
+        
     }
     
     numSatLevels += 1; // HACK we techincally have 9 levels since sat of 0 == white
@@ -147,14 +151,18 @@ struct AsciiLutInfo asciiLUT[256] = {{' ', 2},{' ', 2},{' ', 2},{' ', 2},{' ', 2
 
 int CursesGfxTerminal::rgbToColorIndex(const Coordinates3D& rgb, double& outputLevel) {
     Coordinates3D clippedRGB = clipRGB(rgb);
+//    clippedRGB.y = 1.0-clippedRGB.y;    // light mode
     Coordinates3D hsl = rgbToHsv(clippedRGB);
 
-    int colorIndex = 0;
-    if(hsl.y != 0 ) {
+    int colorIndex = 1;
+    if(hsl.y != 0 ) {   // Normal
+//    if(hsl.y != 1.0 ) { // Light Mode
         colorIndex = floor(hsl.x/360.0*(double)(numHueLevels));
         colorIndex |= (((uint8_t)floor(hsl.y*((double)numSatLevels-2))) << satShift) & satMask;
     }
-    outputLevel = hsl.z;
+    outputLevel = hsl.z;    // Normal
+//    outputLevel = 1.0-hsl.z;    // Light Mode
+    
     return colorIndex;
 }
 
@@ -164,7 +172,8 @@ void CursesGfxTerminal::setRGB( const Coordinates2D& pixel, const Coordinates3D&
 //    int colorIndex = rgbToColorIndex(rgb, level);
 //    attron(COLOR_PAIR(colorIndex));
     enableColor(rgb, level);
-    AsciiLutInfo aLut = asciiLUT[(int)(level*255)];
+    AsciiLutInfo aLut = asciiLUT[(int)(level*255)]; // Normal
+//    AsciiLutInfo aLut = asciiLUT[255-(int)(level*255)]; // Light Mode
     set(pixel, aLut.c);
     
 //    attroff(COLOR_PAIR(colorIndex));

@@ -82,6 +82,7 @@ find_package(ASSIMP)
 #find_package(BULLET)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(BULLET bullet)
+pkg_check_modules(SDL2 SDL2)
 
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -163,6 +164,10 @@ if(BULLET_FOUND)
     link_directories(${BULLET_LIBDIR})
     set(DEPENDENCIES ${DEPENDENCIES} ${BULLET_LIBRARIES})
 endif(BULLET_FOUND)
+
+if(SDL2_FOUND)
+    link_directories(${SDL2_LIBDIR})
+endif(SDL2_FOUND)
 set(c_sources ${c_sources} ${c_headers} )
 
 # Libraries:
@@ -217,6 +222,12 @@ if(BULLET_FOUND)
     add_executable(bullet examples/bullet.cpp)
     target_link_libraries(bullet ncurses ${LIBNAME} ${BULLET_LIBRARY})
 endif(BULLET_FOUND)
+
+if(ASSIMP_FOUND AND BULLET_FOUND)
+    add_executable(game examples/game.cpp)
+    message( " -------- SDL2_LIBRARY = ${SDL2_LIBRARIES}")
+    target_link_libraries(game ncurses ${LIBNAME} ${ASSIMP_LIBRARY} ${BULLET_LIBRARY} ${SDL2_LIBRARIES})
+endif(ASSIMP_FOUND AND BULLET_FOUND)
 
 add_executable(aviz examples/aviz.cpp)
 target_link_libraries(aviz ncurses ${LIBNAME})

@@ -9,7 +9,7 @@ RenderPipeline::RenderPipeline() {
 	
 	asTexImage2d(fbo, FBT_RGBA, 1, 1);
 	asTexImage2d(depthBuffer, FBT_DEPTH, 1, 1);
-	depthClearColor = 00;
+	depthClearColor = 0;
     backfaceCulling = true;
 #ifdef FB_SUPPORT
 	setupLinuxFb();
@@ -126,10 +126,14 @@ void RenderPipeline::reset() {
 	depthBuffer->clear(&depthClearColor);
 	
 	ColorRGBA clearColor;
-	clearColor.r = 0;
+	clearColor.r = 0;   // Normal color Mode
 	clearColor.g = 0;
 	clearColor.b = 0;
 	clearColor.a = 0;
+//    clearColor.r = 255;   // Light Mode
+//    clearColor.g = 255;
+//    clearColor.b = 255;
+//    clearColor.a = 0;
 	fbo->clear(&clearColor);
 }
 

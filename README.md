@@ -5,6 +5,21 @@ This project was originally inspired by a 4D hypercube rotation written in C fro
 
 I decided to reinvent the wheel and accru tech debt at the same time by making a software renderer for ascii art.  It's a fun project, almost as challenging and pretty as it useless.
 
+## Dependencies
+```
+ncurses is the only required dependency.  
+sudo apt install libncurses5-dev    # Linux, like Raspbian
+brew install ncurses                # macos with Brew
+```
+
+The optional dependencies are really nice to have to expand capability.
+
+```
+sudo apt install libassimp-dev libbullet-dev libsdl2-dev    # Linux, like Raspbian
+brew install assimp bullet sdl2                             # macos with Brew
+```
+
+## Setup
 Cmake is used to build installable shared objects.  Recommended install process on something like a Raspberry Pi:
 
 ```
