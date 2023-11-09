@@ -21,6 +21,7 @@ template <typename T, unsigned int length> class GfxVector {
     GfxVector operator * (const GfxVector<T,length> &p) const { return GfxVector<T,length>(p.x*x, p.y*y, p.z*z); }
 };
 */
+
 typedef struct _Coordinates2D {
     int x;
     int y;
@@ -43,25 +44,51 @@ typedef struct _Coordinates2Df {
     _Coordinates2Df operator * (const double &d) const { return _Coordinates2Df(d*x, d*y); }
 } Coordinates2Df;
 
-typedef struct _Coordinates3D {
+class Coordinates4D;
+
+typedef struct Coordinates3D {
     double x;
     double y;
     double z;
     
-    _Coordinates3D() {}
-    _Coordinates3D( const double& x, const double& y, const double& z) : x(x), y(y), z(z) {}
-    _Coordinates3D( const _Coordinates3D& p) : x(p.x), y(p.y), z(p.z) {}
-    _Coordinates3D operator + (const double &d) const { return _Coordinates3D(d+x, d+y, d+z); }
-    _Coordinates3D operator + (const _Coordinates3D &p) const { return _Coordinates3D(p.x+x, p.y+y, p.z+z); }
-    _Coordinates3D operator * (const double &d) const { return _Coordinates3D(d*x, d*y, d*z); }
-    _Coordinates3D operator * (const _Coordinates3D &p) const { return _Coordinates3D(p.x*x, p.y*y, p.z*z); }
+    Coordinates3D() {}
+    Coordinates3D( const double& x, const double& y, const double& z) : x(x), y(y), z(z) {}
+    Coordinates3D( const Coordinates3D& p) : x(p.x), y(p.y), z(p.z) {}
+    Coordinates3D operator + (const double &d) const { return Coordinates3D(d+x, d+y, d+z); }
+    Coordinates3D operator + (const Coordinates3D &p) const { return Coordinates3D(p.x+x, p.y+y, p.z+z); }
+    Coordinates3D operator * (const double &d) const { return Coordinates3D(d*x, d*y, d*z); }
+    Coordinates3D operator * (const Coordinates3D &p) const { return Coordinates3D(p.x*x, p.y*y, p.z*z); }
+    
+    
+    Coordinates3D( const Coordinates4D& p);
 } Coordinates3D;
+
+class Coordinates4D {
+public:
+    double x;
+    double y;
+    double z;
+    double w;
+    
+    Coordinates4D() {}
+    Coordinates4D( const double& x, const double& y, const double& z, const double& w) : x(x), y(y), z(z), w(w) {}
+    Coordinates4D( const Coordinates4D& p) : x(p.x), y(p.y), z(p.z), w(p.w) {}
+    Coordinates4D operator + (const Coordinates4D &p) const { return Coordinates4D(p.x+x, p.y+y, p.z+z, p.w+w); }
+    Coordinates4D operator * (const double &d) const { return Coordinates4D(d*x, d*y, d*z, d*w); }
+//    _Coordinates4D operator = (const Coordinates3D &d) const {return _Coordinates4D(d.x, d.y, d.z, 1);}
+    
+    Coordinates4D& operator += (const Coordinates4D &p) { x+=p.x; y+=p.y; z+=p.z; w+=p.w; return *this; }
+    
+    Coordinates4D( const Coordinates3D& p, const double& w);
+};
 
 typedef struct _ColorRGB {
 	uint8_t r;
 	uint8_t g;
 	uint8_t b;
 } ColorRGB;
+
+double clamp(const double& input, const double& min, const double& max);
 
 typedef struct _ColorRGBA {
         uint8_t r;
@@ -73,22 +100,18 @@ typedef struct _ColorRGBA {
     _ColorRGBA( const uint8_t& r, const uint8_t& g, const uint8_t& b, const uint8_t& a) : r(r), g(g), b(b), a(a) {}
     _ColorRGBA( const _ColorRGBA& p) : r(p.r), g(p.g), b(p.b), a(p.a) {}
     _ColorRGBA operator + (const _ColorRGBA &p) const { return _ColorRGBA(p.r+r, p.g+g, p.b+b, p.a+a); }
-    _ColorRGBA operator * (const double &d) const { return _ColorRGBA(round(d*(double)r),round(d*(double)g),round(d*(double)b),round(d*(double)a)); }
+    _ColorRGBA operator * (const double &d) const { return _ColorRGBA(clamp(round(d*(double)r),0,255),clamp(round(d*(double)g),0,255),clamp(round(d*(double)b),0,255),clamp(round(d*(double)a),0,255)); }
+//    _ColorRGBA& operator = (const _ColorRGBA &d) {this->r = d.r; this->g = d.g; this->b = d.b; this->a = d.a; return *this;}
+//    _ColorRGBA& operator = (const Coordinates4D &d) {this->r = d.x; this->g = d.y; this->b = d.z; this->a = d.w; return *this;}
+//    _ColorRGBA& operator = (const Coordinates3D &d) {this->r = d.x; this->g = d.y; this->b = 127; this->a = 0; return *this;}
+    
+    
+    _ColorRGBA(const Coordinates4D &p) : r(clamp(p.x*255,0,255)), g(clamp(p.y*255,0,255)), b(clamp(p.z*255,0,255)), a(clamp(p.w*255,0,255)) {}
+
 } ColorRGBA;
 
 
-typedef struct _Coordinates4D {
-	double x;
-	double y;
-	double z;
-	double w;
-    
-    _Coordinates4D() {}
-    _Coordinates4D( const double& x, const double& y, const double& z, const double& w) : x(x), y(y), z(z), w(w) {}
-    _Coordinates4D( const _Coordinates4D& p) : x(p.x), y(p.y), z(p.z), w(p.w) {}
-    _Coordinates4D operator + (const _Coordinates4D &p) const { return _Coordinates4D(p.x+x, p.y+y, p.z+z, p.w+w); }
-    _Coordinates4D operator * (const double &d) const { return _Coordinates4D(d*x, d*y, d*z, d*w); }
-} Coordinates4D;
+
 
 typedef struct _Mat3D {
 	double d[3][3];

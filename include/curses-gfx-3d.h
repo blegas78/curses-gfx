@@ -38,6 +38,8 @@ enum LineClipStatus {
 enum FrameBufferType {
 	FBT_RGB,	// 3 bytes
 	FBT_RGBA,	// 4 bytes
+    FBT_COORDINATES3D,    // 3*4 bytes
+    FBT_COORDINATES4D,    // 4*4 bytes
 	FBT_DEPTH	// 4 bytes, doubles
 };
 
@@ -89,8 +91,17 @@ public:
         return ((T*)data)[index];
     }
     
+    template <class T> void setSize(int width, int height) {
+        if (width*height*sizeof(T) != rows*cols*typeSize) {
+            data = realloc(data, sizeof(T)*width*height);
+        }
+        this->cols = width;
+        this->rows = height;
+        this->typeSize = sizeof(T);
+    }
+    
     void setSize(int width, int height, size_t size) {
-        if (width*height*typeSize != rows*cols*size) {
+        if (width*height*size != rows*cols*typeSize) {
             data = realloc(data, size*width*height);
         }
         this->cols = width;
@@ -98,7 +109,9 @@ public:
         this->typeSize = size;
     }
 	
-	FrameBuffer(): typeSize(0), rows(0), cols(0), data(NULL) {};
+	FrameBuffer(): typeSize(sizeof(char)), rows(1), cols(1), data(NULL) {
+        data = malloc(rows*cols*typeSize);
+    };
 	~FrameBuffer() {
 		if (data) {
 			free(data);
@@ -148,6 +161,17 @@ typedef struct _FragmentInfo {
     void* interpolated;
 	ColorRGBA* colorOutput;
 } FragmentInfo;
+    
+typedef struct _FragmentInfo2 { // I know, I know appending 2 is terrible but this is a refactoring nightmare
+    Coordinates2D pixel;
+    Coordinates4D location3D;
+//    Coordinates3D normal;
+//    ColorRGBA color;
+//    Mat4D modeView;
+    void* data;
+    void* interpolated;
+    ColorRGBA* colorOutput;
+} FragmentInfo2;
 
 
 
@@ -186,16 +210,16 @@ Coordinates2D onlyXY(Coordinates4D& input);
 Mat4D transpose( Mat4D& input );
 Coordinates3D normalizeVector(const Coordinates3D& input);
 Coordinates3D normalizeVector(Coordinates4D& input);	// only in 3D
-Coordinates3D normalizeVectorFast(Coordinates3D& input);
-Coordinates3D normalizeVectorFast(Coordinates4D& input);	// only in 3D
+Coordinates3D normalizeVectorFast(const Coordinates3D& input);
+Coordinates3D normalizeVectorFast(const Coordinates4D& input);	// only in 3D
 
 // Operations
 int mod(int a, int b);
 Mat3D matrixMultiply(const Mat3D& a, const Mat3D& b);
 Mat4D matrixMultiply(const Mat4D& a, const Mat4D& b);
-Coordinates3D matrixVectorMultiple(Mat3D& rotation, const Coordinates3D& vec);
-Coordinates4D matrixVectorMultiply(Mat4D& rotation, const Coordinates4D& vec);
-Coordinates3D matrixVectorMultiply(Mat4D& rotation, const Coordinates3D& vec); // operated in 3d
+Coordinates3D matrixVectorMultiple(const Mat3D& rotation, const Coordinates3D& vec);
+Coordinates4D matrixVectorMultiply(const Mat4D& rotation, const Coordinates4D& vec);
+Coordinates3D matrixVectorMultiply(const Mat4D& rotation, const Coordinates3D& vec); // operated in 3d
 Coordinates3D crossProduct(Coordinates3D a, Coordinates3D b);
 Coordinates4D crossProduct(Coordinates4D a, Coordinates4D b);
 double dotProduct(const Coordinates4D& a, const Coordinates4D& b); // operates in 3d
@@ -208,6 +232,7 @@ Coordinates4D vectorSubtract(Coordinates4D a, Coordinates4D b);
 Coordinates3D vectorAdd(Coordinates3D a, Coordinates3D b);
 Coordinates3D vectorSubtract(Coordinates3D a, Coordinates3D b);
 Coordinates3D vectorScale(Coordinates3D a, double scale);
+Coordinates3D reflect(const Coordinates3D& vectorToSurface, const Coordinates3D surfaceNormal);
 
 
 Coordinates3D interpolate(Coordinates3D& a, Coordinates3D& b, double factor);

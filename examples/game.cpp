@@ -71,7 +71,7 @@ template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const
 
 
 
-void textureFs(const FragmentInfo& fInfo) {
+void textureFs(const FragmentInfo2& fInfo) {
     LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
     MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     //setRGB(fInfo.pixel, *colorRGB);
@@ -95,7 +95,7 @@ void textureFs(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
 }
 
-void materialFs(const FragmentInfo& fInfo) {
+void materialFs(const FragmentInfo2& fInfo) {
     LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
     MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     
@@ -110,7 +110,7 @@ void materialFs(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
 }
 
-void vertexColorFs(const FragmentInfo& fInfo) {
+void vertexColorFs(const FragmentInfo2& fInfo) {
 //    LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
     MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     

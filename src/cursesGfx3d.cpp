@@ -10,6 +10,10 @@
 #include <vector>
 #include <algorithm>
 
+double clamp(const double& input, const double& min, const double& max) {
+    return fmax(min, fmin(input, max));
+}
+
 float Q_rsqrt( float number )
 {
 //	long i;
@@ -64,7 +68,7 @@ Mat4D makeWindowTransform(int screenSizeX, int screenSizeY, double characterAspe
 //	Mat4D windowScale = scaleMatrix((double)(screenSizeX-1)/2, (double)(screenSizeY-1)/2, 1);	// Full accurate
 	//	Mat4D translationScreen = translationMatrix((double)screenSizeX/2 - 0.5, (double)screenSizeY/2 - 0.5, 0);
 //	Mat4D windowScale = scaleMatrix((double)(screenSizeX+2)/2, -(double)(screenSizeY+2)/2, 1);	// note the negative in Y, since y is positive down in a terminal
-    Mat4D windowScale = scaleMatrix((double)(screenSizeX-2)/2, -(double)(screenSizeY-2)/2, 1);    // note the negative in Y, since y is positive down in a terminal
+    Mat4D windowScale = scaleMatrix((double)(screenSizeX)/2, -(double)(screenSizeY)/2, 1);    // note the negative in Y, since y is positive down in a terminal
 	Mat4D translationScreen = translationMatrix((double)screenSizeX/2, (double)screenSizeY/2, 0);
 	return matrixMultiply(translationScreen, windowScale);
 }
@@ -1036,7 +1040,7 @@ Mat4D matrixMultiply(const Mat4D& a, const Mat4D& b) {
 	return result;
 }
 
-Coordinates3D matrixVectorMultiple(Mat3D& rotation, const Coordinates3D& vec) {
+Coordinates3D matrixVectorMultiple(const Mat3D& rotation, const Coordinates3D& vec) {
 	Coordinates3D result = {0, 0 , 0};
 	
 	result.x  = rotation.d[0][0] * vec.x;
@@ -1054,7 +1058,7 @@ Coordinates3D matrixVectorMultiple(Mat3D& rotation, const Coordinates3D& vec) {
 	return result;
 }
 
-Coordinates4D matrixVectorMultiply(Mat4D& rotation, const Coordinates4D& vec) {
+Coordinates4D matrixVectorMultiply(const Mat4D& rotation, const Coordinates4D& vec) {
 	Coordinates4D result;
 	
 	result.x  = rotation.d[0][0] * vec.x;
@@ -1080,7 +1084,7 @@ Coordinates4D matrixVectorMultiply(Mat4D& rotation, const Coordinates4D& vec) {
 	return result;
 }
 
-Coordinates3D matrixVectorMultiply(Mat4D& rotation, const Coordinates3D& vec) {
+Coordinates3D matrixVectorMultiply(const Mat4D& rotation, const Coordinates3D& vec) {
 	Coordinates3D result;
 	
 	result.x  = rotation.d[0][0] * vec.x;
@@ -1302,7 +1306,7 @@ Coordinates3D normalizeVector(Coordinates4D& input) {
 	return result;
 }
 
-Coordinates3D normalizeVectorFast(Coordinates3D& input) {
+Coordinates3D normalizeVectorFast(const Coordinates3D& input) {
 	Coordinates3D result;
 	
 	double magInv = Q_rsqrt(input.x*input.x + input.y*input.y + input.z*input.z);
@@ -1314,7 +1318,7 @@ Coordinates3D normalizeVectorFast(Coordinates3D& input) {
 	return result;
 }
 
-Coordinates3D normalizeVectorFast(Coordinates4D& input) {
+Coordinates3D normalizeVectorFast(const Coordinates4D& input) {
 	Coordinates3D result;
 	
 	double magInv = Q_rsqrt(input.x*input.x + input.y*input.y + input.z*input.z);
@@ -2926,8 +2930,16 @@ void asTexImage2d(FrameBuffer* fbo, FrameBufferType type, int width, int height)
 		case FBT_RGBA:
 			channels = 4;
 			break;
+            
+        case FBT_COORDINATES3D:
+            channels = sizeof(Coordinates3D);
+            break;
+            
+        case FBT_COORDINATES4D:
+            channels = sizeof(Coordinates4D);
+            break;
 		case FBT_DEPTH:
-			channels = 1 * sizeof(double);
+			channels = sizeof(double);
 			break;
 	}
     fbo->setSize(width, height, channels);
@@ -3157,4 +3169,11 @@ void drawPolygonWithTriangles( Polygon4D& poly, FrameBuffer* fbo) {
 	}
 	
 	
+}
+
+// See https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
+Coordinates3D reflect(const Coordinates3D& vector, const Coordinates3D surfaceNormal) {
+    Coordinates3D reflectDir = vectorScale(surfaceNormal, 2*dotProduct(surfaceNormal, vector));
+    reflectDir = vectorSubtract(vector, reflectDir);
+    return reflectDir;
 }

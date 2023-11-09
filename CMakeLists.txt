@@ -60,8 +60,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-#set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
+set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_COLOR_MAKEFILE ON)
 
 set(CMAKE_SKIP_BUILD_RPATH false)
@@ -133,6 +133,7 @@ set(c_sources src/cursesGfx3d.cpp
                       src/cursesGfxRenderPipeline.cpp
                       src/cursesGfx-set.cpp
                       src/cursesGfx.cpp
+                      src/cursesGfxTypes.cpp
                       src/cursesGfxHandler.cpp
                       src/cursesClock.cpp
                       src/cursesGfxTexture.cpp
@@ -241,4 +242,8 @@ target_link_libraries(testFill ncurses ${LIBNAME})
 
 add_executable(threadPoolCheck examples/threadPoolCheck.cpp)
 target_link_libraries(threadPoolCheck ncurses ${LIBNAME})
+
+
+add_executable(deferred examples/deferred.cpp)
+target_link_libraries(deferred ncurses ${LIBNAME})
 

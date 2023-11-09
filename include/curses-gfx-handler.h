@@ -35,7 +35,7 @@ template <class T> class BlockRenderer;
 //	Mat4D viewPort;
 //	void* userData;
 ////	DepthBuffer* depthBuffer;
-//	void (*fragmentShader)(const FragmentInfo&);
+//	void (*fragmentShader)(const FragmentInfo2&);
 //	int line;
 //} Renderable;
 
@@ -75,7 +75,7 @@ public:
 
 class RenderPipeline {
 public:
-	FrameBuffer* fbo;
+	static FrameBuffer* fbo;
 	FrameBuffer* depthBuffer;
 	
     bool backfaceCulling;
@@ -90,12 +90,14 @@ public:
     Mat4D viewport;
     
 //    void (*vertexShader)(...);
-	void (*fragmentShader)(const FragmentInfo&);
+    void (*fragmentShaderOld)(const FragmentInfo&); // Soon to be deprecated
+	void (*fragmentShader)(const FragmentInfo2&);
+    bool depthTestEnable;
 	
 	void drawPolygonWithTriangles( Polygon4D& poly, Polygon4D& restored, void* userData);
 	void drawPolygonShader( Polygon4D& poly, Polygon4D& restored, void* userData, int &line);
 	
-	void triangleFill(FragmentInfo* fragments);
+	void triangleFill(FragmentInfo2* fragments);
 //    template <class T> void triangleFill(T* vertexInfo);
     template <class T> void triangleFill(T* fragment1, T* fragment2, T* fragment3, void* userData);
 //    template <class T> void trianglesFill(T* vertexInfo, int edgeIndices[][3], int count);
@@ -104,7 +106,7 @@ public:
 	void setWithDepthBuffer( Coordinates2D pt, char c, double invDepth);
 	void setWithDepthBuffer( Coordinates4D pt, char c, double invDepth);
 	
-	void drawHorizonalLineWithShader( FragmentInfo& start, FragmentInfo& end, double depth1, double depth2, void* userData);
+	void drawHorizonalLineWithShader( FragmentInfo& start, FragmentInfo& end, double depth1, double depth2, void* userData);    // to be deprecated
 	
 	void setFloatDotWithDepthBuffer( double x, double y, double depth);
 	void drawDotFloat(double x, double y);
@@ -137,8 +139,9 @@ public:
 	
 	void resize(int width, int height);
 	void reset(); // resets depth buffer
-	
-	void setFragmentShader(void (*fragmentShader)(const FragmentInfo&));
+    
+    void setFragmentShader(void (*fragmentShaderOld)(const FragmentInfo&));
+	void setFragmentShader(void (*fragmentShader)(const FragmentInfo2&));
 	
 	void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line);
     template <class T, class U> RenderStats rasterizeShader(T* vertexInfo, U* uniformInfo, int triangleLayout[][3], int numTriangles, void* userData, void (*vertexShader)(U*, T&, const T&));
@@ -149,7 +152,7 @@ public:
 	void setRenderBuffer(const int& x, const int& y, ColorRGBA& color);
 	void setRenderBuffer(const int& index, ColorRGBA& color);
 	
-	void renderBufferToTerminal(int fboIndex = 0);
+	void renderBufferToTerminal(FrameBuffer* fboToRender = fbo);
 	void depthBufferToTerminal();
     
     template <class T> void clipPolygon(T* input, int inputCount, T* output, int& outputCountResult);

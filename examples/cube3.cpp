@@ -35,7 +35,7 @@ typedef struct _LightParams {
 } LightParams;
 
 
-void lightModelFs(const FragmentInfo& fInfo) {
+void lightModelFs(const FragmentInfo2& fInfo) {
 	Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
 	//setRGB(fInfo.pixel, *colorRGB);
     
@@ -47,60 +47,60 @@ void lightModelFs(const FragmentInfo& fInfo) {
 	fInfo.colorOutput->a = 0;
 }
 
-void lightFs2(const FragmentInfo& fInfo) {
-	LightParams* lights = (LightParams*)fInfo.data;
-	
-	Coordinates3D colorRGB = {0,0,0};
-	
-	Coordinates4D lightToFrag;
-	Coordinates3D lightToFragNoramlized;
-	double intensity2;
-//	double lightMagnitudeSquared;
-	double lightMagnitude;
-	Coordinates3D lightReflected;
-	double intensitySpecular;
-	double intensity;
-	
-	for (int i = 0; i < lights->numLights; i++) {
-		lightToFrag = vectorSubtract(lights->modelView[i], fInfo.location3D);
-		if(dotProduct(lightToFrag, fInfo.normal) < 0) {
-			continue;
-		}
-		lightToFragNoramlized = normalizeVectorFast(lightToFrag);
-		intensity2 = 5.0*1.0;//dotProduct(lightToFragNoramlized, fInfo.normal) *0.75;
-		
-//		lightMagnitudeSquared = dotProduct(lightToFrag, lightToFrag) ;
-		lightMagnitude = Q_rsqrt( dotProduct(lightToFrag, lightToFrag) );
-		
-		lightReflected = vectorScale(fInfo.normal, 2*dotProduct(fInfo.normal, lightToFragNoramlized));
-		lightReflected = vectorSubtract(lightToFragNoramlized, lightReflected);
-		
-		intensitySpecular = dotProduct(lightReflected, fInfo.location3D);
-//		intensitySpecular /= sqrt(dotProduct(fInfo.location3D, 	fInfo.location3D));
-		intensitySpecular *= Q_rsqrt(dotProduct(fInfo.location3D, fInfo.location3D));
-		intensitySpecular = pow(intensitySpecular, 32)*0.9;
-		
-//		intensity = (1/(lightMagnitudeSquared) * intensity2 +  intensitySpecular);
-		intensity = (lightMagnitude*lightMagnitude * intensity2 +  intensitySpecular);
-		
-		
-		colorRGB.x += intensity*lights->color[i].x;
-		colorRGB.y += intensity*lights->color[i].y;
-		colorRGB.z += intensity*lights->color[i].z;
-	}
-	
-	
-	
-	//setRGB(fInfo.pixel, colorRGB);
-	
-	//	ColorRGBA result;
-	Coordinates3D clippedRGB = clipRGB(colorRGB);
-	fInfo.colorOutput->r = clippedRGB.x*255;
-	fInfo.colorOutput->g = clippedRGB.y*255;
-	fInfo.colorOutput->b = clippedRGB.z*255;
-	fInfo.colorOutput->a = 0;
-	//	fInfo.colorOutput = result;
-}
+//void lightFs2(const FragmentInfo2& fInfo) {
+//	LightParams* lights = (LightParams*)fInfo.data;
+//	
+//	Coordinates3D colorRGB = {0,0,0};
+//	
+//	Coordinates4D lightToFrag;
+//	Coordinates3D lightToFragNoramlized;
+//	double intensity2;
+////	double lightMagnitudeSquared;
+//	double lightMagnitude;
+//	Coordinates3D lightReflected;
+//	double intensitySpecular;
+//	double intensity;
+//	
+//	for (int i = 0; i < lights->numLights; i++) {
+//		lightToFrag = vectorSubtract(lights->modelView[i], fInfo.location3D);
+//		if(dotProduct(lightToFrag, fInfo.normal) < 0) {
+//			continue;
+//		}
+//		lightToFragNoramlized = normalizeVectorFast(lightToFrag);
+//		intensity2 = 5.0*1.0;//dotProduct(lightToFragNoramlized, fInfo.normal) *0.75;
+//		
+////		lightMagnitudeSquared = dotProduct(lightToFrag, lightToFrag) ;
+//		lightMagnitude = Q_rsqrt( dotProduct(lightToFrag, lightToFrag) );
+//		
+//		lightReflected = vectorScale(fInfo.normal, 2*dotProduct(fInfo.normal, lightToFragNoramlized));
+//		lightReflected = vectorSubtract(lightToFragNoramlized, lightReflected);
+//		
+//		intensitySpecular = dotProduct(lightReflected, fInfo.location3D);
+////		intensitySpecular /= sqrt(dotProduct(fInfo.location3D, 	fInfo.location3D));
+//		intensitySpecular *= Q_rsqrt(dotProduct(fInfo.location3D, fInfo.location3D));
+//		intensitySpecular = pow(intensitySpecular, 32)*0.9;
+//		
+////		intensity = (1/(lightMagnitudeSquared) * intensity2 +  intensitySpecular);
+//		intensity = (lightMagnitude*lightMagnitude * intensity2 +  intensitySpecular);
+//		
+//		
+//		colorRGB.x += intensity*lights->color[i].x;
+//		colorRGB.y += intensity*lights->color[i].y;
+//		colorRGB.z += intensity*lights->color[i].z;
+//	}
+//	
+//	
+//	
+//	//setRGB(fInfo.pixel, colorRGB);
+//	
+//	//	ColorRGBA result;
+//	Coordinates3D clippedRGB = clipRGB(colorRGB);
+//	fInfo.colorOutput->r = clippedRGB.x*255;
+//	fInfo.colorOutput->g = clippedRGB.y*255;
+//	fInfo.colorOutput->b = clippedRGB.z*255;
+//	fInfo.colorOutput->a = 0;
+//	//	fInfo.colorOutput = result;
+//}
 
 
 typedef struct _UniformInfo {
@@ -135,7 +135,7 @@ REGISTER_VERTEX_LAYOUT(CubeVertexInfo)
 END_VERTEX_LAYOUT(CubeVertexInfo)
 
 
-void lightFs3(const FragmentInfo& fInfo) {
+void lightFs3(const FragmentInfo2& fInfo) {
     CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
     
 //    *fInfo.colorOutput = vertexInfo->color;
@@ -207,7 +207,7 @@ void lightFs3(const FragmentInfo& fInfo) {
     //    fInfo.colorOutput = result;
 }
 
-void lightFs4(const FragmentInfo& fInfo) {
+void lightFs4(const FragmentInfo2& fInfo) {
     CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
     
 //    *fInfo.colorOutput = vertexInfo->color;

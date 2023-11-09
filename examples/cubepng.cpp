@@ -44,7 +44,7 @@ typedef struct _LightParamsAndTexture {
     Coordinates3D cameraLocation;
 } LightParamsAndTexture;
 
-void lightModelFs(const FragmentInfo& fInfo) {
+void lightModelFs(const FragmentInfo2& fInfo) {
     Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
     //setRGB(fInfo.pixel, *colorRGB);
     
@@ -89,7 +89,7 @@ REGISTER_VERTEX_LAYOUT(CubeVertexInfo)
 END_VERTEX_LAYOUT(CubeVertexInfo)
 
 
-void lightFs3(const FragmentInfo& fInfo) {
+void lightFs3(const FragmentInfo2& fInfo) {
     CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
     
 //    *fInfo.colorOutput = vertexInfo->color;
@@ -161,7 +161,7 @@ void lightFs3(const FragmentInfo& fInfo) {
     //    fInfo.colorOutput = result;
 }
 
-void textureshader(const FragmentInfo& fInfo) {
+void textureshader(const FragmentInfo2& fInfo) {
     CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
 
     Texture* userTexture = (Texture*) fInfo.data;
@@ -169,7 +169,7 @@ void textureshader(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
 }
 
-void lightAndTextureShader(const FragmentInfo& fInfo) {
+void lightAndTextureShader(const FragmentInfo2& fInfo) {
     CubeVertexInfo* vertexInfo = (CubeVertexInfo*)fInfo.interpolated;
 
     LightParamsAndTexture* lpt = (LightParamsAndTexture*) fInfo.data;

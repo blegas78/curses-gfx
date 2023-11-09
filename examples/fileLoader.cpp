@@ -14,9 +14,9 @@
 
 #include <chrono>
 
-#include <assimp/Importer.hpp>      // C++ importer interface
-#include <assimp/scene.h>           // Output data structure
-#include <assimp/postprocess.h>     // Post processing flags
+//#include <assimp/Importer.hpp>      // C++ importer interface
+//#include <assimp/scene.h>           // Output data structure
+//#include <assimp/postprocess.h>     // Post processing flags
 
 #include "curses-gfx.h"
 #include "curses-clock.h"
@@ -63,7 +63,7 @@ typedef struct _LightParamsAndTexture {
     Coordinates3D colorDiffuse;
 } LightParamsAndTexture;
 
-void lightModelFs(const FragmentInfo& fInfo) {
+void lightModelFs(const FragmentInfo2& fInfo) {
     Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
     MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     //setRGB(fInfo.pixel, *colorRGB);
@@ -83,7 +83,7 @@ void lightModelFs(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
 }
 
-void textureFs(const FragmentInfo& fInfo) {
+void textureFs(const FragmentInfo2& fInfo) {
     LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
     MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     //setRGB(fInfo.pixel, *colorRGB);
@@ -107,7 +107,7 @@ void textureFs(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
 }
 
-void materialFs(const FragmentInfo& fInfo) {
+void materialFs(const FragmentInfo2& fInfo) {
     LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
     MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     
@@ -122,7 +122,7 @@ void materialFs(const FragmentInfo& fInfo) {
     fInfo.colorOutput->a = 0;
 }
 
-void vertexColorFs(const FragmentInfo& fInfo) {
+void vertexColorFs(const FragmentInfo2& fInfo) {
 //    LightParamsAndTexture* lpt = (LightParamsAndTexture*)fInfo.data;
     MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
     
@@ -158,7 +158,7 @@ template <class T, class U> void myVertexShader(U* uniformInfo, T& output, const
 
 
 
-void lightAndTextureShader(const FragmentInfo& fInfo) {
+void lightAndTextureShader(const FragmentInfo2& fInfo) {
     MeshVertexInfo* vertexInfo = (MeshVertexInfo*)fInfo.interpolated;
 
     LightParamsAndTexture* lpt = (LightParamsAndTexture*) fInfo.data;

@@ -14,7 +14,7 @@ RenderPipeline::RenderPipeline() {
 #ifdef FB_SUPPORT
 	setupLinuxFb();
 #endif
-    
+    depthTestEnable = true;
     mRasterizerThreadPool.Start(std::thread::hardware_concurrency());
 }
 
@@ -26,7 +26,7 @@ void RenderPipeline::mvaddstring(int x, int y, const char* string) {
         for (int i=x; i < x+strlen(string); i++) {
 //            ColorRGBA* location = fbo->at(i,y);
 //            *location =
-            fbo->set(i,y, ColorRGBA({255, 255, 255, string[i-x]}));
+            fbo->set(i,y, ColorRGBA(255, 255, 255, string[i-x]));
 //            fbo->data[(i + y*fbo->cols)*4+0] = 255;
 //            fbo->data[(i + y*fbo->cols)*4+1] = 255;
 //            fbo->data[(i + y*fbo->cols)*4+2] = 255;
@@ -73,6 +73,16 @@ void saveFrameBufferToFile(const char* filename, FrameBuffer* fbo) {
                 fwrite( &fbo->at<ColorRGBA>(i, 0), 1, 3, fp);
 			}
 			break;
+            
+        case FBT_COORDINATES4D:
+            fprintf(fp, "P6\n%d %d\n255\n", fbo->cols, fbo->rows);
+            for (int i = 0; i < fbo->cols*fbo->rows; i++) {
+        //                fwrite( &((ColorRGBA*)fbo->data)[i], 1, 3, fp);
+                ColorRGBA color = ColorRGBA(fbo->at<Coordinates4D>(i, 0));
+                
+                fwrite( &color, 1, 3, fp);
+            }
+            break;
 			
 		case FBT_DEPTH:
 			fprintf(fp, "P5\n%d %d\n255\n", fbo->cols, fbo->rows);
@@ -125,6 +135,7 @@ RenderPipeline::~RenderPipeline() {
 
 void RenderPipeline::resize(int width, int height) {
 	asTexImage2d(fbo, FBT_RGBA, width, height);
+//    asTexImage2d(fbo, FBT_COORDINATES4D, width, height);
 	asTexImage2d(depthBuffer, FBT_DEPTH, width, height);
 	
 //	tempD.setSize(width, height);
@@ -137,19 +148,23 @@ void RenderPipeline::reset() {
 	clearColor.g = 0;
 	clearColor.b = 0;
 	clearColor.a = 0;
-//    clearColor.r = 255;   // Light Mode
-//    clearColor.g = 255;
-//    clearColor.b = 255;
+//    clearColor.r = 27;   // Light Mode
+//    clearColor.g = 27;
+//    clearColor.b = 27;
 //    clearColor.a = 0;
 	fbo->clear(clearColor);
 }
 
-void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo&)) {
+void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo2&)) {
 //    RasterizerThreadPool::waitThreads(0);
     if(this->fragmentShader != fragmentShader)
         mRasterizerThreadPool.busyWait();
 	this->fragmentShader = fragmentShader;
 };
+
+void RenderPipeline::setFragmentShader(void (*fragmentShaderOld)(const FragmentInfo&)) {
+    this->fragmentShaderOld = fragmentShaderOld;
+}
 
 
 //void* RenderPipeline::renderThread(void* info) {
@@ -217,7 +232,7 @@ void RenderPipeline::setFragmentShader(void (*fragmentShader)(const FragmentInfo
 void RenderPipeline::rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, int &line) {
 	
 	
-//	void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, DepthBuffer* depthBuffer, void (*fragmentShader)(const FragmentInfo&), int &line) {
+//	void rasterizeQuadsShader(Coordinates4D* vertices, int quadIndices[][4], int count, Mat4D& modelView, Mat4D& projection, Mat4D& viewport, void* userData, DepthBuffer* depthBuffer, void (*fragmentShader)(const FragmentInfo2&), int &line) {
 		Polygon4D quadAsPolygon;
 		for (int i = 0; i < count; i++) {
 			
@@ -381,24 +396,24 @@ void RenderPipeline::drawPolygonWithTriangles( Polygon4D& poly, Polygon4D& resto
 //		}
 //	}
 	
-	FragmentInfo fragments[3];
+	FragmentInfo2 fragments[3];
 	fragments[0].location3D = poly.vertices[0];
-	fragments[0].color = poly.colors[0];
-	fragments[0].normal = poly.normals[0];
+//	fragments[0].color = poly.colors[0];
+//	fragments[0].normal = poly.normals[0];
 	for (int i = 2; i < poly.numVertices; i++) {
 		fragments[1].location3D = poly.vertices[i-1];
 		fragments[2].location3D = poly.vertices[i];
-		fragments[1].color = poly.colors[i-1];
-		fragments[2].color = poly.colors[i];
-		fragments[1].normal = poly.normals[i-1];
-		fragments[2].normal = poly.normals[i];
+//		fragments[1].color = poly.colors[i-1];
+//		fragments[2].color = poly.colors[i];
+//		fragments[1].normal = poly.normals[i-1];
+//		fragments[2].normal = poly.normals[i];
 		triangleFill(fragments);
 	}
 	
 	
 }
 
-void RenderPipeline::triangleFill(FragmentInfo* fragments) {
+void RenderPipeline::triangleFill(FragmentInfo2* fragments) {
  //https://web.archive.org/web/20050408192410/http://sw-shader.sourceforge.net/rasterizer.html
     // 28.4 fixed-point coordinates
     
@@ -505,11 +520,11 @@ void RenderPipeline::triangleFill(FragmentInfo* fragments) {
 //                    color.r = perspectiveIntBary<uint8_t>(fragments[0].color.r, fragments[2].color.r, fragments[1].color.r, alpha, beta, gamma, correctDepth);
 //                    color.g = perspectiveIntBary<uint8_t>(fragments[0].color.g, fragments[2].color.g, fragments[1].color.g, alpha, beta, gamma, correctDepth);
 //                    color.b = perspectiveIntBary<uint8_t>(fragments[0].color.b, fragments[2].color.b, fragments[1].color.b, alpha, beta, gamma, correctDepth);
-                    perspectiveIntBary2<uint8_t,4>(&color, &fragments[0].color, &fragments[2].color, &fragments[1].color, alpha, beta, gamma, correctDepth);
-                    Coordinates3D normal;
-                    perspectiveIntBary2<double,3>(&normal, &fragments[0].normal, &fragments[2].normal, &fragments[1].normal, alpha, beta, gamma, correctDepth);
+//                    perspectiveIntBary2<uint8_t,4>(&color, &fragments[0].color, &fragments[2].color, &fragments[1].color, alpha, beta, gamma, correctDepth);
+//                    Coordinates3D normal;
+//                    perspectiveIntBary2<double,3>(&normal, &fragments[0].normal, &fragments[2].normal, &fragments[1].normal, alpha, beta, gamma, correctDepth);
                     Coordinates4D point;
-                    perspectiveIntBary2<double,4>(&normal, &fragments[0].location3D, &fragments[2].location3D, &fragments[1].location3D, alpha, beta, gamma, correctDepth);
+                    perspectiveIntBary2<double,4>(&point, &fragments[0].location3D, &fragments[2].location3D, &fragments[1].location3D, alpha, beta, gamma, correctDepth);
                     
                     
                     setFrameBufferRGBA(pt.x, pt.y, fbo, color);
@@ -531,9 +546,9 @@ void RenderPipeline::triangleFill(FragmentInfo* fragments) {
 }
 //	ColorRGBA color1, color2;
 //
-//	FragmentInfo fragment;
+//	FragmentInfo2 fragment;
 //
-//	std::vector<FragmentInfo> f(fragments, fragments+3);
+//	std::vector<FragmentInfo2> f(fragments, fragments+3);
 //
 ////	for (int i = 0; i < 3; i++) {
 ////		fragment.location3D = vertices[i];
@@ -1322,10 +1337,10 @@ void RenderPipeline::setWithShader( Coordinates2D& pixel, double invDepth, Coord
             depthBuffer->at<double>(depthIndex) = invDepth;
 		
 //        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
-		FragmentInfo fInfo;
+		FragmentInfo2 fInfo;
 		fInfo.pixel = pixel;
 		fInfo.location3D = pt3D;
-		fInfo.normal = normal;
+//		fInfo.normal = normal;
 		fInfo.data = userData;
 //		fInfo.colorOutput = &colorOutput;
 //        fInfo.colorOutput = &((ColorRGBA*)(fbo[0].data))[depthIndex];
@@ -1345,12 +1360,12 @@ void RenderPipeline::setWithShader2( Coordinates2D& pixel, double invDepth, void
     
 //    if (invDepth > ((double*)depthBuffer->data)[depthIndex]) {
 //        ((double*)depthBuffer->data)[depthIndex] = invDepth;
-        if (invDepth > depthBuffer->at<double>(depthIndex)) {
+        if (invDepth > depthBuffer->at<double>(depthIndex) || !depthTestEnable) {
             depthBuffer->at<double>(depthIndex) = invDepth;
 //        depthBuffer->mutex.unlock();
         
 //        ColorRGBA colorOutput = ((ColorRGBA*)(fbo[0].data))[depthIndex];
-        FragmentInfo fInfo;
+        FragmentInfo2 fInfo;
         fInfo.pixel = pixel;
         fInfo.data = userData;
         fInfo.interpolated = interpolatedData;
@@ -1430,8 +1445,8 @@ void RenderPipeline::setRenderBuffer(const int& index, ColorRGBA& color) {
     fbo[0].at<ColorRGBA>(index) = color;
 }
 
-
-void RenderPipeline::renderBufferToTerminal(int fboIndex) {
+FrameBuffer* RenderPipeline::fbo = NULL;
+void RenderPipeline::renderBufferToTerminal(FrameBuffer* fboToRender) {
 //	waitForThreads();
 //    RasterizerThreadPool::waitThreads(0);
     mRasterizerThreadPool.busyWait();
@@ -1440,43 +1455,84 @@ void RenderPipeline::renderBufferToTerminal(int fboIndex) {
 	Coordinates3D color;
 	int offset, index;
 	
-	for (int y = 0; y < fbo[fboIndex].rows; y++) {
-		offset = y * fbo[fboIndex].cols;
-		for (int x = 0; x < fbo[fboIndex].cols; x++) {
-			index = x + offset;
-			
-			pixel.x = x;
-			pixel.y = y;
-            
-			color.x = (double)fbo[fboIndex].at<ColorRGBA>(index).r / 255.0;
-			color.y = (double)fbo[fboIndex].at<ColorRGBA>(index).g / 255.0;
-			color.z = (double)fbo[fboIndex].at<ColorRGBA>(index).b / 255.0;
-#ifndef FB_SUPPORT
-			if (fbo[fboIndex].at<ColorRGBA>(index).a == 0) {
-				CursesGfxTerminal::setRGB(pixel, color);
-			} else {
-                double dummyLevel;
-                CursesGfxTerminal::enableColor(color, dummyLevel);
-//				set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
-                set(pixel, fbo[fboIndex].at<ColorRGBA>(index).a);
-                CursesGfxTerminal::disableColor();
-			}
-			
-#else
-			int offsetfb = (y * (fb_bytes_per_length) + x)*fb_bytes;
-//			uint16_t finalcolor = 0;
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].r & 0xF8) << (11-3);
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].g & 0xFC) << (5-2);
-//			finalcolor |= (((ColorRGBA*)fbo[0].data)[index].b & 0xF8) >> (3);
-//			*(uint16_t*)&fbdata[0 + offsetfb] = finalcolor;
-			
-			fbdata[2 + offsetfb] = ((ColorRGBA*)fbo[fboIndex].data)[index].r;
-   			fbdata[1 + offsetfb] = ((ColorRGBA*)fbo[fboIndex].data)[index].g;
-   			fbdata[0 + offsetfb] = ((ColorRGBA*)fbo[fboIndex].data)[index].b;
-			
-#endif
-		}
-	}
+    if(fboToRender->type == FBT_RGBA) {
+        for (int y = 0; y < fboToRender->rows; y++) {
+            offset = y * fboToRender->cols;
+            for (int x = 0; x < fboToRender->cols; x++) {
+                index = x + offset;
+                
+                pixel.x = x;
+                pixel.y = y;
+                
+                color.x = (double)fboToRender->at<ColorRGBA>(index).r / 255.0;
+                color.y = (double)fboToRender->at<ColorRGBA>(index).g / 255.0;
+                color.z = (double)fboToRender->at<ColorRGBA>(index).b / 255.0;
+                
+                if (fboToRender->at<ColorRGBA>(index).a == 0) {
+                    CursesGfxTerminal::setRGB(pixel, color);
+                } else {
+                    double dummyLevel;
+                    CursesGfxTerminal::enableColor(color, dummyLevel);
+                    //				set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
+                    set(pixel, fboToRender->at<ColorRGBA>(index).a);
+                    CursesGfxTerminal::disableColor();
+                }
+                
+            }
+        }
+    } else if(fboToRender->type == FBT_COORDINATES4D) {
+        for (int y = 0; y < fboToRender->rows; y++) {
+            offset = y * fboToRender->cols;
+            for (int x = 0; x < fboToRender->cols; x++) {
+                index = x + offset;
+                
+                pixel.x = x;
+                pixel.y = y;
+                
+                color = Coordinates3D(fboToRender->at<Coordinates4D>(index)) ;
+                uint8_t alpha = fboToRender->at<Coordinates4D>(index).w * 255;
+//                color.y = (double)fboToRender->at<Coordinates4D>(index).y ;
+//                color.z = (double)fboToRender->at<Coordinates4D>(index).z ;
+                
+                if (alpha == 0) {
+                    CursesGfxTerminal::setRGB(pixel, color);
+                } else {
+                    double dummyLevel;
+                    CursesGfxTerminal::enableColor(color, dummyLevel);
+                    //                set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
+                    set(pixel, alpha);
+                    CursesGfxTerminal::disableColor();
+                }
+                
+            }
+        }
+    } else if(fboToRender->type == FBT_COORDINATES3D) {
+        for (int y = 0; y < fboToRender->rows; y++) {
+            offset = y * fboToRender->cols;
+            for (int x = 0; x < fboToRender->cols; x++) {
+                index = x + offset;
+                
+                pixel.x = x;
+                pixel.y = y;
+                
+                color = Coordinates3D(fboToRender->at<Coordinates3D>(index)) ;
+//                uint8_t alpha = fboToRender->at<Coordinates3D>(index).w * 255;
+                //                color.y = (double)fboToRender->at<Coordinates4D>(index).y ;
+                //                color.z = (double)fboToRender->at<Coordinates4D>(index).z ;
+                
+//                if (alpha == 0) {
+                CursesGfxTerminal::setRGB(pixel, color);
+//                } else {
+//                    double dummyLevel;
+//                    CursesGfxTerminal::enableColor(color, dummyLevel);
+//                    //                set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
+//                    set(pixel, alpha);
+//                    CursesGfxTerminal::disableColor();
+//                }
+                
+            }
+        }
+    }
 }
 
 void RenderPipeline::depthBufferToTerminal() {

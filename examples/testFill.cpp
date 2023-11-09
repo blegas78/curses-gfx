@@ -86,7 +86,7 @@ END_VERTEX_LAYOUT(MyShaderAttributes)
 
 
 Texture testTexture(4,4);
-void shaderBasic(const FragmentInfo& fInfo) {
+void shaderBasic(const FragmentInfo2& fInfo) {
     Coordinates3D* colorRGB = (Coordinates3D*)fInfo.data;
     MyShaderAttributes* mMyShaderAttributes = (MyShaderAttributes*)fInfo.interpolated;
     //setRGB(fInfo.pixel, *colorRGB);
