@@ -197,7 +197,7 @@ int main(int argc, char** argv) {
     character.sceneMatrix = rotationFromAngleAndUnitAxis(M_PI_2, {1,0,0});
     character.sceneMatrix = matrixMultiply(scaleMatrix(0.0375, 0.0375, 0.0375), character.sceneMatrix);
     character.sceneMatrix = matrixMultiply(translationMatrix(0, 0, -2), character.sceneMatrix);
-    character.body = mCursesGfxPhysics.addUprightCapsule(character.scale, 1, translationMatrix(0, 0, 2));
+    character.body = mCursesGfxPhysics.addUprightCapsule(character.scale, 1, translationMatrix(0, 0, 10));
     character.body->forceActivationState(DISABLE_DEACTIVATION);
     character.body->setAngularFactor(0);
     worldObjects.push_back(&character);
@@ -222,7 +222,8 @@ int main(int argc, char** argv) {
        // Terrain:
        WorldObject terrain;
        terrain.scale = {1,1,1};
-       terrain.load( (std::string(CURSES_GFX_RESOURCE_PATH) + "super-mario-bros-level-1-1/source/supermariobros11/supermariobros11.fbx").c_str());
+//       terrain.load( (std::string(CURSES_GFX_RESOURCE_PATH) + "super-mario-bros-level-1-1/source/supermariobros11/supermariobros11.fbx").c_str());
+    terrain.load( (std::string(CURSES_GFX_RESOURCE_PATH) + "super-mario-bros-level-1-1/source/supermariobros11/lowerPoly.fbx").c_str());
        terrain.loadCollisionScene((std::string(CURSES_GFX_RESOURCE_PATH) + "color-cube.dae").c_str());
        terrain.sceneMatrix = translationMatrix(0, 0, 0);
 //       terrain.body = mCursesGfxPhysics.addCube(terrain.scale, 0, translationMatrix(0, 0, -1));

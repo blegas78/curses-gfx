@@ -1490,19 +1490,19 @@ void RenderPipeline::renderBufferToTerminal(FrameBuffer* fboToRender) {
                 pixel.y = y;
                 
                 color = Coordinates3D(fboToRender->at<Coordinates4D>(index)) ;
-                uint8_t alpha = fboToRender->at<Coordinates4D>(index).w * 255;
+//                uint8_t alpha = fboToRender->at<Coordinates4D>(index).w * 255;
 //                color.y = (double)fboToRender->at<Coordinates4D>(index).y ;
 //                color.z = (double)fboToRender->at<Coordinates4D>(index).z ;
                 
-                if (alpha == 0) {
+//                if (alpha == 0) {
                     CursesGfxTerminal::setRGB(pixel, color);
-                } else {
-                    double dummyLevel;
-                    CursesGfxTerminal::enableColor(color, dummyLevel);
-                    //                set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
-                    set(pixel, alpha);
-                    CursesGfxTerminal::disableColor();
-                }
+//                } else {
+//                    double dummyLevel;
+//                    CursesGfxTerminal::enableColor(color, dummyLevel);
+//                    //                set(pixel, ((ColorRGBA*)fbo[0].data)[index].a);
+//                    set(pixel, alpha);
+//                    CursesGfxTerminal::disableColor();
+//                }
                 
             }
         }

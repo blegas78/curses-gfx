@@ -12,7 +12,7 @@
 
 #include <chrono>
 
-#include <SDL2/SDL.h>
+//#include <SDL2/SDL.h>
 
 #include "curses-gfx.h"
 //#include "curses-clock.h"
@@ -35,7 +35,7 @@ enum GBUFFER_TYPE {
     GBUFFER_TYPE_POSITION = 0,
     GBUFFER_TYPE_NORMAL = 1,
     GBUFFER_TYPE_COLOR = 2,
-    GBUFFER_TYPE_TEST = 3,
+    GBUFFER_TYPE_FINAL = 3,
     GBUFFER_TYPE_MATERIAL = 4,
     GBUFFER_TYPE_COUNT = 5
 };
@@ -218,8 +218,8 @@ void lightingShader(const FragmentInfo2& fInfo) {
     
     ColorRGBA material = fboArray[GBUFFER_TYPE_MATERIAL].at<ColorRGBA>(fInfo.pixel.x, fInfo.pixel.y);
     if (material.a != 0) {
-        fboArray[GBUFFER_TYPE_TEST].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y) = Coordinates4D((double)material.r/255.0, (double)material.g/255.0, (double)material.b/255.0, 0);
-        *fInfo.colorOutput = fboArray[GBUFFER_TYPE_TEST].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y);
+        fboArray[GBUFFER_TYPE_FINAL].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y) = Coordinates4D((double)material.r/255.0, (double)material.g/255.0, (double)material.b/255.0, 0);
+        *fInfo.colorOutput = fboArray[GBUFFER_TYPE_FINAL].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y);
         return;
     }
 //
@@ -269,8 +269,8 @@ void lightingShader(const FragmentInfo2& fInfo) {
     
     Coordinates3D result = lp->color * (ambient + diffuse + specular) * attenuation ;
         
-    fboArray[GBUFFER_TYPE_TEST].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y) += Coordinates4D(result, 0);
-//    fboArray[GBUFFER_TYPE_TEST].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y) = Coordinates4D(0.5,0.5,0.5,0);
+    fboArray[GBUFFER_TYPE_FINAL].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y) += Coordinates4D(result, 0);
+//    fboArray[GBUFFER_TYPE_FINAL].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y) = Coordinates4D(0.5,0.5,0.5,0);
 //    fInfo.colorOutput->r = clamp((int)fInfo.colorOutput->r + result.x*255, 0, 255);
 //    fInfo.colorOutput->g = clamp((int)fInfo.colorOutput->g + result.y*255, 0, 255);
 //    fInfo.colorOutput->b = clamp((int)fInfo.colorOutput->b + result.z*255, 0, 255);
@@ -278,8 +278,8 @@ void lightingShader(const FragmentInfo2& fInfo) {
     
     
     
-//    fboArray[GBUFFER_TYPE_TEST].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y) = {1,0,1,0};
-    *fInfo.colorOutput = fboArray[GBUFFER_TYPE_TEST].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y);
+//    fboArray[GBUFFER_TYPE_FINAL].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y) = {1,0,1,0};
+    *fInfo.colorOutput = fboArray[GBUFFER_TYPE_FINAL].at<Coordinates4D>(fInfo.pixel.x, fInfo.pixel.y);
 }
 
 
@@ -297,7 +297,8 @@ int main(int argc, char** argv) {
     UniformInfo mUniformInfo;
     
     Scene sphereScene;
-    sphereScene.load((std::string(CURSES_GFX_RESOURCE_PATH) + "unit-sphere-low-poly.dae").c_str());
+//    sphereScene.load((std::string(CURSES_GFX_RESOURCE_PATH) + "unit-sphere-low-poly.dae").c_str());
+    sphereScene.load((std::string(CURSES_GFX_RESOURCE_PATH) + "icosphere.dae").c_str());
     
     Coordinates4D cube[] = {
         {-1, -1, -1, 1},
@@ -399,8 +400,8 @@ int main(int argc, char** argv) {
     fboArray[GBUFFER_TYPE_NORMAL].type = FBT_COORDINATES3D;
     fboArray[GBUFFER_TYPE_POSITION].setSize<Coordinates4D>(screenSizeX, screenSizeY);
     fboArray[GBUFFER_TYPE_POSITION].type = FBT_COORDINATES4D;
-    fboArray[GBUFFER_TYPE_TEST].setSize<Coordinates4D>(screenSizeX, screenSizeY);
-    fboArray[GBUFFER_TYPE_TEST].type = FBT_COORDINATES4D;
+    fboArray[GBUFFER_TYPE_FINAL].setSize<Coordinates4D>(screenSizeX, screenSizeY);
+    fboArray[GBUFFER_TYPE_FINAL].type = FBT_COORDINATES4D;
     fboArray[GBUFFER_TYPE_MATERIAL].setSize<ColorRGBA>(screenSizeX, screenSizeY);
     fboArray[GBUFFER_TYPE_MATERIAL].type = FBT_RGBA;
 	
@@ -415,7 +416,7 @@ int main(int argc, char** argv) {
 	Mat4D cameraTranslation = translationMatrix(0, 0, -15);
 	Coordinates3D cameraAxis = {1, 0, 0};
 	cameraAxis = normalizeVector(cameraAxis);
-    double cameraTilt = -M_PI_4;
+    double cameraTilt = M_PI_4 + 0.05*5;
     double cameraTiltVelocity = 0;
 	Mat4D cameraOrientation = rotationFromAngleAndUnitAxis(cameraTilt, cameraAxis);
     Mat4D viewMatrix = matrixMultiply(  cameraTranslation, cameraOrientation );
@@ -431,9 +432,6 @@ int main(int argc, char** argv) {
 	// Viewport
     mRenderPipeline.viewport = makeWindowTransform(screenSizeX, screenSizeY, characterAspect);
 	
-	// Light
-	Coordinates4D light[3];// = {3, 3, 3, 1};
-	Coordinates4D lightModelView = {3, 3, 3, 1};
 	
 	auto now = std::chrono::high_resolution_clock::now();
 	auto before = now;
@@ -442,13 +440,20 @@ int main(int argc, char** argv) {
 	int numEdges;
 	double cubeAngle = 0;
     double lightAngle = 134123;
+    double cameraAngle = 0;
     bool cubeRotateEnable = true;
+    bool cameraRotateEnable = true;
 	bool usePerspective = true;
 	bool showDepth = false;
+    int cubeGridSize = 5;
+    double cubeGridDist = 4;
+    int numCubes = 1 + 1 + cubeGridSize*cubeGridSize;
+    int numLights = 200;
+    double lightHeight = 2.0;
 	double delayTime = 1.0/60;
     double camAngularVelocity = 0;
     double minuteResetTracker = 0;
-    int bufferToShow = GBUFFER_TYPE_TEST;
+    int bufferToShow = GBUFFER_TYPE_FINAL;
 	while (keepRunning == true) {
 		debugLine = 0;
 		
@@ -462,18 +467,34 @@ int main(int argc, char** argv) {
         
         mRenderPipeline.reset();
         
-        fboArray[GBUFFER_TYPE_COLOR].clear(Coordinates3D(0.5,0.5,0.5));
-        fboArray[GBUFFER_TYPE_NORMAL].clear(Coordinates3D(0.5,0.5,0.5));
-        fboArray[GBUFFER_TYPE_POSITION].clear(Coordinates4D(0,0,-1000,0));
-        fboArray[GBUFFER_TYPE_TEST].clear(Coordinates4D(0.,0.,0.,0));
+        fboArray[GBUFFER_TYPE_COLOR].clear(Coordinates3D(0.0, 0.0, 0.0));
+        fboArray[GBUFFER_TYPE_NORMAL].clear(Coordinates3D(0.0, 0.0, 0.0));
+        fboArray[GBUFFER_TYPE_POSITION].clear(Coordinates4D(0, 0, -1000,0));
+        fboArray[GBUFFER_TYPE_FINAL].clear(Coordinates4D(0.0, 0.0, 0.0, 0.0));
         fboArray[GBUFFER_TYPE_MATERIAL].clear(ColorRGBA(0,0,0,0));
         
         // Get camera information
+//        cameraOrientation = rotationFromAngleAndUnitAxis(cameraTilt, {1,0,0});
+//        viewMatrix = matrixMultiply(cameraTranslation, cameraOrientation );
+        if(cameraRotateEnable) {
+            cameraAngle += 0.1*dTime;
+        }
         cameraOrientation = rotationFromAngleAndUnitAxis(cameraTilt, {1,0,0});
+        cameraOrientation = transpose(cameraOrientation);
+        double distance = 35;
+//        cameraTranslation = translationMatrix(-(distance)*sin(cameraAngle), (distance) * cos(cameraAngle), -(distance));
+        cameraTranslation = translationMatrix(0,0, -(distance));
+
         viewMatrix = matrixMultiply(cameraTranslation, cameraOrientation );
         
+        
+        cameraOrientation = rotationFromAngleAndUnitAxis(cameraAngle, {0,0,1});
+        cameraOrientation = transpose(cameraOrientation);
+        
+
+        viewMatrix = matrixMultiply( viewMatrix, cameraOrientation);
+        
         // Light, with rendering:
-        int numLights = 5;
         LightParams mLightParams[numLights];
         for(int i = 0; i < numLights; i++) {
             mLightParams[i].color = {.5*(1+sin(i)), .5*(1+cos(i)), .5*(1+sin(i*5.3))};
@@ -485,13 +506,13 @@ int main(int argc, char** argv) {
             mLightParams[i].constant = 1.0;
             mLightParams[i].linear = 0.22;
             mLightParams[i].quadratic = 0.40;
-            float lightMax  = std::fmaxf(std::fmaxf(mLightParams[i].color.x, mLightParams[i].color.y), mLightParams[i].color.z);
-            mLightParams[i].radius = (-mLightParams[i].linear +  std::sqrtf(mLightParams[i].linear * mLightParams[i].linear - 4 * mLightParams[i].quadratic * (mLightParams[i].constant - (256.0 / 26.0) * lightMax)))
+            float lightMax  = fmaxf(fmaxf(mLightParams[i].color.x, mLightParams[i].color.y), mLightParams[i].color.z);
+            mLightParams[i].radius = (-mLightParams[i].linear +  sqrtf(mLightParams[i].linear * mLightParams[i].linear - 4 * mLightParams[i].quadratic * (mLightParams[i].constant - (256.0 / 20.0) * lightMax)))
               / (2 * mLightParams[i].quadratic);
 
             
-            double radius = (double)i/(double)numLights * 10;
-            mLightParams[i].position = {radius*sin(lightAngle*2*0.1*(double)(i+1)),radius*cos(lightAngle*2 *0.1*(double)(i+1)),0.5};
+            double radius = (double)(i+1)/(double)numLights * 100;
+            mLightParams[i].position = {radius*sin(lightAngle*2*0.1*(double)(i+1)),radius*cos(lightAngle*2 *0.1*(double)(i+1)),lightHeight};
 //            mLightParams[i].positionView = matrixVectorMultiply(viewMatrix, mLightParams[i].position);
             mLightParams[i].modelView = matrixMultiply(viewMatrix, matrixMultiply(translationMatrix(mLightParams[i].position.x, mLightParams[i].position.y, mLightParams[i].position.z), scaleMatrix(0.2, 0.2, 0.2)));
             
@@ -509,23 +530,24 @@ int main(int argc, char** argv) {
         }
 
         
-        int numCubes = 1 + 1 + 5*5;
+        
+        
         void (*fragmentShader[numCubes])(const FragmentInfo2&);
 //        fragmentShader[0] = gbufferFragmentShader;
         fragmentShader[0] = gbufferFlatFragmentShader;
-        fragmentShader[1] = gbufferFragmentShader;
+        fragmentShader[1] = gbufferFlatFragmentShader;//gbufferFragmentShader;
         
         // Cube
         if(cubeRotateEnable)
             cubeAngle += .25*dTime;
         Mat4D cubeModel[numCubes];
         cubeModel[1] = matrixMultiply(matrixMultiply(translationMatrix(0, 0, 6), rotationFromAngleAndUnitAxis(cubeAngle, normalizeVector({sin(cubeAngle/4),cos(cubeAngle/5),2}))), scaleMatrix(3, 3, 3));
-        cubeModel[0] = matrixMultiply(translationMatrix(0, 0, -10), scaleMatrix(10, 10, 10));
+        cubeModel[0] = matrixMultiply(translationMatrix(0, 0, -10), scaleMatrix(100, 100, 10));
         
-        for(int i = 0; i < 5; i++) {
-            for(int j = 0; j < 5; j++) {
-                cubeModel[2+i+5*j] = matrixMultiply(rotationFromAngleAndUnitAxis(cubeAngle, {0,0,1}), matrixMultiply(translationMatrix(3*(i-2), 3*(j-2), 1), scaleMatrix(1, 1, 1)));
-                fragmentShader[2+i+5*j] = gbufferFlatFragmentShader;
+        for(int i = 0; i < cubeGridSize; i++) {
+            for(int j = 0; j < cubeGridSize; j++) {
+                cubeModel[2+i+cubeGridSize*j] = matrixMultiply(rotationFromAngleAndUnitAxis(cubeAngle, {0,0,1}), matrixMultiply(translationMatrix(cubeGridDist*((double)i-(double)(cubeGridSize-1)/2), cubeGridDist*((double)j-(double)(cubeGridSize-1)/2), 1), scaleMatrix(1, 1, 1)));
+                fragmentShader[2+i+cubeGridSize*j] = gbufferFlatFragmentShader;
             }
         }
         
@@ -537,7 +559,7 @@ int main(int argc, char** argv) {
             //        mUniformInfo.fboArray = fboArray;
             //        mRenderPipeline.backfaceCulling = false;
             mRenderPipeline.setFragmentShader(fragmentShader[i]);
-            if(i == 0 ) {
+            if( i == 0 ) {
                 mRenderPipeline.rasterizeShader(cubeVi, &mUniformInfo, 12, (void*)fboArray, myVertexShader);
             } else {
                 mRenderPipeline.rasterizeShader(sphereScene.meshes[0].vi, &mUniformInfo, sphereScene.meshes[0].numTriangles, (void*)fboArray, myVertexShader);
@@ -575,7 +597,7 @@ int main(int argc, char** argv) {
 
 		if (showDepth) {
 			mRenderPipeline.depthBufferToTerminal();
-//            mRenderPipeline.renderBufferToTerminal(&fboArray[GBUFFER_TYPE_TEST]);
+//            mRenderPipeline.renderBufferToTerminal(&fboArray[GBUFFER_TYPE_FINAL]);
 //            mRenderPipeline.renderBufferToTerminal();
 		} else {
 			mRenderPipeline.renderBufferToTerminal(&fboArray[bufferToShow]);
@@ -584,7 +606,8 @@ int main(int argc, char** argv) {
         // HUD
         mvprintw(debugLine++, 0, "FPS: %f", 1.0/dTime);
         mvprintw(debugLine++, 0, "Delay time %f", delayTime);
-        for(int i = 0; i < numLights; i++)
+        
+        for(int i = 0; i < (numLights < 5 ? numLights : 5); i++)
             mvprintw(debugLine++, 0, "light[%d].radius: %0.2f", i, mLightParams[i].radius);
         
         const char* bufferName = "?";
@@ -592,7 +615,7 @@ int main(int argc, char** argv) {
             bufferName = "Depth Buffer";
         } else {
             switch(bufferToShow) {
-                case GBUFFER_TYPE_TEST: bufferName = "GBUFFER_TYPE_TEST"; break;
+                case GBUFFER_TYPE_FINAL: bufferName = "GBUFFER_TYPE_FINAL"; break;
                 case GBUFFER_TYPE_POSITION: bufferName = "GBUFFER_TYPE_POSTION"; break;
                 case GBUFFER_TYPE_NORMAL: bufferName = "GBUFFER_TYPE_NORMAL"; break;
                 case GBUFFER_TYPE_COLOR: bufferName = "GBUFFER_TYPE_COLOR"; break;
@@ -601,6 +624,8 @@ int main(int argc, char** argv) {
             }
         }
         mvprintw(debugLine++, 0, "FBO: %s", bufferName);
+        mvprintw(debugLine++, 0, "light height: %0.1f", lightHeight);
+        mvprintw(debugLine++, 0, "numLights: %d", numLights);
         
 		int ch = getch();
 		if (ch == 0x1B) {	// Escape
@@ -613,7 +638,7 @@ int main(int argc, char** argv) {
             fboArray[GBUFFER_TYPE_COLOR].setSize<Coordinates3D>(screenSizeX, screenSizeY);
             fboArray[GBUFFER_TYPE_NORMAL].setSize<Coordinates3D>(screenSizeX, screenSizeY);
             fboArray[GBUFFER_TYPE_POSITION].setSize<Coordinates4D>(screenSizeX, screenSizeY);
-            fboArray[GBUFFER_TYPE_TEST].setSize<Coordinates4D>(screenSizeX, screenSizeY);
+            fboArray[GBUFFER_TYPE_FINAL].setSize<Coordinates4D>(screenSizeX, screenSizeY);
             fboArray[GBUFFER_TYPE_MATERIAL].setSize<ColorRGBA>(screenSizeX, screenSizeY);
 			
 			screenAspect = (double)screenSizeX/(double)screenSizeY / characterAspect;
@@ -635,16 +660,22 @@ int main(int argc, char** argv) {
 			}
 		} else if ( ch == KEY_LEFT) {
 //            characterXYvel.x = -1;
-            cubeAngle -= 0.1;
+//            cubeAngle -= 0.1;
+            cameraAngle -= 0.05;
 		} else if ( ch == KEY_RIGHT) {
 //            characterXYvel.x = 1;
-            cubeAngle += 0.1;
+//            cubeAngle += 0.1;
+            cameraAngle += 0.05;
 		} else if ( ch == KEY_UP) {
 //            characterXYvel.y = 1;
-            cameraTilt -= 0.05;
+            cameraTilt += 0.05;
 		} else if ( ch == KEY_DOWN) {
 //            characterXYvel.y = -1;
-            cameraTilt += 0.05;
+            cameraTilt -= 0.05;
+        } else if ( ch == '=' || ch == '+' ) {
+            lightHeight += .1;
+        } else if ( ch == '-' || ch == '_' ) {
+            lightHeight -= 0.1;
 		} else if ( ch == ' ' ) {
             cubeRotateEnable = !cubeRotateEnable;
         } else if ( ch == 'b' || ch == 'B' ) {
@@ -654,6 +685,13 @@ int main(int argc, char** argv) {
 			showDepth = !showDepth;
 		} else if ( ch == 'c' || ch == 'C' ) {
 //            showCollision = !showCollision;
+            cameraRotateEnable = !cameraRotateEnable;
+        } else if ( ch == '[' ) {
+            numLights -= 5;
+            if(numLights < 0)
+                numLights = 0;
+        } else if ( ch == ']' ) {
+            numLights += 5;
         } else if ( ch == 'r' || ch == 'R') {
             if (usePerspective) {
                 viewAngle += M_PI * 0.0125;
