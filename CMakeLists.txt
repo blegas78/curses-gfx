@@ -60,13 +60,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_BUILD_TYPE RelWithDebInfo)
+#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_COLOR_MAKEFILE ON)
 
 set(CMAKE_SKIP_BUILD_RPATH false)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH false)
 #SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib64")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH true)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH true)
 
 if(APPLE)
@@ -127,6 +128,7 @@ set(DEPENDENCIES ${DEPENDENCIES} ncurses ${CMAKE_THREAD_LIBS_INIT} ${PNG_LIBRARY
 
 
 set(GENERATED_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/curses-gfx-resources.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(c_sources src/cursesGfx3d.cpp
                       src/cursesGfx-drawPolygon.cpp
@@ -224,7 +226,7 @@ if(BULLET_FOUND)
     target_link_libraries(bullet ncurses ${LIBNAME} ${BULLET_LIBRARY})
 endif(BULLET_FOUND)
 
-if(ASSIMP_FOUND AND BULLET_FOUND)
+if(ASSIMP_FOUND AND BULLET_FOUND AND SDL2_FOUND)
     add_executable(game examples/game.cpp)
     message( " -------- SDL2_LIBRARY = ${SDL2_LIBRARIES}")
     target_link_libraries(game ncurses ${LIBNAME} ${ASSIMP_LIBRARY} ${BULLET_LIBRARY} ${SDL2_LIBRARIES})
@@ -243,7 +245,7 @@ target_link_libraries(testFill ncurses ${LIBNAME})
 add_executable(threadPoolCheck examples/threadPoolCheck.cpp)
 target_link_libraries(threadPoolCheck ncurses ${LIBNAME})
 
-
-add_executable(deferred examples/deferred.cpp)
-target_link_libraries(deferred ncurses ${LIBNAME})
-
+if(ASSIMP_FOUND)
+    add_executable(deferred examples/deferred.cpp)
+    target_link_libraries(deferred ncurses ${LIBNAME})
+endif(BULLET_FOUND)
