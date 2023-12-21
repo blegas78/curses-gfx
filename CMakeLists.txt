@@ -161,7 +161,7 @@ endif(ASSIMP_FOUND)
 
 if(BULLET_FOUND)
     message(" - BULLET_INCLUDE_DIRS: ${BULLET_INCLUDE_DIRS}")
-    include_directories(${BULLET_INCLUDEDIR})
+    include_directories(${BULLET_INCLUDE_DIRS})
     set(c_sources ${c_sources} src/cursesGfxPhysics.cpp )
     set(c_headers ${c_headers} include/curses-gfx-physics.h )
     link_directories(${BULLET_LIBDIR})
